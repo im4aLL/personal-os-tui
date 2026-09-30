@@ -19,7 +19,8 @@ Approve the shell UI ([M0](M0-skeleton-and-repo-seam.md)) before any feature scr
 
 ## Preconditions
 
-- [ ] [M0](M0-skeleton-and-repo-seam.md) deliverables are complete
+- [x] [M0](M0-skeleton-and-repo-seam.md) deliverables are complete
+- [x] [M0](M0-skeleton-and-repo-seam.md) is implemented, approved by hadi-reviewer, and already marked `done`
 
 ## Approval checklist
 
@@ -38,5 +39,5 @@ Approve the shell UI ([M0](M0-skeleton-and-repo-seam.md)) before any feature scr
 
 ## On approval
 
-- [ ] Set this ticket and [M0](M0-skeleton-and-repo-seam.md) to `done`.
+- [ ] Set this ticket to `done` ([M0](M0-skeleton-and-repo-seam.md) is already `done`)
 - [ ] Unblock the next ticket in the sequence.

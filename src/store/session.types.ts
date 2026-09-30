@@ -15,7 +15,6 @@ export interface SessionState {
   latencyMs: number;
   mockUi: MockUiState | null;
   resetMockData: (() => void) | null;
-  setThemeId: (themeId: string) => void;
   cycleTheme: () => void;
   setScenario: (scenario: MockScenario) => void;
   setLatencyMs: (ms: number) => void;

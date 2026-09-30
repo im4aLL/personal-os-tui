@@ -30,9 +30,10 @@ export interface LoadedConfig {
   fromEnv: boolean;
 }
 
-/** Effective Turso credentials with the source recorded. */
+/** Effective Turso credentials with the source recorded per field. */
 export interface EffectiveCredentials {
   url: string;
   token: string;
-  fromEnv: boolean;
+  urlFromEnv: boolean;
+  tokenFromEnv: boolean;
 }

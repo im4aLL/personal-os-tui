@@ -1,4 +1,6 @@
+export type ConnectionDotTone = "ok" | "error" | "stub";
+
 export interface ConnectionDotProps {
-  ok: boolean;
+  tone: ConnectionDotTone;
   label: string;
 }

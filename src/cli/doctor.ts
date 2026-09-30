@@ -1,5 +1,5 @@
 // `pos doctor`: text diagnostics, printed without touching the terminal UI.
-import { loadConfig, redactToken } from "../lib/config";
+import { effectiveCredentials, loadConfig, redactToken } from "../lib/config";
 import type { LoadedConfig } from "../lib/config.types";
 import { describeResolution, resolveRepoMode } from "../repos/resolve";
 import type { RepoResolveInput } from "../repos/resolve.types";
@@ -63,15 +63,19 @@ export async function runDoctor(): Promise<number> {
   if (loaded.config === null) {
     lines.push(`INFO Config: ${loaded.path} (missing - first run, mock mode)`);
   } else {
-    const perms = loaded.loosePermissions ? "loose permissions (should be 600)" : "mode 600";
+    let perms = "mode 600";
+    if (process.platform === "win32") {
+      perms = "permissions not enforced on Windows";
+    } else if (loaded.loosePermissions) {
+      perms = "loose permissions (should be 600)";
+    }
     lines.push(`${mark(!loaded.loosePermissions)} Config: ${loaded.path} (${perms})`);
-    const url = process.env.POS_TURSO_URL ?? loaded.config.turso.url ?? "";
+    const creds = effectiveCredentials(loaded);
+    const urlNote = creds.urlFromEnv ? " (from environment)" : "";
+    const tokenNote = creds.tokenFromEnv ? " (from environment)" : "";
+    lines.push(`INFO Turso URL: ${creds.url === "" ? "(not set)" : creds.url}${urlNote}`);
     lines.push(
-      `INFO Turso URL: ${url === "" ? "(not set)" : url} ${loaded.fromEnv ? "(from environment)" : ""}`,
-    );
-    const token = process.env.POS_TURSO_TOKEN ?? loaded.config.turso.token ?? "";
-    lines.push(
-      `INFO Turso token: ${token === "" ? "(not set)" : redactToken(token)} ${loaded.fromEnv ? "(from environment)" : ""}`,
+      `INFO Turso token: ${creds.token === "" ? "(not set)" : redactToken(creds.token)}${tokenNote}`,
     );
   }
 

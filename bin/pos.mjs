@@ -71,13 +71,18 @@ if (hasFfiFlag) {
     env: process.env,
   });
 
-  const forward = (signal) => {
+  // The child shares the terminal's foreground process group, so a
+  // terminal-generated Ctrl+C already reaches it directly as SIGINT. Forwarding
+  // SIGINT here would deliver a duplicate, and the parent cannot suppress the
+  // kernel-origin copy, so SIGINT is left alone. A signal sent to the parent PID
+  // alone, rather than to its process group, is therefore not propagated for
+  // SIGINT. SIGTERM is forwarded because a supervisor may signal only the parent
+  // PID, and it is not delivered by the terminal.
+  process.on("SIGTERM", () => {
     if (child.exitCode == null && !child.killed) {
-      child.kill(signal);
+      child.kill("SIGTERM");
     }
-  };
-  process.on("SIGINT", () => forward("SIGINT"));
-  process.on("SIGTERM", () => forward("SIGTERM"));
+  });
 
   child.on("error", (error) => {
     console.error(`pos failed to start: ${error.message}`);
@@ -85,6 +90,10 @@ if (hasFfiFlag) {
   });
   child.on("exit", (code, signal) => {
     if (signal != null) {
+      // Clear our own listener for this signal so the re-raise below actually
+      // terminates the parent with the child's signal semantics instead of
+      // being swallowed by the SIGTERM handler installed above.
+      process.removeAllListeners(signal);
       process.kill(process.pid, signal);
       return;
     }

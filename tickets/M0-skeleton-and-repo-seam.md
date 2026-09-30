@@ -2,7 +2,7 @@
 id: M0
 title: Skeleton, theme, shell, navigation, and the repository seam
 type: milestone
-status: not-started
+status: done
 phase: foundation
 order: 1
 depends_on: [B0]
@@ -11,7 +11,7 @@ gate: G0
 
 # M0 - Skeleton, theme, shell, navigation, and the repository seam
 
-> Type: milestone · Status: not-started · Phase: foundation
+> Type: milestone · Status: done · Phase: foundation
 
 ## Objective
 
@@ -19,17 +19,17 @@ gate: G0
 
 ## Deliverables
 
-- [ ] `bin/pos.mjs`: Node version gate, the `--experimental-ffi` re-exec with `stdio: "inherit"` and forwarded signals, `OPENTUI_LIBC` handling, and the "run npm run build" message when the entry is missing.
-- [ ] `src/cli.tsx`: config load, `getRepos()`, renderer creation and destruction with the terminal-restoration guarantees, and the `pos`, `pos --help`, `pos --version`, `pos doctor`, `pos reset` subcommands parsed before the renderer exists.
-- [ ] `src/repos/*`: one interface per domain in `types.ts`, the precedence resolver in `resolve.ts` (flag > env > auto > turso), and `getRepos()` / `getSetupRepo()` in `index.ts` with exactly one dynamic mock import.
-- [ ] `src/repos/mock/*` and `src/repos/turso/*` with the same file set; turso methods may throw "not wired yet" stubs at this milestone.
-- [ ] `src/mock/fixtures.ts` created with empty arrays per domain, plus one todo and one note so the shell has something to render references to.
-- [ ] `src/app/*`: App, Layout, Sidebar, Header (with the `MOCK DATA` badge), StatusLine, ConnectionDot, SetupScreen, and MockStatePanel.
-- [ ] `src/screens/*`: the six placeholder screens (Dashboard, Todo, Save Links, Project Planner, Work Log, Notes).
-- [ ] `src/theme/*`: `types.ts` (palette and semantic tokens), `registry.ts` with all four Catppuccin variants and Mocha as the default, `catppuccin.ts`, `degrade.ts`, and `ThemeProvider.tsx`.
-- [ ] `src/commands/registry.ts`: commands defined as data so the global key handler, the command palette, and the help screen cannot drift.
-- [ ] `src/components/ui/*`: Button, Modal, EmptyState, Skeleton, and List.
-- [ ] `src/lib/config.ts` read path only: location precedence, loose-permission reporting, env overrides, and token redaction.
+- [x] `bin/pos.mjs`: Node version gate, the `--experimental-ffi` re-exec with `stdio: "inherit"` and forwarded signals, `OPENTUI_LIBC` handling, and the "run npm run build" message when the entry is missing.
+- [x] `src/cli.tsx`: config load, `getRepos()`, renderer creation and destruction with the terminal-restoration guarantees, and the `pos`, `pos --help`, `pos --version`, `pos doctor`, `pos reset` subcommands parsed before the renderer exists.
+- [x] `src/repos/*`: one interface per domain in `types.ts`, the precedence resolver in `resolve.ts` (flag > env > auto > turso), and `getRepos()` / `getSetupRepo()` in `index.ts` with exactly one dynamic mock import.
+- [x] `src/repos/mock/*` and `src/repos/turso/*` with the same file set; turso methods may throw "not wired yet" stubs at this milestone.
+- [x] `src/mock/fixtures.ts` created with empty arrays per domain, plus one todo and one note so the shell has something to render references to.
+- [x] `src/app/*`: App, Layout, Sidebar, Header (with the `MOCK DATA` badge), StatusLine, ConnectionDot, SetupScreen, and MockStatePanel.
+- [x] `src/screens/*`: the six placeholder screens (Dashboard, Todo, Save Links, Project Planner, Work Log, Notes).
+- [x] `src/theme/*`: `types.ts` (palette and semantic tokens), `registry.ts` with all four Catppuccin variants and Mocha as the default, `catppuccin.ts`, `degrade.ts`, and `ThemeProvider.tsx`.
+- [x] `src/commands/registry.ts`: commands defined as data so the global key handler, the command palette, and the help screen cannot drift.
+- [x] `src/components/ui/*`: Button, Modal, EmptyState, Skeleton, and List.
+- [x] `src/lib/config.ts` read path only: location precedence, loose-permission reporting, env overrides, and token redaction.
 
 ## Design notes
 
@@ -90,7 +90,7 @@ gate: G0
 
 ## Approval
 
-Approved at [G0](G0-shell-ui-approval.md). Do not start the next ticket until G0 is `done`.
+Marked `done` after implementation and hadi-reviewer approval. The shell UI is still approved at [G0](G0-shell-ui-approval.md); do not start the next ticket until G0 is `done`.
 
 ## Deferred
 
@@ -99,7 +99,6 @@ Approved at [G0](G0-shell-ui-approval.md). Do not start the next ticket until G0
 - `--ascii` mode
 - Full help content
 - Theme picker modal
-- `pos doctor`
 
 ## Notes
 

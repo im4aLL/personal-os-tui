@@ -45,15 +45,23 @@ export function defaultConfig(): AppConfig {
   };
 }
 
-/** Replace all but the first/last few characters of a token for safe logging. */
+/** Safe log form of a token: a short leading prefix for long tokens, a fixed
+ * mask otherwise. The tail is never revealed. */
 export function redactToken(token: string): string {
-  if (token.length <= 8) {
+  // Below this length even a three-character prefix reveals too much.
+  if (token.length < 12) {
     return "****";
   }
-  return `${token.slice(0, 3)}...${token.slice(-2)}`;
+  return `${token.slice(0, 3)}...`;
 }
 
 function hasLoosePermissions(mode: number): boolean {
+  // Windows has no POSIX permission bits: stat().mode is effectively 0o666 for
+  // every file, so the group/other test would always report loose. Report
+  // not-loose and rely on the platform ACL model instead.
+  if (process.platform === "win32") {
+    return false;
+  }
   // Any group/other read/write/execute bit set means the file is not owner-only.
   return (mode & 0o077) !== 0;
 }
@@ -121,9 +129,15 @@ export async function loadConfig(): Promise<LoadedConfig> {
 
 /** Effective credentials with the source recorded; the token must be redacted before logging. */
 export function effectiveCredentials(loaded: LoadedConfig): EffectiveCredentials {
+  // Empty env strings are treated as unset, matching loadConfig.
+  const envUrl = process.env.POS_TURSO_URL ?? "";
+  const envToken = process.env.POS_TURSO_TOKEN ?? "";
+  const urlFromEnv = envUrl !== "";
+  const tokenFromEnv = envToken !== "";
   return {
-    url: process.env.POS_TURSO_URL ?? loaded.config?.turso.url ?? "",
-    token: process.env.POS_TURSO_TOKEN ?? loaded.config?.turso.token ?? "",
-    fromEnv: loaded.fromEnv,
+    url: urlFromEnv ? envUrl : (loaded.config?.turso.url ?? ""),
+    token: tokenFromEnv ? envToken : (loaded.config?.turso.token ?? ""),
+    urlFromEnv,
+    tokenFromEnv,
   };
 }

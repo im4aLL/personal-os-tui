@@ -4,6 +4,7 @@ import { useSession } from "../store/session";
 import { SCREEN_TITLES } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { ConnectionDot } from "./ConnectionDot";
+import type { ConnectionDotTone } from "./ConnectionDot.types";
 import type { HeaderProps } from "./Header.types";
 
 function initials(name: string): string {
@@ -22,7 +23,12 @@ export function Header(props: HeaderProps): ReactNode {
   const scenario = useSession((state) => state.scenario);
   const { width } = useTerminalDimensions();
   const compact = width < 80;
-  const connected = scenario !== "error";
+  // Mock mode is backed by in-memory fixtures, so it can honestly report ok.
+  // Turso repos are `not wired yet` stubs until W1, so the dot reports stub.
+  const mockError = repoMode === "mock" && scenario === "error";
+  const connectionTone: ConnectionDotTone =
+    repoMode === "mock" ? (mockError ? "error" : "ok") : "stub";
+  const connectionLabel = connectionTone;
 
   return (
     <box
@@ -44,7 +50,7 @@ export function Header(props: HeaderProps): ReactNode {
         <text fg={color(tokens.headerBg)}> </text>
       </box>
       {compact ? null : <text fg={color(tokens.fgSubtle)}>{theme.label}</text>}
-      <ConnectionDot ok={connected} label={connected ? "ok" : "error"} />
+      <ConnectionDot tone={connectionTone} label={connectionLabel} />
       <text fg={color(tokens.fgMuted)}>
         {compact ? initials(profileName) : `${initials(profileName)}  ${profileName}`}
       </text>

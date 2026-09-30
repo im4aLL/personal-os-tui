@@ -25,9 +25,6 @@ export const useSession = create<SessionState>((set, get) => {
     latencyMs: 0,
     mockUi: null,
     resetMockData: null,
-    setThemeId: (themeId: string) => {
-      set({ themeId });
-    },
     cycleTheme: () => {
       set((state) => ({ themeId: nextThemeId(state.themeId) }));
     },

@@ -353,10 +353,6 @@ export function matchesQuery(command: Command, query: string): boolean {
   return true;
 }
 
-export function filterCommands(query: string): Command[] {
-  return commands.filter((command) => isCommandVisible(command) && matchesQuery(command, query));
-}
-
 /** True when the command can run given the session state. The setup entry
  * is a silent no-op once the config is complete (App renders Setup only on
  * !configComplete), so the palette hides it there instead of presenting a

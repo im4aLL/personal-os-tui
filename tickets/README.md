@@ -13,7 +13,7 @@ This board is generated from `PLAN.md`, which is the source of truth for scope, 
 One feature at a time: UI, then gate, then wiring.
 
 0. [B0](B0-project-bootstrap.md) - Project bootstrap (init, dependencies, config, license) (bootstrap, foundation, done)
-1. [M0](M0-skeleton-and-repo-seam.md) - Skeleton, theme, shell, navigation, and the repository seam (milestone, foundation, not-started)
+1. [M0](M0-skeleton-and-repo-seam.md) - Skeleton, theme, shell, navigation, and the repository seam (milestone, foundation, done)
 2. [G0](G0-shell-ui-approval.md) - Shell UI approval (gate, foundation, not-started)
 3. [M1](M1-setup-ui.md) - Setup UI (mock connection) (milestone, setup, not-started)
 4. [G1](G1-setup-ui-approval.md) - Setup UI approval (gate, setup, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [M0](M0-skeleton-and-repo-seam.md) | Skeleton, theme, shell, navigation, and the repository seam | milestone | foundation |
 | [G0](G0-shell-ui-approval.md) | Shell UI approval | gate | foundation |
 | [M1](M1-setup-ui.md) | Setup UI (mock connection) | milestone | setup |
 | [G1](G1-setup-ui-approval.md) | Setup UI approval | gate | setup |
@@ -84,12 +83,13 @@ None yet.
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
 | [B0](B0-project-bootstrap.md) | Project bootstrap (init, dependencies, config, license) | bootstrap | foundation |
+| [M0](M0-skeleton-and-repo-seam.md) | Skeleton, theme, shell, navigation, and the repository seam | milestone | foundation |
 
 ## Rules
 
 - B0 (project bootstrap) has no gate; it must be `done` before M0 starts.
 - A gate must be `done` before its wiring ticket starts.
-- A milestone's ticket stays open until its gate passes.
+- A milestone may be marked `done` once its implementation and review are complete; its gate must still pass before the next ticket starts.
 - A `feature` ticket has no gate; it is reviewed in the end-to-end pass in W8.
 - Keep statuses in sync between the ticket frontmatter and this board.
 

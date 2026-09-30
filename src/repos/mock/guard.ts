@@ -8,11 +8,17 @@
 import { currentLatencyMs, delay } from "../../mock/latency";
 import { currentScenario } from "../../mock/scenario";
 
+/** Shared `large` default: rows appended on top of a scenario fixture. PLAN's
+ * per-domain counts (M2-M7) replace this once each feature's fixtures land;
+ * until then every list gets the same reviewable size. */
+const LARGE_SCENARIO_ROWS = 200;
+
 export async function mockCall<T>(fn: () => T): Promise<T> {
   const scenario = currentScenario();
   if (scenario === "loading") {
-    // Effectively stuck: the UI shows skeletons until the scenario changes.
-    await delay(30_000);
+    // Sticky-ish delay so the UI shows skeletons long enough to review.
+    // PLAN documents `loading` as 1500 ms for the shared guard.
+    await delay(1500);
   } else {
     await delay(currentLatencyMs());
   }
@@ -30,7 +36,7 @@ export function applyListScenario<T>(rows: T[], clone: (row: T, index: number) =
   }
   if (scenario === "large" && rows.length > 0) {
     const out = [...rows];
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < LARGE_SCENARIO_ROWS; i++) {
       out.push(clone(rows[i % rows.length], i));
     }
     return out;

@@ -106,7 +106,7 @@ One Node process. No daemon, no server, no background workers.
 pos (bin/pos.mjs, shebang #!/usr/bin/env node)
   -> version gate (>= 26.4.0)
   -> ensure --experimental-ffi, set OPENTUI_LIBC if needed
-  -> re-exec: node --experimental-ffi <dist/cli.js> [args]   (stdio inherit, signals forwarded)
+  -> re-exec: node --experimental-ffi <dist/cli.js> [args]   (stdio inherit; SIGTERM forwarded, SIGINT via process group)
        -> dist/cli.js (bundled ESM)
             -> load config
             -> getRepos() (mock or turso)
@@ -125,7 +125,7 @@ Escape hatch: if `bun` is detected and `pos --bun` (or `POS_RUNTIME=bun`) is set
 1. Parse `process.versions.node` and compare to `[26, 4, 0]`. On failure, print a clear message (required version, detected version, install link) to stderr and exit 1 before the renderer touches the terminal.
 2. `OPENTUI_LIBC`: set for `musl` only when already requested or on Alpine; otherwise leave unset (glibc default). Pass the full environment through.
 3. If `process.execArgv` already contains `--experimental-ffi` or `--allow-ffi`, import `dist/cli.js` directly. Otherwise `spawn(process.execPath, ["--experimental-ffi", entry, ...process.argv.slice(2)], { stdio: "inherit", env })`.
-4. Forward `SIGINT` and `SIGTERM`; exit with the child's code; report spawn errors clearly.
+4. Forward `SIGTERM` to the child; deliver `SIGINT` through the terminal's foreground process group (a single-PID `SIGINT` is not propagated). Exit with the child's code, or re-raise the child's terminating signal; report spawn errors clearly.
 5. Resolve the entry via `fileURLToPath(new URL("../dist/cli.js", import.meta.url))` and print "run npm run build" when missing.
 
 Windows note: npm generates `pos.cmd` and `pos.ps1` shims, so the shebang is ignored and Node is invoked explicitly; the re-exec then adds the FFI flag exactly as on Unix. Windows remains an explicit hardening test item because OpenTUI's Node acceptance currently runs on Linux x64 only.
@@ -551,6 +551,8 @@ Notes on the table: the sequence is M0 -> G0 -> M1 -> G1 -> W1 -> M2 -> G2 -> W2
 
 `src/mock/fixtures.ts` is created with empty arrays per domain, plus one todo and one note so the shell has something to render references to. Fixtures grow per feature milestone.
 
+Shared scenario transforms live in `src/repos/mock/guard.ts`: `loading` is a fixed 1500 ms delay, and `large` appends a shared default of 200 rows until a feature's own fixtures land. The per-domain counts documented in each feature's "Mock data used" section (M2-M7) supersede that default once those fixtures exist.
+
 #### Files touched
 
 `package.json`, `tsconfig.json`, `tsdown.config.ts`, `bin/pos.mjs`, `src/cli.tsx`, `src/repos/*`, `src/mock/fixtures.ts`, `src/app/*`, `src/screens/*` (placeholders), `src/theme/*`, `src/commands/registry.ts`, `src/components/ui/*` (Button, Modal, EmptyState, Skeleton, List), `src/lib/config.ts` (read only).
@@ -572,7 +574,7 @@ Notes on the table: the sequence is M0 -> G0 -> M1 -> G1 -> W1 -> M2 -> G2 -> W2
 
 #### Deliberately deferred
 
-Real data, mouse, `--ascii` mode, full help content, theme picker modal, `pos doctor`.
+Real data, mouse, `--ascii` mode, full help content, theme picker modal.
 
 ---
 

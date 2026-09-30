@@ -17,6 +17,7 @@ import { configPath } from "./lib/config";
 import { getRepos } from "./repos/index";
 import type { RepoBundle } from "./repos/index.types";
 import { initSession } from "./store/session";
+import { useUi } from "./store/ui";
 import { getTheme } from "./theme/registry";
 
 function readVersion(): string {
@@ -111,6 +112,7 @@ async function runApp(args: string[]): Promise<number> {
     resetMockData: bundle.resetMockData,
     mockUi: bundle.mockUi,
   });
+  useUi.getState().setSidebarCollapsed(bundle.loaded.config?.ui.sidebarCollapsed ?? false);
 
   const theme = getTheme(themeId);
   let renderer: CliRenderer | null = null;
