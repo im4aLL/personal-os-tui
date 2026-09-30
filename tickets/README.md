@@ -6,12 +6,13 @@ This board is generated from `PLAN.md`, which is the source of truth for scope, 
 
 `status`: `not-started` | `in-progress` | `done`
 
-`type`: `milestone` (a feature UI built on mock data) | `gate` (explicit approval of a milestone before wiring) | `wiring` (swap the mock repository for real Turso)
+`type`: `bootstrap` (project init, dependencies, tooling config, license) | `milestone` (a feature UI built on mock data) | `gate` (explicit approval of a milestone before wiring) | `wiring` (swap the mock repository for real Turso)
 
 ## Delivery sequence
 
 One feature at a time: UI, then gate, then wiring.
 
+0. [B0](B0-project-bootstrap.md) - Project bootstrap (init, dependencies, config, license) (bootstrap, foundation, not-started)
 1. [M0](M0-skeleton-and-repo-seam.md) - Skeleton, theme, shell, navigation, and the repository seam (milestone, foundation, not-started)
 2. [G0](G0-shell-ui-approval.md) - Shell UI approval (gate, foundation, not-started)
 3. [M1](M1-setup-ui.md) - Setup UI (mock connection) (milestone, setup, not-started)
@@ -45,6 +46,7 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
+| [B0](B0-project-bootstrap.md) | Project bootstrap (init, dependencies, config, license) | bootstrap | foundation |
 | [M0](M0-skeleton-and-repo-seam.md) | Skeleton, theme, shell, navigation, and the repository seam | milestone | foundation |
 | [G0](G0-shell-ui-approval.md) | Shell UI approval | gate | foundation |
 | [M1](M1-setup-ui.md) | Setup UI (mock connection) | milestone | setup |
@@ -82,6 +84,7 @@ None yet.
 
 ## Rules
 
+- B0 (project bootstrap) has no gate; it must be `done` before M0 starts.
 - A gate must be `done` before its wiring ticket starts.
 - A milestone's ticket stays open until its gate passes.
 - Keep statuses in sync between the ticket frontmatter and this board.

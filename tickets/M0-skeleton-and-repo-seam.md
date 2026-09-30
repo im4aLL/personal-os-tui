@@ -5,7 +5,7 @@ type: milestone
 status: not-started
 phase: foundation
 order: 1
-depends_on: []
+depends_on: [B0]
 gate: G0
 ---
 
@@ -19,9 +19,6 @@ gate: G0
 
 ## Deliverables
 
-- [ ] `package.json` with bin `pos` -> `bin/pos.mjs`, the `>=26.4.0` engine gate, the `build` / `build:prod` / `dev` / `dev:mock` / `typecheck` scripts, and the runtime and dev dependency sets.
-- [ ] `tsconfig.json` with ESNext target and module, bundler resolution, `jsxImportSource "@opentui/react"`, `strict`, and `noEmit`.
-- [ ] `tsdown.config.ts` with `entry: ["src/cli.tsx"]`, ESM, `target: "node26"`, `splitting: true`, and OpenTUI/React externalized so the mock compiles to a separate droppable chunk.
 - [ ] `bin/pos.mjs`: Node version gate, the `--experimental-ffi` re-exec with `stdio: "inherit"` and forwarded signals, `OPENTUI_LIBC` handling, and the "run npm run build" message when the entry is missing.
 - [ ] `src/cli.tsx`: config load, `getRepos()`, renderer creation and destruction with the terminal-restoration guarantees, and the `pos`, `pos --help`, `pos --version`, `pos doctor`, `pos reset` subcommands parsed before the renderer exists.
 - [ ] `src/repos/*`: one interface per domain in `types.ts`, the precedence resolver in `resolve.ts` (flag > env > auto > turso), and `getRepos()` / `getSetupRepo()` in `index.ts` with exactly one dynamic mock import.
@@ -80,7 +77,6 @@ gate: G0
 
 ## Files touched
 
-- `package.json`, `tsconfig.json`, `tsdown.config.ts` - package, TypeScript, and bundler configuration
 - `bin/pos.mjs` - version gate, `--experimental-ffi` re-exec, `OPENTUI_LIBC`, signals
 - `src/cli.tsx` - entry: subcommands, config load, repo resolve, renderer lifecycle
 - `src/repos/*` - repository interfaces, resolver, mock and turso implementations
@@ -107,4 +103,6 @@ Approved at [G0](G0-shell-ui-approval.md). Do not start the next ticket until G0
 
 ## Notes
 
+- Depends on [B0](B0-project-bootstrap.md) for the initialized project, installed dependencies, and tooling config.
+- Builds the full `bin/pos.mjs` launcher on top of the B0 placeholder.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
