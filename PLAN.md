@@ -32,6 +32,7 @@ New decisions introduced by the UI-first model:
 | Validation | Hand-written validators in `src/lib/validate.ts` | Six simple forms; `zod` plus react-hook-form is unnecessary weight. Easy to add later |
 | Keymap | In-house `CommandRegistry` consumed by one global handler and the command palette; `@opentui/keymap` deferred | `useKeyboard` plus per-component `keyBindings` covers a mostly-modal app; the registry shape makes a later keymap migration mechanical |
 | Bundler | `tsdown` with code splitting, OpenTUI/React externalized | Native optional packages must resolve from `node_modules` at runtime; splitting gives the mock a separate chunk that production drops |
+| Lint and format | Biome v2 (`@biomejs/biome`) with a single `biome.json`; `npm run check` is the gate, `npm run ci` for CI | One fast tool for both lint and format, so no ESLint/Prettier pair; settings aligned with the coding style guide |
 | Notes list query | New projection `getNotesList()` selecting only `id,title,pinned,created_at,updated_at` | `getNotes()` selects `*` including full `content`; wasteful over HTTP for a list pane |
 | Multi-statement writes | `tursoBatch()` sending several statements in one `/v2/pipeline` request | Tag replacement, position updates, and reorders are N writes each |
 | Dashboard counts | `SELECT COUNT(*)` per store instead of first-page array length | The desktop's `links.length` is the loaded page (max 50), wrong for larger libraries |
@@ -373,10 +374,12 @@ personal-os-tui/
       date.ts text.ts             # width-aware truncate/pad, relativeDate, startOfWeek, todayISO
   tsconfig.json
   tsdown.config.ts
+  biome.json                    # Biome lint + format config
   package.json
   README.md
   LICENSE                       # MIT (open source release)
   .gitignore
+  .editorconfig
 ```
 
 Where automated tests would go later (not planned): `src/lib/*.test.ts` and `src/repos/*.test.ts` for pure functions, SQL builders, and interface conformance of both implementations; `src/components/**` with `@opentui/react/test-utils` and `@opentui/core/testing` for render and capability fixtures.
@@ -397,7 +400,7 @@ Optional/fallback: `@opentui/keymap` `^0.5.12` (polish phase only).
 
 Not used, with rationale: `zod` (hand-written validators suffice), `date-fns` (a few helpers), `react-markdown`/`remark-gfm`/`rehype-highlight` (OpenTUI `<markdown>` handles preview), `jspdf`/`jspdf-autotable` (PDF dropped), `string-width` unless OpenTUI's width utilities prove insufficient - if imported, declare it directly rather than relying on a transitive resolution.
 
-Dev: `typescript ~5.8`, `@types/node ^24`, `@types/react ^19.2`, `tsdown`, `tsx` (for `npm run dev`).
+Dev: `typescript ~5.8`, `@types/node ^24`, `@types/react ^19.2`, `tsdown`, `tsx` (for `npm run dev`), and `@biomejs/biome ^2` for linting and formatting.
 
 `tsdown.config.ts`: `entry: ["src/cli.tsx"]`, `format: ["esm"]`, `platform: "node"`, `target: "node26"`, `splitting: true`, `outDir: "dist"`, `clean: true`, `sourcemap: true`, `external: ["@opentui/core", "@opentui/react", "react", "react-reconciler", "ws", /^@opentui\/core-/]`. Externalizing the platform native packages is mandatory; splitting is what makes the mock a droppable chunk. No asset embedding is needed, which avoids `OTUI_ASSET_ROOT`. `dts: false` for v1.
 
@@ -416,14 +419,47 @@ Dev: `typescript ~5.8`, `@types/node ^24`, `@types/react ^19.2`, `tsdown`, `tsx`
     "build:prod": "tsdown --define POS_MOCK_ENABLED=false",
     "dev": "node --experimental-ffi --import tsx src/cli.tsx",
     "dev:mock": "POS_MOCK=1 npm run dev",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "check:write": "biome check --write .",
+    "ci": "biome ci ."
   },
   "dependencies": { "@opentui/core": "^0.5.12", "@opentui/react": "^0.5.12", "react": "^19.2.0", "zustand": "^5.0.14", "ws": "^8.18.0" },
-  "devDependencies": { "@types/node": "^24", "@types/react": "^19.2", "tsdown": "^0.10", "tsx": "^4", "typescript": "~5.8" }
+  "devDependencies": { "@biomejs/biome": "^2", "@types/node": "^24", "@types/react": "^19.2", "tsdown": "^0.10", "tsx": "^4", "typescript": "~5.8" }
 }
 ```
 
 `tsconfig.json`: `target ESNext`, `module ESNext`, `moduleResolution bundler`, `lib ["ESNext","DOM"]`, `jsx react-jsx`, `jsxImportSource "@opentui/react"`, `strict`, `skipLibCheck`, `noEmit`, `resolveJsonModule`, `types ["node"]`. No `#`-style import map (Vite-specific in the desktop app); relative imports only.
+
+`biome.json` (Biome v2) is the single lint and format config, aligned with Hadi's coding style guide:
+
+```json
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": { "includes": ["**", "!!**/dist"] },
+  "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100, "lineEnding": "lf" },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "linter": { "rules": { "preset": "recommended", "style": { "useBlockStatements": "on" } } },
+  "assist": { "actions": { "source": { "recommended": true } } }
+}
+```
+
+- Formatting encodes the style guide: 2-space indent, double quotes, semicolons, trailing commas, LF, 100 columns.
+- `files.includes` force-ignores `dist` (`!!**/dist`) so the scanner never indexes build output; `node_modules` is always ignored.
+- `assist.actions.source.recommended` enables the import-organizing action; `style.useBlockStatements` enforces braces on every control-flow block. Verify with `biome explain useBlockStatements` after install and move the rule to `nursery` or drop it if the installed Biome major does not expose it under `style`.
+- Scripts: `check` (lint + format + assist, no writes) is the gate, `check:write` applies fixes, and `ci` is the non-interactive CI form. `typecheck` stays separate because Biome does not typecheck.
+- An `.editorconfig` also exists, but `biome.json` takes precedence (`formatter.useEditorconfig` defaults to false).
 
 ## Phasing
 
