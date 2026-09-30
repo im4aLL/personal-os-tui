@@ -12,7 +12,7 @@ This board is generated from `PLAN.md`, which is the source of truth for scope, 
 
 One feature at a time: UI, then gate, then wiring.
 
-0. [B0](B0-project-bootstrap.md) - Project bootstrap (init, dependencies, config, license) (bootstrap, foundation, not-started)
+0. [B0](B0-project-bootstrap.md) - Project bootstrap (init, dependencies, config, license) (bootstrap, foundation, done)
 1. [M0](M0-skeleton-and-repo-seam.md) - Skeleton, theme, shell, navigation, and the repository seam (milestone, foundation, not-started)
 2. [G0](G0-shell-ui-approval.md) - Shell UI approval (gate, foundation, not-started)
 3. [M1](M1-setup-ui.md) - Setup UI (mock connection) (milestone, setup, not-started)
@@ -46,7 +46,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [B0](B0-project-bootstrap.md) | Project bootstrap (init, dependencies, config, license) | bootstrap | foundation |
 | [M0](M0-skeleton-and-repo-seam.md) | Skeleton, theme, shell, navigation, and the repository seam | milestone | foundation |
 | [G0](G0-shell-ui-approval.md) | Shell UI approval | gate | foundation |
 | [M1](M1-setup-ui.md) | Setup UI (mock connection) | milestone | setup |
@@ -80,7 +79,9 @@ None yet.
 
 ## done
 
-None yet.
+| Ticket | Title | Type | Phase |
+| --- | --- | --- | --- |
+| [B0](B0-project-bootstrap.md) | Project bootstrap (init, dependencies, config, license) | bootstrap | foundation |
 
 ## Rules
 

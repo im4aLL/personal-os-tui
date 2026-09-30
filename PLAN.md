@@ -395,6 +395,7 @@ Runtime:
 | `react` | `^19.2.0` | Required by the binding |
 | `zustand` | `^5.0.14` | Store parity with the desktop app |
 | `ws` | `^8.18.0` | Declared peer of `@opentui/react`; list directly so global installs always resolve it |
+| `web-tree-sitter` | `0.25.10` (exact) | `@opentui/core` lists it as an exact, non-optional peer; declare it directly so global installs always resolve it |
 
 Optional/fallback: `@opentui/keymap` `^0.5.12` (polish phase only).
 
@@ -402,7 +403,9 @@ Not used, with rationale: `zod` (hand-written validators suffice), `date-fns` (a
 
 Dev: `typescript ~5.8`, `@types/node ^24`, `@types/react ^19.2`, `tsdown`, `tsx` (for `npm run dev`), and `@biomejs/biome ^2` for linting and formatting.
 
-`tsdown.config.ts`: `entry: ["src/cli.tsx"]`, `format: ["esm"]`, `platform: "node"`, `target: "node26"`, `splitting: true`, `outDir: "dist"`, `clean: true`, `sourcemap: true`, `external: ["@opentui/core", "@opentui/react", "react", "react-reconciler", "ws", /^@opentui\/core-/]`. Externalizing the platform native packages is mandatory; splitting is what makes the mock a droppable chunk. No asset embedding is needed, which avoids `OTUI_ASSET_ROOT`. `dts: false` for v1.
+`tsdown.config.ts`: `entry: ["src/cli.tsx"]`, `format: ["esm"]`, `platform: "node"`, `target: "node26"`, `outDir: "dist"`, `clean: true`, `sourcemap: true`, `external: ["@opentui/core", "@opentui/react", "react", "react-reconciler", "ws", /^@opentui\/core-/]`. Externalizing the platform native packages is mandatory. No `splitting` option is set: tsdown 0.10 has none, because rolldown already emits one chunk per dynamic `import()`, which is what makes the mock a droppable chunk. No asset embedding is needed, which avoids `OTUI_ASSET_ROOT`. `dts: false` for v1.
+
+`POS_MOCK_ENABLED` is inlined through tsdown's `define`, and `build:prod` sets it with `--env.POS_MOCK_ENABLED=false` (tsdown 0.10 has no `--define` CLI flag; `--env.*` is the supported, shell-portable equivalent). Three constraints come with that mechanism: the config reads the flag off `cliOptions.env`, so `define` is computed per build; the identifier must be declared ambiently in a `*.d.ts`, because a module-local `declare const POS_MOCK_ENABLED` makes rolldown treat it as a local binding and silently skip the replacement; and only the bare `POS_MOCK_ENABLED` identifier is valid, because `--env.POS_MOCK_ENABLED=false` also defines `process.env.POS_MOCK_ENABLED` as the truthy string `"false"`, so reading the flag through `process.env` would silently defeat mock elimination. The `grep -r "fixtures" dist/` check in W8 remains the backstop.
 
 `package.json` essentials:
 
@@ -410,13 +413,15 @@ Dev: `typescript ~5.8`, `@types/node ^24`, `@types/react ^19.2`, `tsdown`, `tsx`
 {
   "name": "@im4all/personal-os-tui",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
+  "publishConfig": { "access": "public" },
   "bin": { "pos": "bin/pos.mjs" },
   "files": ["bin", "dist", "README.md"],
   "engines": { "node": ">=26.4.0" },
   "scripts": {
     "build": "tsdown",
-    "build:prod": "tsdown --define POS_MOCK_ENABLED=false",
+    "build:prod": "tsdown --env.POS_MOCK_ENABLED=false",
     "dev": "node --experimental-ffi --import tsx src/cli.tsx",
     "dev:mock": "POS_MOCK=1 npm run dev",
     "typecheck": "tsc --noEmit",
@@ -424,12 +429,15 @@ Dev: `typescript ~5.8`, `@types/node ^24`, `@types/react ^19.2`, `tsdown`, `tsx`
     "lint": "biome lint .",
     "check": "biome check .",
     "check:write": "biome check --write .",
+    "check:ffi": "node --experimental-ffi scripts/check-ffi.mjs",
     "ci": "biome ci ."
   },
-  "dependencies": { "@opentui/core": "^0.5.12", "@opentui/react": "^0.5.12", "react": "^19.2.0", "zustand": "^5.0.14", "ws": "^8.18.0" },
+  "dependencies": { "@opentui/core": "^0.5.12", "@opentui/react": "^0.5.12", "react": "^19.2.0", "web-tree-sitter": "0.25.10", "ws": "^8.18.0", "zustand": "^5.0.14" },
   "devDependencies": { "@biomejs/biome": "^2", "@types/node": "^24", "@types/react": "^19.2", "tsdown": "^0.10", "tsx": "^4", "typescript": "~5.8" }
 }
 ```
+
+`license` and `publishConfig.access: "public"` are explicit so a public MIT scoped package publishes publicly regardless of the npm major used. `check:ffi` runs `scripts/check-ffi.mjs`, which imports `@opentui/core` under `--experimental-ffi` and asserts the native core loads (`RGBA.fromHex("#cba6f7").toInts()` returns `[203, 166, 247, 255]`), exiting non-zero with a clear message on failure. It makes the FFI verification reproducible instead of a one-off command.
 
 `tsconfig.json`: `target ESNext`, `module ESNext`, `moduleResolution bundler`, `lib ["ESNext","DOM"]`, `jsx react-jsx`, `jsxImportSource "@opentui/react"`, `strict`, `skipLibCheck`, `noEmit`, `resolveJsonModule`, `types ["node"]`. No `#`-style import map (Vite-specific in the desktop app); relative imports only.
 
@@ -1488,7 +1496,7 @@ The application is production-ready against real data.
 
 1. Every UI and wiring checklist above passes on a clean machine and on an existing database.
 2. The desktop app and the TUI show the same data for every domain after a round trip of edits in both directions.
-3. No mock code path is reachable in the production build.
+3. No mock code path is reachable in the production build; `grep -r "fixtures" dist/` finds nothing (the backstop for the `process.env` truthiness trap described under "Dependencies").
 4. The terminal is restored after normal quit, `Ctrl+Q`, handled signals, uncaught exceptions, and unhandled rejections.
 5. The README takes a new user from install to a working setup without reading source.
 

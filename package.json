@@ -1,0 +1,50 @@
+{
+  "name": "@im4all/personal-os-tui",
+  "version": "0.1.0",
+  "description": "Keyboard-first terminal UI for Personal OS, built on OpenTUI + React.",
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "pos": "bin/pos.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=26.4.0"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:prod": "tsdown --env.POS_MOCK_ENABLED=false",
+    "dev": "node --experimental-ffi --import tsx src/cli.tsx",
+    "dev:mock": "POS_MOCK=1 npm run dev",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "check:write": "biome check --write .",
+    "check:ffi": "node --experimental-ffi scripts/check-ffi.mjs",
+    "ci": "biome ci ."
+  },
+  "dependencies": {
+    "@opentui/core": "^0.5.12",
+    "@opentui/react": "^0.5.12",
+    "react": "^19.2.0",
+    "web-tree-sitter": "0.25.10",
+    "ws": "^8.18.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2",
+    "@types/node": "^24",
+    "@types/react": "^19.2",
+    "tsdown": "^0.10",
+    "tsx": "^4",
+    "typescript": "~5.8"
+  }
+}
