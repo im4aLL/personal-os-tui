@@ -6,7 +6,7 @@ This board is generated from `PLAN.md`, which is the source of truth for scope, 
 
 `status`: `not-started` | `in-progress` | `done`
 
-`type`: `bootstrap` (project init, dependencies, tooling config, license) | `milestone` (a feature UI built on mock data) | `gate` (explicit approval of a milestone before wiring) | `wiring` (swap the mock repository for real Turso)
+`type`: `bootstrap` (project init, dependencies, tooling config, license) | `milestone` (a feature UI built on mock data) | `gate` (explicit approval of a milestone before wiring) | `wiring` (swap the mock repository for real Turso) | `feature` (config- or runtime-driven behavior on real files, no mock or Turso)
 
 ## Delivery sequence
 
@@ -38,7 +38,8 @@ One feature at a time: UI, then gate, then wiring.
 23. [W7](W7-dashboard-wiring.md) - Dashboard wiring (wiring, dashboard, not-started)
 24. [M8](M8-cross-cutting-polish-ui.md) - Cross-cutting polish (UI) (milestone, polish, not-started)
 25. [G8](G8-polish-ui-approval.md) - Polish UI approval (gate, polish, not-started)
-26. [W8](W8-real-data-hardening.md) - Real-data hardening and end-to-end (wiring, hardening, not-started)
+26. [F1](F1-configurable-keymap.md) - Configurable keymap from the config file (feature, polish, not-started)
+27. [W8](W8-real-data-hardening.md) - Real-data hardening and end-to-end (wiring, hardening, not-started)
 
 ## Status board
 
@@ -71,6 +72,7 @@ One feature at a time: UI, then gate, then wiring.
 | [W7](W7-dashboard-wiring.md) | Dashboard wiring | wiring | dashboard |
 | [M8](M8-cross-cutting-polish-ui.md) | Cross-cutting polish (UI) | milestone | polish |
 | [G8](G8-polish-ui-approval.md) | Polish UI approval | gate | polish |
+| [F1](F1-configurable-keymap.md) | Configurable keymap from the config file | feature | polish |
 | [W8](W8-real-data-hardening.md) | Real-data hardening and end-to-end | wiring | hardening |
 
 ## in-progress
@@ -88,6 +90,7 @@ None yet.
 - B0 (project bootstrap) has no gate; it must be `done` before M0 starts.
 - A gate must be `done` before its wiring ticket starts.
 - A milestone's ticket stays open until its gate passes.
+- A `feature` ticket has no gate; it is reviewed in the end-to-end pass in W8.
 - Keep statuses in sync between the ticket frontmatter and this board.
 
 ## How to update

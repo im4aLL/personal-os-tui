@@ -58,10 +58,11 @@ Approved at [G8](G8-polish-ui-approval.md). Do not start the next ticket until G
 
 ## Deferred
 
-- User-configurable keybindings
 - Plugin slots
 - SSH serving
 - ASCII logo
+
+User-configurable keybindings are promoted to [F1](F1-configurable-keymap.md), which runs after G8.
 
 ## Notes
 

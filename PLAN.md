@@ -486,13 +486,14 @@ Delivery is sequential, one feature at a time: each feature's UI is built and ap
 | 7 | Project Planner | M6 | G6 | W6 | M0 |
 | 8 | Dashboard | M7 | G7 | W7 | M2-M6 |
 | 9 | Cross-cutting polish (command palette, help, theme picker, mock panel full) | M8 | G8 | n/a | M0-M7 |
-| 10 | Real-data hardening and end-to-end | W8 | - | - | W1-W7 |
+| 10 | Configurable keymap (config file) | F1 | - | n/a | G8 |
+| 11 | Real-data hardening and end-to-end | W8 | - | - | W1-W7, F1 |
 
-Notes on the table: the sequence is M0 -> G0 -> M1 -> G1 -> W1 -> M2 -> G2 -> W2 -> ... -> M7 -> G7 -> W7 -> M8 -> G8 -> W8. Work Log's UI is listed after Todo only by preference; neither depends on the other's UI, because Todo's "Add as work log" action only needs the `WorkLogRepo` interface, which exists from M0. Dashboard is last among screens because it aggregates all domains, and its UI only needs mock aggregates plus working navigation targets.
+Notes on the table: the sequence is M0 -> G0 -> M1 -> G1 -> W1 -> M2 -> G2 -> W2 -> ... -> M7 -> G7 -> W7 -> M8 -> G8 -> F1 -> W8. Work Log's UI is listed after Todo only by preference; neither depends on the other's UI, because Todo's "Add as work log" action only needs the `WorkLogRepo` interface, which exists from M0. Dashboard is last among screens because it aggregates all domains, and its UI only needs mock aggregates plus working navigation targets.
 
 ### Order flexibility provided by the seam
 
-- The chosen cadence is one feature at a time, so the default sequence is: M0, M1, W1, then M2/W2, M3/W3, M4/W4, M5/W5, M6/W6, M7/W7, then M8 and W8.
+- The chosen cadence is one feature at a time, so the default sequence is: M0, M1, W1, then M2/W2, M3/W3, M4/W4, M5/W5, M6/W6, M7/W7, then M8, G8, F1, and W8.
 - Because every cross-feature dependency is expressed through an interface, mock implementations satisfy all of them from M0, so the feature UIs have no hard ordering constraint beyond "the shell exists". If priorities change, features can be reordered without rework.
 - Dashboard stays last among screens because it aggregates every domain. A partial Dashboard can also be approved early with placeholder panels if desired.
 - Todo's "Add as work log" and Notes' "Add as todo" only need the corresponding repository interface, so they work in mock mode regardless of when those screens are approved or wired.
@@ -1240,7 +1241,27 @@ Adds `large` transforms per domain and a `slow` transform (3 s latency) purely t
 
 #### Deliberately deferred
 
-User-configurable keybindings, plugin slots, SSH serving, ASCII logo.
+Plugin slots, SSH serving, ASCII logo. (User-configurable keybindings are promoted to ticket F1.)
+
+---
+
+### Feature: Configurable keymap (F1)
+
+#### Outcome
+
+Users can override the app's key bindings from the config file on macOS, Linux, and Windows. Overrides apply only to the commands they name; every unlisted command keeps its default binding. The global handler, the command palette, and the help screen keep sharing one source of truth, so an override changes behavior and documentation together.
+
+#### File and format
+
+Read the override from the existing config location (`POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default, joined with `personal-os/`). Use either a `keymap` section in `config.json` or a sibling `personal-os/keymap.json`; the sibling file is preferred because `config.json` holds the Turso token at mode `0o600` while a keymap is not secret and is nicer to share. Bindings use the registry's `KeyBinding` shape (`name`, `ctrl`, `meta`, `shift`) keyed by command id, with a `version` field so a later rename cannot silently mis-map a user file. No new home-root dotfile.
+
+#### Merge and failure semantics
+
+Resolve effective bindings once at startup: replace the `keys` of every command id present in the file and leave all others as declared; an empty array clears a command deliberately. Unknown ids, malformed key names, and collisions are skipped and reported, never fatal, matching the advisory loose-permissions posture. `pos doctor` reports the keymap source and every skipped entry; the status line carries the ambient notice. `Command.hint` derives from `keys` via `formatKey` (or is removed) so an override never leaves a stale hint. Keys that bypass the registry today (palette navigation, the mock panel, Setup `d`, the quit-always `Ctrl+Q` filter) are out of scope for v1 and named in the README.
+
+#### Verification
+
+A config file remaps a command and the new key works while the old one stops; an unlisted command is unchanged; an invalid entry is skipped with a warning and the app still starts; help and the palette show the overridden keys; `pos doctor` reports the source; the README example works verbatim on macOS, Linux, and Windows.
 
 ---
 
