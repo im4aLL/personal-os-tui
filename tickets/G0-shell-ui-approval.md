@@ -2,7 +2,7 @@
 id: G0
 title: Shell UI approval
 type: gate
-status: not-started
+status: done
 phase: foundation
 order: 2
 depends_on: [M0]
@@ -11,7 +11,7 @@ approves: M0
 
 # G0 - Shell UI approval
 
-> Type: gate · Status: not-started · Phase: foundation
+> Type: gate · Status: done · Phase: foundation
 
 ## Purpose
 
@@ -39,5 +39,5 @@ Approve the shell UI ([M0](M0-skeleton-and-repo-seam.md)) before any feature scr
 
 ## On approval
 
-- [ ] Set this ticket to `done` ([M0](M0-skeleton-and-repo-seam.md) is already `done`)
-- [ ] Unblock the next ticket in the sequence.
+- [x] Set this ticket to `done` ([M0](M0-skeleton-and-repo-seam.md) is already `done`)
+- [x] Unblock the next ticket in the sequence.

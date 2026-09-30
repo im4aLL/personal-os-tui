@@ -43,7 +43,10 @@ export function Header(props: HeaderProps): ReactNode {
       <text fg={color(tokens.fg)}>{SCREEN_TITLES[props.screen]}</text>
       {repoMode === "mock" ? (
         <box backgroundColor={color(tokens.warning)} paddingLeft={1} paddingRight={1}>
-          <text fg={color(tokens.bg)}>{"MOCK DATA"}</text>
+          {/* Warning yellow is light in the dark variants (dark text reads)
+              but mid-tone in Latte (2.3:1 under near-white text), so the
+              light variant sets dark text for a 3:1 badge. */}
+          <text fg={color(theme.dark ? tokens.bg : tokens.fg)}>{"MOCK DATA"}</text>
         </box>
       ) : null}
       <box flexGrow={1}>

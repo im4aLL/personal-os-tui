@@ -160,7 +160,9 @@ function Shell(props: ShellProps): ReactNode {
       }
       if (key.name === "down" || (key.ctrl && key.name === "n")) {
         const count = Math.min(10, results.length);
-        state.setPaletteIndex(Math.min(count - 1, state.paletteIndex + 1));
+        // max(0, ...): with no matches count - 1 is -1, which must not leak
+        // into paletteIndex (Enter on -1 just closes; nothing highlights).
+        state.setPaletteIndex(Math.max(0, Math.min(count - 1, state.paletteIndex + 1)));
         return;
       }
       if (key.name === "up" || (key.ctrl && key.name === "p")) {

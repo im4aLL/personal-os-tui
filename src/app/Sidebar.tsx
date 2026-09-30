@@ -1,17 +1,7 @@
 import type { ReactNode } from "react";
 import { SCREEN_ORDER, SCREEN_SHORT_LABELS, SCREEN_TITLES } from "../store/ui";
-import type { Screen } from "../store/ui.types";
 import { useTheme } from "../theme/ThemeProvider";
 import type { SidebarProps } from "./Sidebar.types";
-
-const NAV_NUMBERS: Record<Screen, string> = {
-  dashboard: "1",
-  todo: "2",
-  links: "3",
-  projects: "4",
-  "work-log": "5",
-  notes: "6",
-};
 
 /** Fit a label into the 14 usable columns, truncating with ".." like the plan. */
 function fitLabel(label: string): string {
@@ -75,9 +65,6 @@ export function Sidebar(props: SidebarProps): ReactNode {
       </box>
       <box flexGrow={1}>
         <text fg={color(tokens.sidebarBg)}> </text>
-      </box>
-      <box paddingLeft={1} paddingBottom={1}>
-        <text fg={color(tokens.fgSubtle)}>{NAV_NUMBERS[props.screen]}</text>
       </box>
     </box>
   );
