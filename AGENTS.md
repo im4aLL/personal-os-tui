@@ -1,0 +1,4 @@
+- Relative imports are always extensionless (e.g. `from "./foo"`, `import("./mock/index")`); never use `.js` suffixes. tsconfig uses moduleResolution bundler.
+- Types live in `<name>.types.ts`, runtime in `<name>.ts`/`<name>.tsx`; never mix exported types/interfaces with runtime functions/consts/classes in one file.
+- Runtime files import types via `import type ... from "./<name>.types"`; `src/repos/types.ts` and `src/theme/types.ts` stay as shared types-only modules.
+- Preserve exported names and behavior when splitting; update all importers to the new `.types` path.

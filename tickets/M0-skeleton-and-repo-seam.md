@@ -60,7 +60,7 @@ gate: G0
 | `/` or `Ctrl+P` | Command palette |
 | `?` | Help and keymap |
 | `t` | Cycle theme (Latte, Frappe, Macchiato, Mocha) |
-| `Ctrl+B` | Toggle sidebar |
+| `Ctrl+\` | Toggle sidebar |
 | `Ctrl+Shift+D` | Mock state panel (latency, scenario, inject error, reset fixtures) |
 | `q` | Quit from normal browsing (ignored while a text field or the editor has focus) |
 | `Ctrl+Q` | Quit (always, including from modals and text fields) |
@@ -73,7 +73,7 @@ gate: G0
 - Loading: `Skeleton` blocks shown when `POS_MOCK_LATENCY` makes the mock resolve slowly.
 - Populated: not applicable at this milestone beyond the shell chrome.
 - Error: `POS_MOCK_SCENARIO=error` renders the shell-level error banner and status-line message.
-- Narrow: below 80 columns the sidebar collapses to a 2-character column; below 60 it hides and `Ctrl+B` is the only way back; the status line truncates hint segments rather than wrapping.
+- Narrow: below 80 columns the sidebar collapses to a 2-character column; below 60 it hides and `Ctrl+\` is the only way back; the status line truncates hint segments rather than wrapping.
 
 ## Files touched
 

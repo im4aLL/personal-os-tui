@@ -74,4 +74,4 @@ Deliberately omitted: `zod` (hand-written validators), `date-fns`, `react-markdo
 
 ## Status
 
-The bootstrap (B0) is complete and the dependency list is confirmed. `pos` gates the Node version, re-execs itself with `--experimental-ffi`, and runs the bundled entry; the entry itself is still a placeholder that prints `M0 shell is not implemented yet`. Feature screens land incrementally per `PLAN.md`, on mock data first and wired to Turso after each approval gate.
+The M0 shell is implemented: `pos` gates the Node version, re-execs itself with `--experimental-ffi`, and runs the bundled entry into a six-screen shell (Dashboard, Todo, Save Links, Project Planner, Work Log, Notes) with sidebar navigation, four theme variants, a command palette, a keymap help dialog, and a Setup screen until the config is complete. Without credentials it runs on in-memory mock data behind a MOCK DATA badge; `POS_MOCK_LATENCY` and `POS_MOCK_SCENARIO` shape loading and error states in dev builds, and the mock chunk is dropped from `build:prod`. Turso repos are stubbed and land per milestone in `PLAN.md`.
