@@ -41,7 +41,11 @@ export function Header(props: HeaderProps): ReactNode {
       flexGrow={1}
     >
       <text fg={color(tokens.fg)}>{SCREEN_TITLES[props.screen]}</text>
-      {repoMode === "mock" ? (
+      {/* Inline mock guard (not a shared const): the bundler folds it and
+          drops this branch - including the badge string - from production
+          builds. */}
+      {(typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) &&
+      repoMode === "mock" ? (
         <box backgroundColor={color(tokens.warning)} paddingLeft={1} paddingRight={1}>
           {/* Warning yellow is light in the dark variants (dark text reads)
               but mid-tone in Latte (2.3:1 under near-white text), so the

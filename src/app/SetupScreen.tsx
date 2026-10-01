@@ -337,16 +337,21 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       return;
     }
     if (key.name.length === 1) {
-      // Form-level typing: `d` demos on mock data (dev builds only), any
-      // other character jumps into the URL field carrying it.
+      // Form-level typing (Connect focused, or nothing focused - the URL and
+      // token fields own their keys otherwise): `d` demos on mock data (dev
+      // builds only), any other character jumps into the URL field carrying it.
+      // When `d` would not demo (turso mode, or production builds without the
+      // mock chunk), it falls through to URL typing like any other character
+      // instead of being swallowed.
       if (key.name.toLowerCase() === "d") {
-        if (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) {
-          if (repoMode === "mock") {
-            key.preventDefault();
-            demoWithMockData();
-          }
+        if (
+          (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) &&
+          repoMode === "mock"
+        ) {
+          key.preventDefault();
+          demoWithMockData();
+          return;
         }
-        return;
       }
       key.preventDefault();
       setUrl((current) => `${current}${key.sequence}`);
@@ -374,15 +379,23 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
     setToken((current) => `${current}${pasted}`);
   });
 
+  // Inline mock guard (not a shared const): the bundler folds it and drops
+  // this branch - including the badge string - from production builds.
   const mockBadge =
-    repoMode === "mock" ? (
+    (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) && repoMode === "mock" ? (
       <box backgroundColor={color(tokens.warning)} paddingLeft={1} paddingRight={1}>
         <text fg={color(theme.dark ? tokens.bg : tokens.fg)}>{"[MOCK DATA MODE]"}</text>
       </box>
     ) : null;
 
+  // Shown only when `d` would actually demo (Connect focused, or nothing
+  // focused): the URL `<input>` and the secure token field own `d` as typed
+  // input while focused, so an unconditional hint would advertise a shortcut
+  // that types a literal "d" instead.
   const demoHint =
-    (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) && repoMode === "mock" ? (
+    (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) &&
+    repoMode === "mock" &&
+    (focusedField === null || focusedField === FOCUS_CONNECT) ? (
       <text fg={color(tokens.fgSubtle)}>{"d  Demo data (dev only)"}</text>
     ) : null;
 

@@ -20,6 +20,10 @@ export async function getRepos(options: GetReposOptions): Promise<RepoBundle> {
     tursoFlag: options.tursoFlag,
     mockEnv: process.env.POS_MOCK,
     configComplete: loaded.complete,
+    // Build flag as a resolver input value (not a branch guard): the dynamic
+    // mock import below keeps its own inline `typeof` guard, which is what
+    // the bundler folds to drop the mock chunk in production builds.
+    mockAvailable: typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED,
   };
   const mode = resolveRepoMode(resolution);
   const reason = describeResolution(resolution, mode);

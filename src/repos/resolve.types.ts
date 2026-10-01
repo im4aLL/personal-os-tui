@@ -7,4 +7,9 @@ export interface RepoResolveInput {
   mockEnv: string | undefined;
   /** False when no config file exists, credentials are missing, or onboarding is incomplete. */
   configComplete: boolean;
+  /** False in production builds where the mock chunk is dropped
+   * (`POS_MOCK_ENABLED` is false). The automatic no-config fallback routes to
+   * turso there so first run still opens Setup; explicit mock requests still
+   * resolve to mock and fail loudly at the import boundary. */
+  mockAvailable: boolean;
 }

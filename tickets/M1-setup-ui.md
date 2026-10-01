@@ -24,7 +24,7 @@ The first-run experience is fully reviewable without a database: the connect for
 - [x] `src/repos/types.ts`: `SetupRepo.testConnection(url, token)` and `SetupRepo.applySchema()`, the two Setup operations that are not ordinary CRUD.
 - [x] `src/repos/mock/setup.ts`: mock `testConnection` succeeds when the URL starts with `https://` or `libsql://` and the token is at least 8 characters and not `bad`; mock `applySchema` reports 22 statements applied.
 - [x] `src/repos/mock/settings.ts`: mock `getProfile` and `saveProfile`.
-- [x] `src/repos/resolve.ts`: the "no config file, or config missing `turso.url`/`turso.token` -> mock" fallback, so first run opens on Setup with a fully browsable mock shell behind it.
+- [x] `src/repos/resolve.ts`: the "no config file, or config missing `turso.url`/`turso.token` -> dev builds mock, production turso (Setup still opens)" fallback, so first run opens on Setup with a fully browsable mock shell behind it in dev.
 - [x] Connect form with blank fields and `Connect` disabled until both fields are non-empty.
 - [x] Three-stage progress list (`SELECT 1`, applying schema, loading profile) resolving in sequence with mock latency.
 - [x] Inline failure panel with `r` retry and `e` edit credentials, keeping the entered URL visible.
@@ -95,7 +95,7 @@ Step 3 - profile (only when the database has no profile)
 - Loading: the three-stage progress list; each stage resolves in sequence with mock latency.
 - Populated: not applicable (Setup is a form flow).
 - Error: mock `testConnection` fails when the token is empty, equals `bad`, or the scenario is `error`; the inline error keeps the entered URL visible and offers retry.
-- Narrow: below 70 columns the form becomes single-column, the ASCII framing is dropped, and labels sit above fields; the token field truncates with a visible mask, never wrapping.
+- Narrow: below 70 columns the form stays single-column with labels above fields; no ASCII framing is rendered at any width (the box drawings above are schematic); the token field truncates with a visible mask, never wrapping.
 
 ## Files touched
 
@@ -144,3 +144,5 @@ Approved at [G1](G1-setup-ui-approval.md). Do not start the next ticket until G1
 - `getSetupRepo`/`SetupBundle` (`src/repos/index.ts`, `src/repos/index.types.ts`) are M0 seam code with no M1 consumer; left in place because they predate M1 (see `M0-skeleton-and-repo-seam.md`).
 - Production-drop claim, restated precisely (round-3 review L1): `dist/cli.js` has no mock chunk and no `Demo data`/`createFixtures`/`POS_MOCK_SCENARIO` strings; mock code is genuinely DCE'd. However `dist/cli.js.map` still embeds the original TypeScript via `sourcesContent`, so the dev-only demo hint survives in the map. `dist/` is gitignored and excluded from the uncommitted tree; the map policy (shipping `sourcesContent` in `build:prod`) is a build-config concern, not M1 behavior. Left for a build/packaging follow-up.
 - Token field cursor movement (round-3 review N2): the secure field supports only append and Backspace (arrows/Home/End/Delete/selection/Ctrl+U ignored, paste appends at the end). Fine for M1's short mock tokens; W1 should add at least a clear/select-all affordance for long real tokens.
+- Production first-run (G1 review H1): with the mock chunk dropped, the no-config fallback resolves to turso instead of mock, so a production build with no config still opens Setup (backed by the turso SetupRepo until W1 wires it) instead of exiting with "mock mode is not enabled". Explicit `--mock`/`POS_MOCK=1` in production still resolves to mock and fails loudly at the import boundary. Dev behavior is unchanged.
+- Header placeholder (G1 review N2): the session defaults `profileName` to Alex Johnson, so the header shows AJ behind Setup on a fresh run before any profile exists. Deliberate mock placeholder; W1 replaces it with the remote profile once settings are wired.

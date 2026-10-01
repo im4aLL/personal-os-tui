@@ -1,4 +1,7 @@
 // Pure mode resolver: flag > env > auto > turso. Evaluated once at bootstrap.
+// The auto fallback is build-aware via `mockAvailable`: development builds
+// fall back to mock, while production builds (mock chunk dropped) fall back
+// to turso so a missing config still routes to Setup (PLAN.md:22).
 import type { RepoMode, RepoResolveInput } from "./resolve.types";
 
 function parseMockEnv(raw: string | undefined): boolean | null {
@@ -27,7 +30,7 @@ export function resolveRepoMode(input: RepoResolveInput): RepoMode {
     return fromEnv ? "mock" : "turso";
   }
   if (!input.configComplete) {
-    return "mock";
+    return input.mockAvailable ? "mock" : "turso";
   }
   return "turso";
 }
@@ -44,7 +47,7 @@ export function describeResolution(input: RepoResolveInput, mode: RepoMode): str
     return `${mode} (POS_MOCK env)`;
   }
   if (!input.configComplete) {
-    return "mock (no config yet)";
+    return input.mockAvailable ? "mock (no config yet)" : "turso (no config yet)";
   }
   return "turso (config credentials)";
 }

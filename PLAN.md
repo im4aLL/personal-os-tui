@@ -79,7 +79,7 @@ Precedence, evaluated once at bootstrap in `src/repos/resolve.ts` (a pure functi
 
 1. `--mock` / `--turso` CLI flag.
 2. `POS_MOCK=1` / `POS_MOCK=0` environment variable.
-3. No config file, or config missing `turso.url`/`turso.token` -> `mock` (automatic fallback). The app still opens on the Setup screen, but the shell behind it is fully browsable in mock mode.
+3. No config file, or config missing `turso.url`/`turso.token` -> dev builds `mock`, production `turso` (automatic fallback; Setup still opens). The app still opens on the Setup screen, but the shell behind it is fully browsable in mock mode in dev.
 4. Otherwise -> `turso`.
 
 Deliberate exception: if config exists but Turso is unreachable, there is no silent fallback to mock. The app stays in an error state with a retry, because hiding a connectivity or credential failure behind fixtures would be misleading.

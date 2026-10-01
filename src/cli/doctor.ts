@@ -28,6 +28,7 @@ function repoInput(loaded: LoadedConfig): RepoResolveInput {
     tursoFlag: process.argv.includes("--turso"),
     mockEnv: process.env.POS_MOCK,
     configComplete: loaded.complete,
+    mockAvailable: typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED,
   };
 }
 
@@ -61,7 +62,7 @@ export async function runDoctor(): Promise<number> {
 
   const loaded = await loadConfig();
   if (loaded.config === null) {
-    lines.push(`INFO Config: ${loaded.path} (missing - first run, mock mode)`);
+    lines.push(`INFO Config: ${loaded.path} (missing - first run)`);
   } else {
     let perms = "mode 600";
     if (process.platform === "win32") {

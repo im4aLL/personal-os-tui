@@ -16,7 +16,7 @@ One feature at a time: UI, then gate, then wiring.
 1. [M0](M0-skeleton-and-repo-seam.md) - Skeleton, theme, shell, navigation, and the repository seam (milestone, foundation, done)
 2. [G0](G0-shell-ui-approval.md) - Shell UI approval (gate, foundation, done)
 3. [M1](M1-setup-ui.md) - Setup UI (mock connection) (milestone, setup, done)
-4. [G1](G1-setup-ui-approval.md) - Setup UI approval (gate, setup, not-started)
+4. [G1](G1-setup-ui-approval.md) - Setup UI approval (gate, setup, done)
 5. [W1](W1-setup-wiring.md) - Setup wiring (wiring, setup, not-started)
 6. [M2](M2-todo-ui.md) - Todo UI (milestone, todo, not-started)
 7. [G2](G2-todo-ui-approval.md) - Todo UI approval (gate, todo, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [G1](G1-setup-ui-approval.md) | Setup UI approval | gate | setup |
 | [W1](W1-setup-wiring.md) | Setup wiring | wiring | setup |
 | [M2](M2-todo-ui.md) | Todo UI | milestone | todo |
 | [G2](G2-todo-ui-approval.md) | Todo UI approval | gate | todo |
@@ -85,6 +84,7 @@ One feature at a time: UI, then gate, then wiring.
 | [M0](M0-skeleton-and-repo-seam.md) | Skeleton, theme, shell, navigation, and the repository seam | milestone | foundation |
 | [G0](G0-shell-ui-approval.md) | Shell UI approval | gate | foundation |
 | [M1](M1-setup-ui.md) | Setup UI (mock connection) | milestone | setup |
+| [G1](G1-setup-ui-approval.md) | Setup UI approval | gate | setup |
 
 ## Rules
 
