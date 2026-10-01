@@ -27,4 +27,10 @@ export const tursoNoteRepo: NoteRepo = {
   setPinned(_id: string, _pinned: boolean): Promise<void> {
     throw notWired("notes.setPinned");
   },
+  allTags(): Promise<string[]> {
+    throw notWired("notes.allTags");
+  },
+  setTags(_id: string, _tags: string[]): Promise<void> {
+    throw notWired("notes.setTags");
+  },
 };

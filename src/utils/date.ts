@@ -97,3 +97,38 @@ export function formatDueLabel(iso: string, completed: boolean): string {
   }
   return formatShortDate(iso);
 }
+
+/** Compact relative label for an ISO datetime: `Just now`, `12m ago`,
+ * `3h ago`, `Yesterday`, `Aug 12`, or `Aug 12, 2025` for another year.
+ * Falls back to the raw value when the input is not a valid date. */
+export function relativeTime(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) {
+    return iso;
+  }
+  const current = new Date();
+  const diff = current.getTime() - then.getTime();
+  const minutes = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  if (minutes < 1) {
+    return "Just now";
+  }
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (then.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+  const sameYear = then.getFullYear() === current.getFullYear();
+  return then.toLocaleDateString(
+    undefined,
+    sameYear
+      ? { month: "short", day: "numeric" }
+      : { month: "short", day: "numeric", year: "numeric" },
+  );
+}

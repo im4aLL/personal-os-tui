@@ -64,6 +64,7 @@ export interface Note {
   title: string;
   content: string;
   pinned: boolean;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +89,10 @@ export interface NoteRepo {
   update(id: string, input: UpdateNoteInput): Promise<void>;
   remove(id: string): Promise<void>;
   setPinned(id: string, pinned: boolean): Promise<void>;
+  /** Distinct tag names across all notes, sorted ascending. */
+  allTags(): Promise<string[]>;
+  /** Replace a note's full tag set (does not touch `updatedAt`). */
+  setTags(id: string, tags: string[]): Promise<void>;
 }
 
 export interface Link {

@@ -117,6 +117,12 @@ async function runApp(args: string[]): Promise<number> {
   // Repository seam: every domain store reads repos through this module.
   setRepos(bundle.repos);
   useUi.getState().setSidebarCollapsed(bundle.loaded.config?.ui.sidebarCollapsed ?? false);
+  // Seed the Notes preferences without going through the setters: those
+  // persist, and a bootstrap seed should not write the config back.
+  const uiPrefs = bundle.loaded.config?.ui;
+  useUi.setState({
+    notesPrivacyMode: uiPrefs?.notesPrivacyMode ?? false,
+  });
 
   if (bundle.mode === "turso") {
     const creds = effectiveCredentials(bundle.loaded);

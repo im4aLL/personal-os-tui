@@ -3,7 +3,7 @@ import { useSession } from "../store/session";
 import { useTheme } from "../theme/ThemeProvider";
 import { Header } from "./Header";
 import type { LayoutProps } from "./Layout.types";
-import { Sidebar } from "./Sidebar";
+import { SIDEBAR_WIDTH, Sidebar } from "./Sidebar";
 import { StatusLine } from "./StatusLine";
 
 /** Dev-only error-injection banner. The guard is inline (not a shared const)
@@ -31,7 +31,7 @@ export function Layout(props: LayoutProps): ReactNode {
   const tokens = theme.tokens;
   // The brand cell tracks the sidebar column below it: absent when the
   // sidebar is hidden, 2 columns over the 2-character rail, else full.
-  const sideWidth = props.sidebarHidden ? 0 : props.sidebarRail ? 2 : 18;
+  const sideWidth = props.sidebarHidden ? 0 : props.sidebarRail ? 2 : SIDEBAR_WIDTH;
 
   return (
     <box flexDirection="column" width="100%" height="100%" backgroundColor={color(tokens.bg)}>

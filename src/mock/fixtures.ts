@@ -1,12 +1,31 @@
 // Mock fixture set. Todos carry the full M2 review surface: 12 active todos
 // with mixed statuses, priorities, due dates (gappy positions), plus 3
-// archived todos with stale timestamps. Other domains stay minimal until their
-// feature tickets land.
+// archived todos with stale timestamps. Notes carry the full M3 surface: 14
+// notes (3 pinned, one untitled, a long markdown body, a single long line, 4
+// tagged, relative dates across today/yesterday/last week/last year).
 import { isoDateOffset } from "../utils/date";
 import type { Fixtures } from "./fixtures.types";
 
 function now(): string {
   return new Date().toISOString();
+}
+
+/** An ISO datetime `minutes` in the past. */
+function minutesAgo(minutes: number): string {
+  return new Date(Date.now() - minutes * 60_000).toISOString();
+}
+
+/** An ISO datetime `hours` in the past. */
+function hoursAgo(hours: number): string {
+  return minutesAgo(hours * 60);
+}
+
+/** An ISO datetime exactly a full day in the past. It is always on the previous
+ * local calendar day, so `relativeTime` renders "Yesterday" regardless of the
+ * current time of day (unlike a fixed wall-clock hour, which stays inside the
+ * `Nh ago` window until that hour passes). */
+function yesterdayStamp(): string {
+  return hoursAgo(24);
 }
 
 /** A date `days` before/after today at a fixed local time, as ISO datetime. */
@@ -16,6 +35,114 @@ function dayStamp(dayOffset: number, hour: number): string {
   date.setHours(hour, 0, 0, 0);
   return date.toISOString();
 }
+
+/** Long-form review fixture (~3,000 chars) covering every markdown construct
+ * the preview must render: headings, nested lists, a task list, two fenced
+ * code blocks, a table, a blockquote, an inline link, bold, and italic. */
+const LONG_MARKDOWN = [
+  "# Release checklist",
+  "",
+  "This note is a long-form review fixture for the Notes preview. It exercises",
+  "every markdown construct the editor must render: **bold**, *italic*, an",
+  "[inline link](https://opentui.com/docs), nested lists, a task list, two fenced",
+  "code blocks, a table, and a blockquote. It is intentionally long so the preview",
+  "scrolls and so wrapping can be reviewed.",
+  "",
+  "## Goals",
+  "",
+  "- Ship the release without surprises",
+  "  - Freeze the branch",
+  "  - Run the full test suite",
+  "  - Verify the migration applies cleanly",
+  "- Keep everyone informed",
+  "  - Post the plan in the channel",
+  "  - Update the changelog",
+  "",
+  "## Tasks",
+  "",
+  "- [x] Bump the version",
+  "- [ ] Tag the release",
+  "- [ ] Update the changelog",
+  "- [ ] Publish to npm",
+  "",
+  "## Build script",
+  "",
+  "```bash",
+  "#!/usr/bin/env bash",
+  "set -euo pipefail",
+  "npm run typecheck",
+  "npm run check",
+  "npm run build",
+  "npm publish --access public",
+  "```",
+  "",
+  "## Release helper",
+  "",
+  "```ts",
+  "export interface ReleasePlan {",
+  "  version: string;",
+  "  notes: string[];",
+  "}",
+  "",
+  "export function nextVersion(current: string): string {",
+  "  const parts = current.split('.').map(Number);",
+  "  const [major, minor, patch] = parts;",
+  "  // Patch releases are the default; minors are planned in advance.",
+  "  return String(major) + '.' + minor + '.' + (patch + 1);",
+  "}",
+  "```",
+  "",
+  "## Compatibility",
+  "",
+  "| Platform | Node | Status |",
+  "| --- | --- | --- |",
+  "| macOS | 26.4 | verified |",
+  "| Linux | 26.4 | verified |",
+  "| Windows | 26.4 | pending |",
+  "",
+  "> The release is only done when the changelog, the tag, and the published",
+  "> package all agree. Never skip the changelog.",
+  "",
+  "## Rollback",
+  "",
+  "If the published package is broken, unpublish within the first minutes, or",
+  "publish a patch release immediately. Communicate the rollback in the same",
+  "channel where the release was announced. Do not rewrite history that other",
+  "people may have already pulled.",
+  "",
+  "## Aftercare",
+  "",
+  "Watch the issue tracker for the first hour after publishing. Group incoming",
+  "reports by area (install, runtime, platform) and turn each confirmed defect",
+  "into a ticket with a reproduction. Capture the exact version and platform in",
+  "every report, because a report without a version is not actionable.",
+  "",
+  "## Communication",
+  "",
+  "Write the announcement before the release, not after. State the version, the",
+  "headline change, and any required action. Keep the tone plain and concrete.",
+  "Link to the changelog and to the migration notes when there is one. Avoid",
+  "marketing language in an engineering channel; people read it on a phone.",
+  "",
+  "## Follow-up",
+  "",
+  "Schedule a short review a week after the release. Ask three questions: did",
+  "anything break, did anything surprise us, and what should change next time.",
+  "Record the answers in the next retrospective so the process improves instead",
+  "of repeating. The point of a checklist is not the checklist itself but the",
+  "pause it creates before shipping.",
+  "",
+  "## Checklist discipline",
+  "",
+  "1. Read every line out loud before you start.",
+  "2. Mark each line only when it is truly done.",
+  "3. If a line is wrong, change the checklist first.",
+  "",
+  "A checklist that nobody reads is worse than no checklist at all, because it",
+  "creates the feeling of safety without the substance. Keep it short enough to",
+  "fit on one screen and revisit it after every release. Delete the lines that",
+  "never catch anything, and add a line only after a real failure.",
+].join("\n");
 
 export function createFixtures(): Fixtures {
   const stamp = now();
@@ -206,12 +333,191 @@ export function createFixtures(): Fixtures {
     ],
     notes: [
       {
-        id: "note-1",
-        title: "Welcome to Personal OS",
-        content: "This is mock data. Nothing here persists.",
+        id: "note-01",
+        title: "Release checklist",
+        content: [
+          "# Release checklist",
+          "",
+          "- [x] bump version",
+          "- [ ] tag the release",
+          "- [ ] update the changelog",
+          "",
+          "```bash",
+          "npm run release",
+          "```",
+        ].join("\n"),
+        pinned: true,
+        tags: ["work", "release"],
+        createdAt: dayStamp(-6, 9),
+        updatedAt: minutesAgo(2),
+      },
+      {
+        id: "note-02",
+        title: "Meeting notes",
+        content: [
+          "## Standup",
+          "",
+          "- Reviewed the mock seam",
+          "- Agreed on the list ordering: pinned first, then updated_at descending",
+          "- Next: wire the export path",
+        ].join("\n"),
         pinned: false,
-        createdAt: stamp,
-        updatedAt: stamp,
+        tags: ["work"],
+        createdAt: dayStamp(-4, 10),
+        updatedAt: hoursAgo(3),
+      },
+      {
+        id: "note-03",
+        title: "",
+        content:
+          "Quick capture before I forget: an untitled note should show its created-at date as the display title.",
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-1, 8),
+        updatedAt: minutesAgo(25),
+      },
+      {
+        id: "note-04",
+        title: "Long-form spec",
+        content: LONG_MARKDOWN,
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-12, 9),
+        updatedAt: hoursAgo(5),
+      },
+      {
+        id: "note-05",
+        title: "Reading list",
+        content: [
+          "- The Pragmatic Programmer",
+          "- Designing Data-Intensive Applications",
+          "- A Philosophy of Software Design",
+        ].join("\n"),
+        pinned: true,
+        tags: [],
+        createdAt: dayStamp(-20, 12),
+        updatedAt: yesterdayStamp(),
+      },
+      {
+        id: "note-06",
+        title: "Long line test",
+        content:
+          "ThisIsASingleVeryLongUnbrokenLineOfTextWithoutAnySpacesUsedToVerifyThatThePreviewAndTheEditorBothWrapOnCharacterBoundariesInsteadOfOverflowingOrScrollingHorizontallyAcrossTheWholeTerminalWindowAndItKeepsGoingForQuiteAWhileLongerThanAnyReasonableLine",
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-3, 10),
+        updatedAt: yesterdayStamp(),
+      },
+      {
+        id: "note-07",
+        title: "Ideas parking lot",
+        content: [
+          "- Command palette fuzzy matching",
+          "- A weekly review screen",
+          "- Keyboard macros for the planner",
+        ].join("\n"),
+        pinned: false,
+        tags: ["ideas"],
+        createdAt: dayStamp(-30, 11),
+        updatedAt: hoursAgo(24 * 7 + 5),
+      },
+      {
+        id: "note-08",
+        title: "Design review",
+        content:
+          "## Feedback\n\nThe two-pane proportion feels right. The saving indicator should sit near the actions, and privacy mode must keep a stable mask width.",
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-15, 14),
+        updatedAt: hoursAgo(24 * 9 + 3),
+      },
+      {
+        id: "note-09",
+        title: "Personal OS roadmap",
+        content: [
+          "# Roadmap",
+          "",
+          "1. Repo seam and shell",
+          "2. Todo",
+          "3. Notes",
+          "4. Save Links",
+          "5. Work Log",
+          "6. Project Planner",
+          "7. Dashboard",
+        ].join("\n"),
+        pinned: true,
+        tags: [],
+        createdAt: dayStamp(-40, 9),
+        updatedAt: hoursAgo(24 * 6 + 8),
+      },
+      {
+        id: "note-10",
+        title: "Clippings",
+        content:
+          "> Simplicity is a great virtue but it requires hard work to achieve it.\n\nRevisit this during the polish pass.",
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-25, 16),
+        updatedAt: hoursAgo(24 * 10 + 2),
+      },
+      {
+        id: "note-11",
+        title: "Retro notes",
+        content: [
+          "## What went well",
+          "",
+          "- Incremental delivery",
+          "- Small, reviewable diffs",
+          "",
+          "## What to improve",
+          "",
+          "- Fewer speculative abstractions",
+        ].join("\n"),
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-380, 10),
+        updatedAt: hoursAgo(24 * 370),
+      },
+      {
+        id: "note-12",
+        title: "Conference talk outline",
+        content: [
+          "# Terminal UIs that feel native",
+          "",
+          "- Why keyboard-first matters",
+          "- Layout and density",
+          "- Testing from the code",
+        ].join("\n"),
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-410, 15),
+        updatedAt: hoursAgo(24 * 400),
+      },
+      {
+        id: "note-13",
+        title: "Home maintenance",
+        content: [
+          "- Replace the furnace filter",
+          "- Service the bike",
+          "- Book the gutter cleaning",
+        ].join("\n"),
+        pinned: false,
+        tags: ["personal"],
+        createdAt: dayStamp(-14, 18),
+        updatedAt: hoursAgo(24 * 7 + 19),
+      },
+      {
+        id: "note-14",
+        title: "Questions for Dan",
+        content: [
+          "1. How do we handle token refresh?",
+          "2. What is the rollback plan?",
+          "3. Who owns the release?",
+        ].join("\n"),
+        pinned: false,
+        tags: [],
+        createdAt: dayStamp(-11, 13),
+        updatedAt: hoursAgo(24 * 5 + 12),
       },
     ],
     links: [],

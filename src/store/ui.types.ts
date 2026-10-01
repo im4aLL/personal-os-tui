@@ -6,6 +6,8 @@ export interface UiState {
   screen: Screen;
   modal: ModalKind;
   sidebarCollapsed: boolean;
+  /** When true, every note row except the selected one is masked. */
+  notesPrivacyMode: boolean;
   paletteQuery: string;
   paletteIndex: number;
   setupDismissed: boolean;
@@ -19,6 +21,7 @@ export interface UiState {
   closeModal: () => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  setNotesPrivacyMode: (enabled: boolean) => void;
   setPaletteQuery: (query: string) => void;
   setPaletteIndex: (index: number) => void;
   setFocusedField: (field: string | null) => void;

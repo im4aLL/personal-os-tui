@@ -10,14 +10,24 @@ export function TextArea(props: TextAreaProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const borderColor = props.focused ? tokens.borderFocus : tokens.border;
+  const bordered = props.bordered ?? true;
+  const fill = props.fill === true;
   return (
-    <box border={true} borderColor={color(borderColor)} paddingLeft={1} paddingRight={1}>
+    <box
+      border={bordered}
+      borderColor={bordered ? color(borderColor) : undefined}
+      paddingLeft={bordered ? 1 : 0}
+      paddingRight={bordered ? 1 : 0}
+      flexGrow={fill ? 1 : undefined}
+      flexShrink={fill ? 1 : undefined}
+      minHeight={fill ? 0 : undefined}
+    >
       <textarea
         ref={props.textareaRef}
         initialValue={props.initialValue ?? ""}
         focused={props.focused}
         placeholder={props.placeholder ?? ""}
-        height={props.height ?? 4}
+        height={fill ? "100%" : (props.height ?? 4)}
         backgroundColor={color(tokens.bgPanel)}
         focusedBackgroundColor={color(tokens.bgPanel)}
         textColor={color(tokens.fg)}

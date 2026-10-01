@@ -13,6 +13,7 @@ import type {
   EffectiveCredentials,
   LoadedConfig,
   TursoCredentials,
+  UiPreferences,
 } from "./config.types";
 
 export const CONFIG_DIR_NAME = "personal-os-tui";
@@ -136,7 +137,6 @@ export async function loadConfig(): Promise<LoadedConfig> {
  * temporary file next to the target, then renames it atomically, and sets
  * owner-only permissions (0o600 file, 0o700 directory). */
 export async function saveConfig(credentials: TursoCredentials): Promise<void> {
-  const path = configPath();
   const existing = await loadConfig();
   const base = existing.config ?? defaultConfig();
   const next: AppConfig = {
@@ -144,12 +144,46 @@ export async function saveConfig(credentials: TursoCredentials): Promise<void> {
     turso: { url: credentials.url, token: credentials.token },
     onboarding: { completed: true, completedAt: new Date().toISOString() },
   };
+  await writeConfigFile(next);
+}
 
+/** Serialized chain of UI-preference writes. Keeping it fulfilled after a
+ * failure lets later writes still run. */
+let uiWriteChain: Promise<void> = Promise.resolve();
+
+/** Merge a partial UI-preferences patch into the stored config and write it
+ * atomically. Preserves Turso credentials and onboarding state, so this never
+ * marks onboarding complete.
+ *
+ * Writes are serialized through a module-level promise chain: two quick patches
+ * must not both read the same pre-race config and then overwrite each other.
+ * Each queued write re-reads the config at write time, so it sees the previous
+ * queued write's result. */
+export function saveUiPreferences(patch: Partial<UiPreferences>): Promise<void> {
+  const run = async (): Promise<void> => {
+    const existing = await loadConfig();
+    const base = existing.config ?? defaultConfig();
+    const config: AppConfig = {
+      ...base,
+      ui: { ...base.ui, ...patch },
+    };
+    await writeConfigFile(config);
+  };
+  // Run on either settlement so a rejected predecessor cannot break the chain;
+  // callers receive `next` and handle the rejection themselves.
+  const next = uiWriteChain.then(run, run);
+  uiWriteChain = next.catch(() => {});
+  return next;
+}
+
+/** Atomic config write: tmp file next to the target, then rename. */
+async function writeConfigFile(config: AppConfig): Promise<void> {
+  const path = configPath();
   let tmp: string | null = null;
   try {
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
-    await writeFile(tmp, JSON.stringify(next, null, 2), { mode: 0o600 });
+    await writeFile(tmp, JSON.stringify(config, null, 2), { mode: 0o600 });
     await rename(tmp, path);
   } catch (error) {
     if (tmp !== null) {

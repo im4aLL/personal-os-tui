@@ -3,12 +3,18 @@ import { SCREEN_ORDER, SCREEN_SHORT_LABELS, SCREEN_TITLES } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import type { SidebarProps } from "./Sidebar.types";
 
-/** Fit a label into the 14 usable columns, truncating with ".." like the plan. */
+/** Full sidebar column width; the brand cell in Layout tracks this value. */
+export const SIDEBAR_WIDTH = 22;
+
+/** Fit a label into the usable columns (width minus 2 cells of padding and the
+ * 2-character active prefix), truncating with ".." like the plan. */
+const LABEL_WIDTH = SIDEBAR_WIDTH - 4;
+
 function fitLabel(label: string): string {
-  if (label.length <= 14) {
+  if (label.length <= LABEL_WIDTH) {
     return label;
   }
-  return `${label.slice(0, 12)}..`;
+  return `${label.slice(0, LABEL_WIDTH - 2)}..`;
 }
 
 export function Sidebar(props: SidebarProps): ReactNode {
@@ -41,7 +47,7 @@ export function Sidebar(props: SidebarProps): ReactNode {
     <box
       flexDirection="column"
       backgroundColor={color(tokens.sidebarBg)}
-      width={18}
+      width={SIDEBAR_WIDTH}
       paddingTop={1}
       flexShrink={0}
     >

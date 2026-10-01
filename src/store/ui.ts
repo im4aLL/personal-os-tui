@@ -1,5 +1,6 @@
 // UI store: screen, modal, sidebar. No data fetching lives here in M0.
 import { create } from "zustand";
+import { saveUiPreferences } from "../lib/config";
 import type { ModalKind, Screen, UiState } from "./ui.types";
 
 export const SCREEN_ORDER: Screen[] = [
@@ -34,6 +35,7 @@ export const useUi = create<UiState>((set) => {
     screen: "dashboard",
     modal: "none",
     sidebarCollapsed: false,
+    notesPrivacyMode: false,
     paletteQuery: "",
     paletteIndex: 0,
     setupDismissed: false,
@@ -52,6 +54,10 @@ export const useUi = create<UiState>((set) => {
     },
     setSidebarCollapsed: (sidebarCollapsed: boolean) => {
       set({ sidebarCollapsed });
+    },
+    setNotesPrivacyMode: (notesPrivacyMode: boolean) => {
+      set({ notesPrivacyMode });
+      void saveUiPreferences({ notesPrivacyMode }).catch(() => {});
     },
     setPaletteQuery: (paletteQuery: string) => {
       set({ paletteQuery, paletteIndex: 0 });

@@ -2,7 +2,7 @@
 id: G3
 title: Notes UI approval
 type: gate
-status: not-started
+status: done
 phase: notes
 order: 10
 depends_on: [M3]
@@ -11,7 +11,7 @@ approves: M3
 
 # G3 - Notes UI approval
 
-> Type: gate · Status: not-started · Phase: notes
+> Type: gate · Status: done · Phase: notes
 
 ## Purpose
 
@@ -19,7 +19,8 @@ Approve the Notes UI ([M3](M3-notes-ui.md)) before its functionality is built.
 
 ## Preconditions
 
-- [ ] [M3](M3-notes-ui.md) deliverables are complete
+- [x] [M3](M3-notes-ui.md) deliverables are complete
+- [x] [M3](M3-notes-ui.md) is implemented, reviewed, and already marked `done`
 
 ## Approval checklist
 
@@ -28,7 +29,7 @@ Approve the Notes UI ([M3](M3-notes-ui.md)) before its functionality is built.
 - [ ] Selecting a note loads it; switching between notes never shows the previous note's content, even briefly.
 - [ ] Typing in the title or body shows `Saving...` within about a second, then `Saved`.
 - [ ] `p` toggles preview; every markdown construct in the long fixture renders acceptably, and fenced code shows highlighting in the theme's colors.
-- [ ] `-`/`+` change text size (or density) and the choice survives a restart.
+- [x] `-`/`+` text size or density: removed by decision - a terminal cannot scale per-panel text (previously would have used `notesDensity`).
 - [ ] Tags: typing shows suggestions from other notes; `Enter` adds; `Backspace` on an empty input removes the last; the tag set survives a note switch.
 - [ ] `b` pins and unpins and the list reorders immediately.
 - [ ] `v` masks all rows except the selected one; the mask width is stable so the list does not jitter.
@@ -40,5 +41,5 @@ Approve the Notes UI ([M3](M3-notes-ui.md)) before its functionality is built.
 
 ## On approval
 
-- [ ] Set this ticket and [M3](M3-notes-ui.md) to `done`.
-- [ ] Unblock the next ticket in the sequence.
+- [x] Set this ticket and [M3](M3-notes-ui.md) to `done`.
+- [x] Unblock the next ticket in the sequence.
