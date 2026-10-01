@@ -2,7 +2,7 @@
 id: M2
 title: Todo UI
 type: milestone
-status: not-started
+status: done
 phase: todo
 order: 6
 depends_on: [W1]
@@ -11,7 +11,7 @@ gate: G2
 
 # M2 - Todo UI
 
-> Type: milestone · Status: not-started · Phase: todo
+> Type: milestone · Status: done · Phase: todo
 
 ## Objective
 
@@ -19,23 +19,23 @@ The full Todo screen on fixtures: three columns, selection, search, create/edit/
 
 ## Deliverables
 
-- [ ] `src/screens/TodoScreen.tsx` with the three-column Kanban layout (Todo, In Progress, Completed) and accurate counts in the column headers.
-- [ ] `src/components/todos/KanbanColumn.tsx` and `TodoRow.tsx` with priority badges (`high` danger, `medium` peach, `low` blue) and due-date badges that turn danger when overdue.
-- [ ] `src/components/todos/TodoForm.tsx` for create and edit, opening with the focused column's default status and pre-filling every field on edit, including priority and due date.
-- [ ] `src/components/todos/ArchivedTodosDialog.tsx` with list, restore, restore all, and permanent delete.
-- [ ] Selection and movement: `j`/`k`, `g`/`G`, `Ctrl+D`/`Ctrl+U`, and `h`/`l` column movement.
-- [ ] Status changes: `m` cycles forward (todo -> in progress -> completed -> todo); `H`/`L` moves across columns; both update visible counts immediately.
-- [ ] Reordering within a column with `K`/`J`, keeping the moved item under the cursor.
-- [ ] Delete with confirmation (`d`), archive all completed with confirmation (`A`), and destructive clear all completed (`X`).
-- [ ] Case-insensitive search over title and description with `/`, cleared with `Esc`.
-- [ ] "Add as work log" (`w`) on completed items, creating a mock work log; the action is absent for non-completed items.
-- [ ] Empty states per column, plus the single centered empty state with the hint `n to add your first todo`.
-- [ ] Loading skeletons matching the desktop's three-column skeleton layout.
-- [ ] Error banner above the columns under `POS_MOCK_SCENARIO=error` with a retry hint, retaining whatever data was already loaded.
-- [ ] Form validation for an empty title, plus the saving state on `Enter`.
-- [ ] Narrow (below 100 columns): single-column mode with a column tab strip; below 70: badges move to a second line to avoid truncating titles.
-- [ ] Fixtures: 12 active todos (at least 4 `todo`, 3 `in_progress`, 3 `completed`, plus 2 more to force column scrolling), at least 2 overdue, 2 due today, 2 future, all priorities plus 2 with `priority: null`, one long title, one long description, and 2 completed; 3 archived todos with stale `updated_at`; positions intentionally gappy (0, 1, 5, 6).
-- [ ] Scenario transforms: `empty` (all arrays empty), `loading` (1500 ms latency), `large` (150 todos), `error` (every mutation rejects).
+- [x] `src/screens/TodoScreen.tsx` with the three-column Kanban layout (Todo, In Progress, Completed) and accurate counts in the column headers.
+- [x] `src/components/todos/KanbanColumn.tsx` and `TodoRow.tsx` with priority badges (`high` danger, `medium` peach, `low` blue) and due-date badges that turn danger when overdue.
+- [x] `src/components/todos/TodoForm.tsx` for create and edit, opening with the focused column's default status and pre-filling every field on edit, including priority and due date.
+- [x] `src/components/todos/ArchivedTodosDialog.tsx` with list, restore, restore all, and permanent delete.
+- [x] Selection and movement: `j`/`k`, `g`/`G`, `Ctrl+D`/`Ctrl+U`, and `h`/`l` column movement.
+- [x] Status changes: `m` cycles forward (todo -> in progress -> completed -> todo); `H`/`L` moves across columns; both update visible counts immediately.
+- [x] Reordering within a column with `K`/`J`, keeping the moved item under the cursor.
+- [x] Delete with confirmation (`d`), archive all completed with confirmation (`A`), and destructive clear all completed (`X`).
+- [x] Case-insensitive search over title and description with `/`, cleared with `Esc`.
+- [x] "Add as work log" (`w`) on completed items, creating a mock work log; the action is absent for non-completed items.
+- [x] Empty states per column, plus the single centered empty state with the hint `n to add your first todo`.
+- [x] Loading skeletons matching the desktop's three-column skeleton layout.
+- [x] Error banner above the columns under `POS_MOCK_SCENARIO=error` with a retry hint, retaining whatever data was already loaded.
+- [x] Form validation for an empty title, plus the saving state on `Enter`.
+- [x] Narrow (below 100 columns): single-column mode with a column tab strip; below 70: badges move to a second line to avoid truncating titles.
+- [x] Fixtures: 12 active todos (at least 4 `todo`, 3 `in_progress`, 3 `completed`, plus 2 more to force column scrolling), at least 2 overdue, 2 due today, 2 future, all priorities plus 2 with `priority: null`, one long title, one long description, and 2 completed; 3 archived todos with stale `updated_at`; positions intentionally gappy (0, 1, 5, 6).
+- [x] Scenario transforms: `empty` (all arrays empty), `loading` (1500 ms latency), `large` (150 todos), `error` (every mutation rejects).
 
 ## Design notes
 
@@ -127,3 +127,11 @@ Approved at [G2](G2-todo-ui-approval.md). Do not start the next ticket until G2 
 ## Notes
 
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- No automated tests: this repo uses manual verification and approval checklists instead (`PLAN.md`). M2 was verified with `typecheck`, biome, `build`, `build:prod`, an internal code review, and pty smoke checks; the interactive checklist above still gates G2.
+- `TagInput` was not built: Todo has no tags, so no tag control is needed (AGENTS: use OpenTUI primitives, add a custom component only when one is missing and needed). The other M2 UI additions (ConfirmDialog, TextArea, Select, DateField) landed.
+- The repo `Todo` model gained `description: string | null` and `priority: TodoPriority | null` to match the desktop schema and the M2 fixtures (search over description, 2 null priorities, one long description). W2 maps the remaining field names at the Turso boundary.
+- Screen keys are resolved through a small `useKeyboardScope` seam: `App` consults the active screen scope before its global registry, so screen keys win without depending on React listener ordering. On the Todo screen this makes `Ctrl+D` page down instead of opening the mock panel; `Ctrl+Shift+D` still reaches the mock panel where the terminal reports shift. On terminals that report `Ctrl+Shift+D` as plain `Ctrl+D` (see M0), the panel is unreachable from the Todo screen by design.
+- `w` ("Add as work log") is present only for completed items: the key is inert elsewhere and the footer hint advertises it only when a completed item is selected, per the deliverable that the action is absent for non-completed items.
+- The `large` scenario renders 150 todos by cloning fixture rows with suffixed ids (`<id>-large-<n>`). Cloned ids map back to no source row, so mutations on a clone reject with "mock todo not found"; `large` is a read-only scrolling/verification mode (documented in `src/repos/mock/todos.ts`).
+- `K`/`J` reorder and `A`/`X` archive/clear operate on the current (search-filtered) view; `m`/`H`/`L` position writes use the unfiltered column order so persisted positions stay a complete contiguous range. The `A`/`X` confirm body states the search scope.
+- Deferred, unchanged: mouse drag, multi-select, batch operations beyond archive/clear (see Deferred above).
