@@ -29,7 +29,7 @@ One feature at a time: UI, then gate, then wiring.
 14. [W4](W4-links-wiring.md) - Links wiring (wiring, links, done)
 15. [M5](M5-work-log-ui.md) - Work Log UI (milestone, work-log, done)
 16. [G5](G5-work-log-ui-approval.md) - Work Log UI approval (gate, work-log, done)
-17. [W5](W5-work-log-wiring.md) - Work Log wiring (wiring, work-log, not-started)
+17. [W5](W5-work-log-wiring.md) - Work Log wiring (wiring, work-log, done)
 18. [M6](M6-project-planner-ui.md) - Project Planner UI (milestone, projects, not-started)
 19. [G6](G6-project-planner-ui-approval.md) - Project Planner UI approval (gate, projects, not-started)
 20. [W6](W6-project-planner-wiring.md) - Project Planner wiring (wiring, projects, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [W5](W5-work-log-wiring.md) | Work Log wiring | wiring | work-log |
 | [M6](M6-project-planner-ui.md) | Project Planner UI | milestone | projects |
 | [G6](G6-project-planner-ui-approval.md) | Project Planner UI approval | gate | projects |
 | [W6](W6-project-planner-wiring.md) | Project Planner wiring | wiring | projects |
@@ -85,6 +84,7 @@ One feature at a time: UI, then gate, then wiring.
 | [W4](W4-links-wiring.md) | Links wiring | wiring | links |
 | [M5](M5-work-log-ui.md) | Work Log UI | milestone | work-log |
 | [G5](G5-work-log-ui-approval.md) | Work Log UI approval | gate | work-log |
+| [W5](W5-work-log-wiring.md) | Work Log wiring | wiring | work-log |
 
 ## Rules
 
