@@ -10,6 +10,10 @@ export interface SessionState {
   configComplete: boolean;
   fromEnv: boolean;
   loosePermissions: boolean;
+  /** Bootstrap connectivity probe for the header dot, not live per-request
+   * health: null = unknown (probe skipped or timed out), true = reachable at
+   * bootstrap, false = bootstrap probe failed. Mock mode ignores it. */
+  connectionOk: boolean | null;
   scenario: MockScenario;
   scenarios: MockScenario[];
   latencyMs: number;
@@ -17,6 +21,8 @@ export interface SessionState {
   resetMockData: (() => void) | null;
   cycleTheme: () => void;
   setProfileName: (name: string) => void;
+  setConfigComplete: (complete: boolean) => void;
+  setConnectionOk: (ok: boolean | null) => void;
   setScenario: (scenario: MockScenario) => void;
   setLatencyMs: (ms: number) => void;
 }

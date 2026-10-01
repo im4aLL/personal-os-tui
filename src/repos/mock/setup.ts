@@ -9,19 +9,19 @@ export const mockSetupRepo: SetupRepo = {
     return mockCall(() => {
       const trimmedUrl = url.trim();
       if (!trimmedUrl.startsWith("https://") && !trimmedUrl.startsWith("libsql://")) {
-        return { ok: false, error: "URL must start with https:// or libsql://" };
+        return { ok: false, error: "URL must start with https:// or libsql://", kind: "other" };
       }
       if (token.length < 8 || token === "bad") {
         // `token === "bad"` is already covered by the length check (bad is 3
         // characters); it is kept for spec fidelity because the ticket names
         // `bad` explicitly as the failure token.
-        return { ok: false, error: "Turso HTTP 401: unauthorized" };
+        return { ok: false, error: "Turso HTTP 401: unauthorized", kind: "credentials" };
       }
       return { ok: true };
     });
   },
 
   applySchema(): Promise<ApplySchemaResult> {
-    return mockCall(() => ({ applied: 22 }));
+    return mockCall(() => ({ applied: 28, ensured: 28 }));
   },
 };

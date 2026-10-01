@@ -13,6 +13,6 @@ export type ConnectStageState = "pending" | "active" | "done";
 export interface ConnectStage {
   label: string;
   state: ConnectStageState;
-  /** Extra detail shown once the stage resolves (e.g. statements applied). */
+  /** Extra detail shown once the stage resolves (e.g. "N applied, M ensured"). */
   detail?: string;
 }

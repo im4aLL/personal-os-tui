@@ -17,7 +17,7 @@ One feature at a time: UI, then gate, then wiring.
 2. [G0](G0-shell-ui-approval.md) - Shell UI approval (gate, foundation, done)
 3. [M1](M1-setup-ui.md) - Setup UI (mock connection) (milestone, setup, done)
 4. [G1](G1-setup-ui-approval.md) - Setup UI approval (gate, setup, done)
-5. [W1](W1-setup-wiring.md) - Setup wiring (wiring, setup, not-started)
+5. [W1](W1-setup-wiring.md) - Setup wiring (wiring, setup, done)
 6. [M2](M2-todo-ui.md) - Todo UI (milestone, todo, not-started)
 7. [G2](G2-todo-ui-approval.md) - Todo UI approval (gate, todo, not-started)
 8. [W2](W2-todo-wiring.md) - Todo wiring (wiring, todo, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [W1](W1-setup-wiring.md) | Setup wiring | wiring | setup |
 | [M2](M2-todo-ui.md) | Todo UI | milestone | todo |
 | [G2](G2-todo-ui-approval.md) | Todo UI approval | gate | todo |
 | [W2](W2-todo-wiring.md) | Todo wiring | wiring | todo |
@@ -85,6 +84,7 @@ One feature at a time: UI, then gate, then wiring.
 | [G0](G0-shell-ui-approval.md) | Shell UI approval | gate | foundation |
 | [M1](M1-setup-ui.md) | Setup UI (mock connection) | milestone | setup |
 | [G1](G1-setup-ui-approval.md) | Setup UI approval | gate | setup |
+| [W1](W1-setup-wiring.md) | Setup wiring | wiring | setup |
 
 ## Rules
 

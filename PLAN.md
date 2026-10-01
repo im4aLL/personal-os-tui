@@ -195,7 +195,7 @@ Pure helpers copied verbatim: `week-utils.ts`, `week-groups.ts`, `project-progre
 
 ### Config file
 
-Location: `POS_CONFIG_DIR`, else `XDG_CONFIG_HOME`, else platform default (`~/.config`, or `%APPDATA%` on Windows), joined with `personal-os/config.json`.
+Location: `POS_CONFIG_DIR`, else `XDG_CONFIG_HOME`, else platform default (`~/.config`, or `%APPDATA%` on Windows), joined with `personal-os-tui/config.json`. The directory is named for the package, not the product, so it cannot be confused with the desktop app's identifier-based Tauri directory (`com.hadi.personal-os`).
 
 ```json
 {
@@ -1261,7 +1261,7 @@ Users can override the app's key bindings from the config file on macOS, Linux, 
 
 #### File and format
 
-Read the override from the existing config location (`POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default, joined with `personal-os/`). Use either a `keymap` section in `config.json` or a sibling `personal-os/keymap.json`; the sibling file is preferred because `config.json` holds the Turso token at mode `0o600` while a keymap is not secret and is nicer to share. Bindings use the registry's `KeyBinding` shape (`name`, `ctrl`, `meta`, `shift`) keyed by command id, with a `version` field so a later rename cannot silently mis-map a user file. No new home-root dotfile.
+Read the override from the existing config location (`POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default, joined with `personal-os-tui/`). The override lives in a sibling `personal-os-tui/keymap.json`, not in `config.json`: `config.json` holds the Turso token at mode `0o600` and is rebuilt from a typed schema on every save, so a `keymap` section there would inherit secret handling and be dropped by the credential write path, while a keymap is not secret and is nicer to share. Bindings use the registry's `KeyBinding` shape (`name`, `ctrl`, `meta`, `shift`) keyed by command id, with a `version` field so a later rename cannot silently mis-map a user file. No new home-root dotfile.
 
 #### Merge and failure semantics
 

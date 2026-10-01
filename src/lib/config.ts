@@ -1,15 +1,21 @@
 // Config file read path (M0). Write path arrives with Setup wiring (W1).
 //
 // Location precedence: POS_CONFIG_DIR > XDG_CONFIG_HOME > platform default
-// (~/.config, or %APPDATA% on Windows), joined with personal-os/config.json.
+// (~/.config, or %APPDATA% on Windows), joined with personal-os-tui/config.json.
 //
 // POS_TURSO_URL / POS_TURSO_TOKEN override the file and are never persisted.
 // The token is redacted in every error message and log line.
+import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
-import type { AppConfig, EffectiveCredentials, LoadedConfig } from "./config.types";
+import { dirname, join } from "node:path";
+import type {
+  AppConfig,
+  EffectiveCredentials,
+  LoadedConfig,
+  TursoCredentials,
+} from "./config.types";
 
-export const CONFIG_DIR_NAME = "personal-os";
+export const CONFIG_DIR_NAME = "personal-os-tui";
 export const CONFIG_FILE_NAME = "config.json";
 
 export function configDir(): string {
@@ -76,7 +82,6 @@ export async function loadConfig(): Promise<LoadedConfig> {
   let loosePermissions = false;
 
   try {
-    const { readFile, stat } = await import("node:fs/promises");
     const raw = await readFile(path, "utf8");
     const parsed = JSON.parse(raw) as Partial<AppConfig>;
     const base = defaultConfig();
@@ -125,6 +130,37 @@ export async function loadConfig(): Promise<LoadedConfig> {
   const complete = url !== "" && token !== "" && config?.onboarding.completed === true;
 
   return { config, path, complete, loosePermissions, fromEnv };
+}
+
+/** Write config with the given credentials and onboarding completed. Writes a
+ * temporary file next to the target, then renames it atomically, and sets
+ * owner-only permissions (0o600 file, 0o700 directory). */
+export async function saveConfig(credentials: TursoCredentials): Promise<void> {
+  const path = configPath();
+  const existing = await loadConfig();
+  const base = existing.config ?? defaultConfig();
+  const next: AppConfig = {
+    ...base,
+    turso: { url: credentials.url, token: credentials.token },
+    onboarding: { completed: true, completedAt: new Date().toISOString() },
+  };
+
+  let tmp: string | null = null;
+  try {
+    await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+    tmp = `${path}.tmp-${process.pid}-${Date.now()}`;
+    await writeFile(tmp, JSON.stringify(next, null, 2), { mode: 0o600 });
+    await rename(tmp, path);
+  } catch (error) {
+    if (tmp !== null) {
+      try {
+        await unlink(tmp);
+      } catch {
+        // Best-effort cleanup; do not mask the original write error.
+      }
+    }
+    throw error;
+  }
 }
 
 /** Effective credentials with the source recorded; the token must be redacted before logging. */

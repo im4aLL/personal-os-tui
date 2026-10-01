@@ -1,21 +1,26 @@
-// Turso stub (M0). Throws until the Setup wiring milestone lands.
+// Real SettingsRepo: remote profile read/write through app_settings.
+import {
+  getProfile,
+  getSetting,
+  saveProfile as saveRemoteProfile,
+  setSetting,
+} from "../../lib/settings";
 import type { Profile, SettingsRepo } from "../types";
 
-function notWired(what: string): Error {
-  return new Error(`turso ${what} is not wired yet`);
-}
-
 export const tursoSettingsRepo: SettingsRepo = {
-  getSetting(_key: string): Promise<string | null> {
-    throw notWired("settings.getSetting");
+  async getSetting(key: string): Promise<string | null> {
+    return getSetting(key);
   },
-  setSetting(_key: string, _value: string): Promise<void> {
-    throw notWired("settings.setSetting");
+
+  async setSetting(key: string, value: string): Promise<void> {
+    await setSetting(key, value);
   },
-  getProfile(): Promise<Profile | null> {
-    throw notWired("settings.getProfile");
+
+  async getProfile(): Promise<Profile | null> {
+    return getProfile();
   },
-  saveProfile(_profile: Profile): Promise<void> {
-    throw notWired("settings.saveProfile");
+
+  async saveProfile(profile: Profile): Promise<void> {
+    await saveRemoteProfile(profile);
   },
 };

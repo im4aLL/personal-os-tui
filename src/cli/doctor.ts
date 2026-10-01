@@ -1,6 +1,7 @@
 // `pos doctor`: text diagnostics, printed without touching the terminal UI.
 import { effectiveCredentials, loadConfig, redactToken } from "../lib/config";
 import type { LoadedConfig } from "../lib/config.types";
+import { clearTursoConfig, setTursoConfig, tursoSelect } from "../lib/turso";
 import { describeResolution, resolveRepoMode } from "../repos/resolve";
 import type { RepoResolveInput } from "../repos/resolve.types";
 import type { FfiProbeResult } from "./doctor.types";
@@ -84,7 +85,23 @@ export async function runDoctor(): Promise<number> {
   const mode = resolveRepoMode(input);
   const reason = describeResolution(input, mode);
   lines.push(`INFO Repo mode: ${reason}`);
-  lines.push("INFO Turso SELECT 1: skipped (not wired yet in M0)");
+
+  const creds = effectiveCredentials(loaded);
+  if (creds.url === "" || creds.token === "") {
+    lines.push("INFO Turso SELECT 1: skipped (credentials not set)");
+  } else {
+    setTursoConfig({ url: creds.url, token: creds.token });
+    try {
+      await tursoSelect("SELECT 1");
+      lines.push("OK   Turso SELECT 1");
+    } catch (error) {
+      healthy = false;
+      const message = error instanceof Error ? error.message : String(error);
+      lines.push(`FAIL Turso SELECT 1: ${message}`);
+    } finally {
+      clearTursoConfig();
+    }
+  }
 
   console.log(lines.join("\n"));
   return healthy ? 0 : 1;

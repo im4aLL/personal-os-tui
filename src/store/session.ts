@@ -20,6 +20,7 @@ export const useSession = create<SessionState>((set, get) => {
     configComplete: false,
     fromEnv: false,
     loosePermissions: false,
+    connectionOk: null,
     scenario: "default",
     scenarios: [],
     latencyMs: 0,
@@ -30,6 +31,12 @@ export const useSession = create<SessionState>((set, get) => {
     },
     setProfileName: (profileName: string) => {
       set({ profileName });
+    },
+    setConfigComplete: (configComplete: boolean) => {
+      set({ configComplete });
+    },
+    setConnectionOk: (connectionOk: boolean | null) => {
+      set({ connectionOk });
     },
     setScenario: (scenario: MockScenario) => {
       const api = get().mockUi;

@@ -21,13 +21,24 @@ export function Header(props: HeaderProps): ReactNode {
   const repoMode = useSession((state) => state.repoMode);
   const profileName = useSession((state) => state.profileName);
   const scenario = useSession((state) => state.scenario);
+  const connectionOk = useSession((state) => state.connectionOk);
   const { width } = useTerminalDimensions();
   const compact = width < 80;
   // Mock mode is backed by in-memory fixtures, so it can honestly report ok.
-  // Turso repos are `not wired yet` stubs until W1, so the dot reports stub.
+  // Turso mode shows the one-shot bootstrap connectivity probe only, not live
+  // per-request health: null (skipped or timed out) shows stub, a successful
+  // probe shows ok, a failed probe shows error.
   const mockError = repoMode === "mock" && scenario === "error";
   const connectionTone: ConnectionDotTone =
-    repoMode === "mock" ? (mockError ? "error" : "ok") : "stub";
+    repoMode === "mock"
+      ? mockError
+        ? "error"
+        : "ok"
+      : connectionOk === null
+        ? "stub"
+        : connectionOk
+          ? "ok"
+          : "error";
   const connectionLabel = connectionTone;
 
   return (

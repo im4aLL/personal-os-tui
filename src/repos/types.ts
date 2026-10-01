@@ -203,10 +203,12 @@ export interface SettingsRepo {
 export interface ConnectionTestResult {
   ok: boolean;
   error?: string;
+  kind?: "credentials" | "network" | "other";
 }
 
 export interface ApplySchemaResult {
   applied: number;
+  ensured?: number;
 }
 
 export interface SetupRepo {

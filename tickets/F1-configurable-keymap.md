@@ -14,11 +14,11 @@ depends_on: [G8]
 
 ## Objective
 
-Users can override the app's key bindings from a config file on macOS, Linux, and Windows. Overrides apply only to the commands they name; every unlisted command keeps its default binding. The global handler, the command palette, and the help screen keep sharing one source of truth, so an override changes behavior and documentation together.
+Users can override the app's key bindings from a keymap file on macOS, Linux, and Windows. Overrides apply only to the commands they name; every unlisted command keeps its default binding. The global handler, the command palette, and the help screen keep sharing one source of truth, so an override changes behavior and documentation together.
 
 ## Deliverables
 
-- [ ] A keymap override read at startup from the existing config location (`configDir()`: `POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default), never from a new home-root dotfile.
+- [ ] A keymap override read at startup from `keymap.json` in the existing config directory (`configDir()`: `POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default), never from `config.json` and never from a new home-root dotfile.
 - [ ] A resolver that merges overrides onto the registry defaults: a listed command id replaces that command's bindings; unlisted commands are untouched.
 - [ ] Validation: an unknown command id, a malformed key name, and a binding that collides with another command are reported and skipped, never fatal. Invalid entries leave the app fully usable.
 - [ ] `pos doctor` prints the resolved keymap source and any skipped entries.
@@ -33,7 +33,7 @@ Users can override the app's key bindings from a config file on macOS, Linux, an
 
 ### File location
 
-Reuse the existing config location. `src/lib/config.ts` already resolves `POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default (`~/.config`, or `%APPDATA%` on Windows) joined with `personal-os/`. Add the keymap either as a `keymap` section in `config.json` or as a sibling `personal-os/keymap.json` in the same directory. A sibling file is preferred: `config.json` holds the Turso token and is written `0o600`, while a keymap is not secret and is nicer to share or keep in a dotfiles repository. Do not introduce a `.pos-config` at the home root; it breaks the existing convention and has no clean Windows equivalent.
+Reuse the existing config location. `src/lib/config.ts` already resolves `POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default (`~/.config`, or `%APPDATA%` on Windows) joined with `personal-os-tui/`. The override is a sibling `personal-os-tui/keymap.json`, never a `keymap` section in `config.json`: `config.json` holds the Turso token and is written `0o600` and rebuilt from the typed `AppConfig` on every save, so a merged section would inherit secret handling and be dropped by the credential write path, while a keymap is not secret and is nicer to share or keep in a dotfiles repository. Do not introduce a `.pos-config` at the home root; it breaks the existing convention and has no clean Windows equivalent.
 
 ### Override format (illustrative)
 
@@ -63,7 +63,7 @@ Keys that bypass the registry today and therefore cannot be overridden without m
 
 ## Files touched
 
-- `src/lib/config.ts`, `src/lib/config.types.ts` - read and validate the keymap section or file
+- `src/lib/config.ts`, `src/lib/config.types.ts` - read and validate `keymap.json`
 - `src/commands/registry.ts` - effective bindings, merge, and hint derivation
 - `src/commands/HelpScreen.tsx`, `src/commands/CommandPalette.tsx` - render effective keys
 - `src/app/App.tsx` - pass the resolved keymap into the registry at bootstrap

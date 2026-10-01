@@ -5,16 +5,20 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Field } from "../components/ui/Field";
 import { TextField } from "../components/ui/TextField";
+import { saveConfig } from "../lib/config";
+import { classifyTursoError, clearTursoConfig, normalizeUrl, setTursoConfig } from "../lib/turso";
 import { validateDbUrl, validateProfileEmail, validateProfileName } from "../lib/validate";
+import type { ApplySchemaResult } from "../repos/types";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import type { ConnectStage, SetupScreenProps, SetupStep } from "./SetupScreen.types";
 
-// First-run Setup on the mock seam (M1): connect form, three-stage
-// connecting state, inline failure, and profile. No fixtures; the only state
-// is the entered form. Real persistence (config file, remote profile) is
-// deferred to W1, so completing the flow only dismisses into the app.
+// First-run Setup (M1 + W1): connect form, three-stage connecting state,
+// inline failure, and profile. Credentials are validated with a real SELECT 1,
+// schema is applied idempotently, and the profile lives in remote
+// app_settings. On success the config file is persisted and onboarding is
+// marked complete.
 //
 // Focus model: one of url/token/connect (step 1) or name/email/start
 // (profile) owns the keyboard, synced into `ui.focusedField` so the global
@@ -66,6 +70,14 @@ function sanitizePastedToken(text: string): string {
   return out;
 }
 
+function schemaDetail(schema: ApplySchemaResult): string {
+  const ensured = schema.ensured ?? schema.applied;
+  if (schema.applied < ensured) {
+    return `${schema.applied} applied, ${ensured} ensured`;
+  }
+  return `${schema.applied} applied`;
+}
+
 export function SetupScreen(props: SetupScreenProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
@@ -84,12 +96,13 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [failureFocus, setFailureFocus] = useState<string>(FOCUS_URL);
   const runRef = useRef(0);
 
   // Entry focus: Connect (see the focus-model note above). The cleanup
   // invalidates any in-flight connect/save so a late mock resolve cannot
   // finish the flow after Setup is gone (navigation, `d`, or quit), then
-  // releases focus; dismissSetup/showSetupScreen also clear it.
+  // releases focus; dismissSetup/showSetupScreen also clear ui.focusedField.
   useEffect(() => {
     useUi.getState().setFocusedField(FOCUS_CONNECT);
     return () => {
@@ -107,17 +120,27 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   const formWidth = narrow ? Math.max(8, Math.min(availableWidth, width - 4)) : 52;
   const canSubmit = url.trim() !== "" && token.trim() !== "";
 
-  function finishToApp(profileName: string): void {
-    useSession.getState().setProfileName(profileName);
+  async function finishToApp(profileName: string): Promise<void> {
+    // Persist credentials only for a real Turso connection. Mock mode is a
+    // dev-only preview and must not write fake credentials to disk.
+    if (repoMode === "turso") {
+      const normalizedUrl = normalizeUrl(url.trim());
+      await saveConfig({ url: normalizedUrl, token });
+      setTursoConfig({ url: normalizedUrl, token });
+    }
+    const session = useSession.getState();
+    session.setConfigComplete(true);
+    session.setProfileName(profileName);
     const ui = useUi.getState();
     ui.dismissSetup();
     ui.setScreen("dashboard");
   }
 
-  function fail(message: string): void {
+  function fail(message: string, kind?: "credentials" | "network" | "other"): void {
     runRef.current += 1;
     setFailureError(message);
     setStep("failure");
+    setFailureFocus(kind === "credentials" ? FOCUS_TOKEN : FOCUS_URL);
     useUi.getState().setFocusedField(null);
   }
 
@@ -134,7 +157,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
         return;
       }
       if (!test.ok) {
-        fail(test.error ?? "Connection failed");
+        fail(test.error ?? "Connection failed", test.kind);
         return;
       }
       setStages([
@@ -148,7 +171,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       }
       setStages([
         { label: "SELECT 1", state: "done" },
-        { label: "applying schema", state: "done", detail: `${schema.applied} statements` },
+        { label: "applying schema", state: "done", detail: schemaDetail(schema) },
         { label: "loading profile", state: "active" },
       ]);
       const profile = await props.settings.getProfile();
@@ -157,11 +180,11 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       }
       setStages([
         { label: "SELECT 1", state: "done" },
-        { label: "applying schema", state: "done", detail: `${schema.applied} statements` },
+        { label: "applying schema", state: "done", detail: schemaDetail(schema) },
         { label: "loading profile", state: "done" },
       ]);
       if (profile !== null) {
-        finishToApp(profile.name);
+        await finishToApp(profile.name);
         return;
       }
       setName("");
@@ -175,16 +198,19 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       if (!alive()) {
         return;
       }
-      fail(error instanceof Error ? error.message : String(error));
+      clearTursoConfig();
+      const classified = classifyTursoError(error);
+      fail(classified.message, classified.kind);
     }
   }
 
-  function backToConnect(): void {
+  function backToConnect(focusField: string = failureFocus): void {
     // Values are kept; the failure panel and Esc both land here.
     runRef.current += 1;
+    clearTursoConfig();
     setUrlError(null);
     setStep("connect");
-    useUi.getState().setFocusedField(FOCUS_URL);
+    useUi.getState().setFocusedField(focusField);
   }
 
   function attemptConnect(): void {
@@ -221,7 +247,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
     try {
       const profile = { name: name.trim(), email: email.trim() };
       await props.settings.saveProfile(profile);
-      finishToApp(profile.name);
+      await finishToApp(profile.name);
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : String(error));
     }
@@ -280,7 +306,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
     if (step === "profile") {
       if (key.name === "escape") {
         key.preventDefault();
-        backToConnect();
+        backToConnect(FOCUS_URL);
         return;
       }
       if (key.name === "tab") {
@@ -313,14 +339,19 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       attemptConnect();
       return;
     }
+    if (focusedField === FOCUS_TOKEN && key.ctrl && key.name === "u") {
+      // The secure field renders no `<input>` (H1), so Setup owns Ctrl+U as a
+      // one-shot clear even though it is not a plain key.
+      key.preventDefault();
+      setToken("");
+      return;
+    }
     if (!plain) {
       return;
     }
     if (focusedField === FOCUS_TOKEN) {
       // The secure field renders no `<input>` (H1), so Setup owns its editing:
-      // append printable characters and drop the last on Backspace. Other keys
-      // (arrows, Delete) are ignored rather than falling through to form-level
-      // typing below.
+      // append printable characters and drop the last on Backspace.
       if (key.name === "backspace") {
         key.preventDefault();
         setToken((current) => current.slice(0, -1));
@@ -444,6 +475,9 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
             <text fg={color(tokens.fgSubtle)}>
               {"Enter  Connect      Tab  next field      Esc  quit"}
             </text>
+            {focusedField === FOCUS_TOKEN ? (
+              <text fg={color(tokens.fgSubtle)}>{"Ctrl+U  clear token"}</text>
+            ) : null}
             {demoHint}
           </>
         ) : null}

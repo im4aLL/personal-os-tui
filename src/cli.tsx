@@ -13,10 +13,11 @@ import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import { App } from "./app/App";
 import { runDoctor } from "./cli/doctor";
-import { configPath } from "./lib/config";
+import { configPath, effectiveCredentials } from "./lib/config";
+import { setTursoConfig } from "./lib/turso";
 import { getRepos } from "./repos/index";
 import type { RepoBundle } from "./repos/index.types";
-import { initSession } from "./store/session";
+import { initSession, useSession } from "./store/session";
 import { useUi } from "./store/ui";
 import { getTheme } from "./theme/registry";
 
@@ -113,6 +114,53 @@ async function runApp(args: string[]): Promise<number> {
     mockUi: bundle.mockUi,
   });
   useUi.getState().setSidebarCollapsed(bundle.loaded.config?.ui.sidebarCollapsed ?? false);
+
+  if (bundle.mode === "turso") {
+    const creds = effectiveCredentials(bundle.loaded);
+    if (creds.url !== "" && creds.token !== "") {
+      setTursoConfig(creds);
+    }
+  }
+
+  // `complete` is the second guard on purpose: when onboarding is unfinished,
+  // Setup owns the credential and profile flow, so a config with credentials
+  // but no completed onboarding is left to the stub/Setup path.
+  if (bundle.mode === "turso" && bundle.loaded.complete) {
+    // Bootstrap name read so the first painted header shows the remote name
+    // instead of the default fallback. The same single call doubles as the
+    // one-shot connectivity probe for the header dot.
+    //
+    // Best-effort and bounded: a slow or unreachable database must never stall
+    // first paint, so the read races a short timeout. On a thrown error it
+    // degrades to the default name and an error dot; on timeout it leaves the
+    // dot unknown (stub) so a slow database does not show a false error. The
+    // warning stays generic so no credential or connection string can leak.
+    const BOOTSTRAP_TIMEOUT_MS = 3000;
+    const timedOut = Symbol("bootstrap-timeout");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const name = await Promise.race<string | null | typeof timedOut>([
+        bundle.repos.settings.getSetting("profile_name"),
+        new Promise<typeof timedOut>((resolve) => {
+          timer = setTimeout(() => resolve(timedOut), BOOTSTRAP_TIMEOUT_MS);
+        }),
+      ]);
+      if (name !== timedOut) {
+        if (name !== null && name !== "") {
+          useSession.getState().setProfileName(name);
+        }
+        // A resolved read proves connectivity even when the setting is absent.
+        useSession.getState().setConnectionOk(true);
+      }
+    } catch {
+      console.warn("pos: could not load remote profile; using the default name.");
+      useSession.getState().setConnectionOk(false);
+    } finally {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    }
+  }
 
   const theme = getTheme(themeId);
   let renderer: CliRenderer | null = null;
