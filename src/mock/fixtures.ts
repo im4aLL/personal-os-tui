@@ -4,8 +4,8 @@
 // notes (3 pinned, one untitled, a long markdown body, a single long line, 4
 // tagged, relative dates across today/yesterday/last week/last year).
 
-import type { Link } from "../repos/types";
-import { isoDateOffset } from "../utils/date";
+import type { Link, WorkLog } from "../repos/types";
+import { addDaysISO, isoDateOffset, mondayOfWeekISO, todayISO } from "../utils/date";
 import type { Fixtures } from "./fixtures.types";
 
 function now(): string {
@@ -344,6 +344,164 @@ function linkFixtures(): Link[] {
     tags: [...tags],
     createdAt: dayStamp(-daysAgo, hour),
   }));
+}
+
+interface WorkLogSpec {
+  title: string;
+  description: string | null;
+  startDate: string;
+  endDate: string;
+  tags: string[];
+}
+
+/** A deterministic ISO datetime for a fixture, derived from its start date and
+ * index so createdAt/updatedAt stay realistic without wall-clock dependence. */
+function workLogStamp(date: string, index: number): string {
+  const hour = 8 + (index % 8);
+  return `${date}T${String(hour).padStart(2, "0")}:30:00.000Z`;
+}
+
+// Work Log review set: 14 entries whose distribution holds at any run date.
+// Exactly 3 fall in the current ISO week, 2 in the previous week, and 2 in the
+// week before that; the remaining 7 spread across the last year and include a
+// fixed year-boundary pair (2025-12-31 / 2026-01-01, both ISO 2026-W01) that
+// exercises the ISO week-key year logic. Three entries are multi-day ranges
+// (one in the current week whenever the day is not Monday, since a same-week
+// span with a future end date is not allowed), two carry no tags, and one has
+// a long title and description for truncation review.
+function workLogFixtures(): WorkLog[] {
+  const today = todayISO();
+  const monday = mondayOfWeekISO(0);
+  const lastWeekMonday = mondayOfWeekISO(-1);
+  const priorWeekMonday = mondayOfWeekISO(-2);
+  // Candidate current-week days, clamped so they never spill into the previous
+  // week and never land in the future.
+  const currentDay = (days: number): string => {
+    const candidate = addDaysISO(today, days);
+    return candidate < monday ? monday : candidate;
+  };
+  const currentStart = today === monday ? monday : addDaysISO(today, -1);
+  // On a Monday the current-week range collapses to a single day, so a spread
+  // entry becomes the third multi-day range instead.
+  const spreadSpan = today === monday ? 2 : 0;
+  const spread = (weeks: number): string => addDaysISO(monday, weeks * 7);
+
+  const specs: WorkLogSpec[] = [
+    {
+      title: "Release prep",
+      description: "Freeze the branch, cut the changelog, and dry-run the publish.",
+      startDate: currentStart,
+      endDate: today,
+      tags: ["work", "review"],
+    },
+    {
+      title: "API cleanup",
+      description: "Tidy the repository seam before the Work Log wiring starts.",
+      startDate: currentDay(-1),
+      endDate: currentDay(-1),
+      tags: ["dev"],
+    },
+    {
+      title: "Design review",
+      description: null,
+      startDate: currentDay(-2),
+      endDate: currentDay(-2),
+      tags: [],
+    },
+    {
+      title: "Sprint planning",
+      description: "Scope the Work Log UI and the project planner.",
+      startDate: lastWeekMonday,
+      endDate: addDaysISO(lastWeekMonday, 1),
+      tags: ["meetings", "work"],
+    },
+    {
+      title: "Migration notes",
+      description: "Record the schema differences between the desktop and the TUI.",
+      startDate: addDaysISO(lastWeekMonday, 2),
+      endDate: addDaysISO(lastWeekMonday, 2),
+      tags: ["research"],
+    },
+    {
+      title: "Docs pass",
+      description: "Refresh the README and the milestone notes.",
+      startDate: priorWeekMonday,
+      endDate: addDaysISO(priorWeekMonday, 2),
+      tags: ["work", "review"],
+    },
+    {
+      title: "Team sync",
+      description: null,
+      startDate: addDaysISO(priorWeekMonday, 4),
+      endDate: addDaysISO(priorWeekMonday, 4),
+      tags: [],
+    },
+    {
+      title:
+        "Migrated the Work Log mock repository to the desktop date-range semantics and verified overlap filtering end to end",
+      description:
+        "The manual range filter keeps a multi-day entry when its end date is on or after the From date and its start date is on or before the To date, so a range that straddles either boundary still appears. This description is intentionally long so the row truncation can be reviewed at every width without touching the title.",
+      startDate: spread(-5),
+      endDate: addDaysISO(spread(-5), spreadSpan),
+      tags: ["work", "dev"],
+    },
+    {
+      title: "Tag audit",
+      description: "Confirm the tag pool stays distinct and sorted after writes.",
+      startDate: spread(-11),
+      endDate: spread(-11),
+      tags: ["research"],
+    },
+    {
+      title: "Keyboard pass",
+      description: "Walk the selection, preset, and date-field keys at every width.",
+      startDate: spread(-19),
+      endDate: spread(-19),
+      tags: ["review", "dev"],
+    },
+    {
+      title: "Year-end wrap",
+      description: "Close out the year and note the outstanding work.",
+      startDate: "2025-12-31",
+      endDate: "2025-12-31",
+      tags: ["meetings"],
+    },
+    {
+      title: "New year kickoff",
+      description: "Set the priorities for the first quarter.",
+      startDate: "2026-01-01",
+      endDate: "2026-01-01",
+      tags: ["work"],
+    },
+    {
+      title: "Reading day",
+      description: "Caught up on the OpenTUI component reference.",
+      startDate: spread(-28),
+      endDate: spread(-28),
+      tags: ["research"],
+    },
+    {
+      title: "Retro notes",
+      description: "Incremental delivery kept every diff small and reviewable.",
+      startDate: spread(-40),
+      endDate: spread(-40),
+      tags: ["work", "meetings"],
+    },
+  ];
+
+  return specs.map((spec, index) => {
+    const stamp = workLogStamp(spec.startDate, index);
+    return {
+      id: `worklog-${String(index + 1).padStart(2, "0")}`,
+      title: spec.title,
+      description: spec.description,
+      startDate: spec.startDate,
+      endDate: spec.endDate,
+      createdAt: stamp,
+      updatedAt: stamp,
+      tags: [...spec.tags],
+    };
+  });
 }
 
 export function createFixtures(): Fixtures {
@@ -724,7 +882,7 @@ export function createFixtures(): Fixtures {
     ],
     links: linkFixtures(),
     linkTags: [...LINK_TAGS],
-    workLogs: [],
+    workLogs: workLogFixtures(),
     projects: [],
   };
 }

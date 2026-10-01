@@ -12,16 +12,25 @@ export function DateField(props: DateFieldProps): ReactNode {
   const tokens = theme.tokens;
   const value = props.value.trim();
   const invalid = value !== "" && !isValidISODate(value);
+  const field = (
+    <TextField
+      value={props.value}
+      onChange={props.onChange}
+      focused={props.focused}
+      placeholder={props.placeholder ?? "YYYY-MM-DD"}
+      width={props.width}
+      borderless={props.borderless}
+    />
+  );
+
+  if (props.hideHint === true) {
+    return field;
+  }
+
   const hint = invalid ? "Use YYYY-MM-DD" : "YYYY-MM-DD (optional)";
   return (
     <box flexDirection="column" gap={0}>
-      <TextField
-        value={props.value}
-        onChange={props.onChange}
-        focused={props.focused}
-        placeholder={props.placeholder ?? "YYYY-MM-DD"}
-        width={props.width}
-      />
+      {field}
       <text fg={color(invalid ? tokens.danger : tokens.fgSubtle)}>{hint}</text>
     </box>
   );

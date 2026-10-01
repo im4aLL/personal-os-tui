@@ -5,6 +5,9 @@ interface TextFieldBaseProps {
   placeholder?: string;
   /** Visible field width in columns, including the border. */
   width?: number;
+  /** Drop the outer border and padding so the field reads like a bare input
+   * (used by the compact date-range toolbar). */
+  borderless?: boolean;
 }
 
 /** Editable field: renders an `<input>` and reports every change. */

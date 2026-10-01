@@ -2,7 +2,7 @@
 id: M5
 title: Work Log UI
 type: milestone
-status: not-started
+status: done
 phase: work-log
 order: 15
 depends_on: [W4]
@@ -11,7 +11,7 @@ gate: G5
 
 # M5 - Work Log UI
 
-> Type: milestone · Status: not-started · Phase: work-log
+> Type: milestone · Status: done · Phase: work-log
 
 ## Objective
 
@@ -19,22 +19,22 @@ The Work Log screen on fixtures: debounced search, date range with presets, week
 
 ## Deliverables
 
-- [ ] `src/screens/WorkLogScreen.tsx` with the search bar, date-range toolbar, and grouped list.
-- [ ] `src/components/work-log/WorkLogRow.tsx`, `WorkLogForm.tsx`, `WeekGroupHeader.tsx`, and `DateRangeBar.tsx`.
-- [ ] Client-side grouping via `groupByWeek`: "This week", "Last week", then "Week of <Mon DD>" with a year for older entries, newest first.
-- [ ] An accurate count badge per group.
-- [ ] Date presets `1`/`2`/`3` (this week, last week, this month) that visibly populate the From/To fields and refetch; `c` clears all filters.
-- [ ] Manual From/To filtering, including the overlap semantics for multi-day entries; `f` focuses the From field and `Tab` moves to To.
-- [ ] Debounced (300 ms) search by title; clearing restores all entries.
-- [ ] Add (`n`) and edit (`Enter`) forms pre-filling all fields, with tags and tag suggestions.
-- [ ] Delete with confirmation (`d`).
-- [ ] Validation: title required; an end date before the start date rejected with the desktop's exact message.
-- [ ] Empty states: "No entries yet" plus "Start logging what you work on each day"; filtered empty: "No entries match your filters".
-- [ ] Loading: two skeleton groups with placeholder headers.
-- [ ] Error: a save failure keeps the form open with an inline error; a filter failure keeps the previous list and shows a retry hint.
-- [ ] Narrow: below 90 columns descriptions and tags collapse to a single metadata line; below 60 the date fields stack vertically.
-- [ ] Fixtures: 14 work logs (3 in the current ISO week, 2 in the previous week, 2 in the week before that, the rest across the last year including a year-boundary entry); 3 multi-day ranges; 2 untagged; one long title and long description.
-- [ ] Scenario transforms: `empty`, `loading`, `large` (300 entries across many weeks), `error`.
+- [x] `src/screens/WorkLogScreen.tsx` with the search bar, date-range toolbar, and grouped list.
+- [x] `src/components/work-log/WorkLogRow.tsx`, `WorkLogForm.tsx`, `WeekGroupHeader.tsx`, and `DateRangeBar.tsx`.
+- [x] Client-side grouping via `groupByWeek`: "This week", "Last week", then "Week of <Mon DD>" with a year for older entries, newest first.
+- [x] An accurate count badge per group.
+- [x] Date presets `1`/`2`/`3` (this week, last week, this month) that visibly populate the From/To fields and refetch; `c` clears all filters.
+- [x] Manual From/To filtering, including the overlap semantics for multi-day entries; `f` focuses the From field and `Tab` moves to To.
+- [x] Debounced (300 ms) search by title; clearing restores all entries.
+- [x] Add (`n`) and edit (`Enter`) forms pre-filling all fields, with tags and tag suggestions.
+- [x] Delete with confirmation (`d`).
+- [x] Validation: title required; an end date before the start date rejected with the desktop's exact message.
+- [x] Empty states: "No entries yet" plus "Start logging what you work on each day"; filtered empty: "No entries match your filters".
+- [x] Loading: two skeleton groups with placeholder headers.
+- [x] Error: a save failure keeps the form open with an inline error; a filter failure keeps the previous list and shows a retry hint.
+- [x] Narrow: below 90 columns descriptions and tags collapse to a single metadata line; below 60 the date fields stack vertically.
+- [x] Fixtures: 14 work logs (3 in the current ISO week, 2 in the previous week, 2 in the week before that, the rest across the last year including a year-boundary entry); 3 multi-day ranges; 2 untagged; one long title and long description.
+- [x] Scenario transforms: `empty`, `loading`, `large` (300 entries across many weeks), `error`.
 
 ## Design notes
 
@@ -107,3 +107,9 @@ Approved at [G5](G5-work-log-ui-approval.md). Do not start the next ticket until
 ## Notes
 
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- `npm run typecheck`, `npm run check`, `npm run build`, and `npm run build:prod` all pass. The interactive G5 checklist (narrow-width pass and visual approval) remains a manual pass.
+- Repo seam: the placeholder `WorkLog` gained the desktop-faithful shape (`description`, `startDate`/`endDate`, `updatedAt`, `tags`) and `WorkLogFilter` moved to `query`/`dateFrom`/`dateTo`, matching `personal-os/src/lib/work-logs.ts` so W5 is a mechanical wrapper. The mock applies the desktop filter semantics (title-only query; `endDate >= dateFrom` and `startDate <= dateTo` for multi-day overlap) and sorts `startDate DESC, createdAt DESC`. `TodoScreen`'s "Add as work log" caller was updated to the new input shape.
+- `groupByWeek` (with the ISO week-key year logic) is ported from the desktop into `src/lib/week-groups.ts`, with one deliberate deviation: the "this week"/"last week" comparison key is derived from the local calendar date (`todayISO`), not the desktop's UTC date, because every filter and fixture here uses local `YYYY-MM-DD` (fixes a midnight/timezone mislabel window). The store rebuilds groups after every mutation, and a module-level generation guard drops stale filter responses.
+- Review follow-ups applied: `patchWorkLog` now takes a narrow `WorkLogPatch`; the cross-year date column widened to 26 columns so labels are not clipped; the screen's `Notice` type moved to `WorkLogScreen.types.ts`. The pre-existing `TodoScreen` `wide &&` key guard was intentionally left alone (unrelated to M5 and removing it would change narrow-mode behavior).
+- Fixtures: 14 entries generated relative to the current week so 3/2/2 always fall in this/last/week-before along with 7 spread across the year (including the 2025-12-31 / 2026-01-01 ISO 2026-W01 boundary pair), 3 multi-day ranges, 2 untagged, and one long title plus long description.
+- Badge wording follows the desktop exact strings ("3 entries" / "1 entry") rather than the sketch's "items".

@@ -143,30 +143,36 @@ export interface LinkRepo {
 export interface WorkLog {
   id: string;
   title: string;
-  body: string;
-  date: string;
-  tags: string[];
+  description: string | null;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
   createdAt: string;
+  updatedAt: string;
+  tags: string[];
 }
 
 export interface WorkLogFilter {
+  /** Case-insensitive substring over the title; trimmed, empty means all. */
   query?: string;
-  tag?: string | null;
-  from?: string;
-  to?: string;
+  /** Keeps logs whose `endDate` is on or after this date (overlap). */
+  dateFrom?: string;
+  /** Keeps logs whose `startDate` is on or before this date (overlap). */
+  dateTo?: string;
 }
 
 export interface CreateWorkLogInput {
   title: string;
-  body?: string;
-  date?: string;
-  tags?: string[];
+  description: string | null;
+  startDate: string;
+  endDate: string;
+  tags: string[];
 }
 
 export interface UpdateWorkLogInput {
   title?: string;
-  body?: string;
-  date?: string;
+  description?: string | null;
+  startDate?: string;
+  endDate?: string;
   tags?: string[];
 }
 

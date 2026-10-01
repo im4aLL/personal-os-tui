@@ -6,4 +6,9 @@ export interface DateFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   width?: number;
+  /** Render without the outer border/padding, so the field reads like a bare
+   * input (used by the compact date-range toolbar). */
+  borderless?: boolean;
+  /** Hide the "YYYY-MM-DD" format hint under the field. */
+  hideHint?: boolean;
 }

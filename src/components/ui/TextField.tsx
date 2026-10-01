@@ -18,50 +18,47 @@ export function TextField(props: TextFieldProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const width = props.width ?? 44;
+  const borderless = props.borderless === true;
   const borderColor = props.focused ? tokens.borderFocus : tokens.border;
 
+  const frame = (child: ReactNode): ReactNode => (
+    <box
+      border={!borderless}
+      borderColor={borderless ? undefined : color(borderColor)}
+      paddingLeft={borderless ? 0 : 1}
+      paddingRight={borderless ? 0 : 1}
+      width={width}
+    >
+      {child}
+    </box>
+  );
+
   if (props.secure === true) {
-    const room = Math.max(1, width - 4);
+    const room = Math.max(1, borderless ? width : width - 4);
     const masked = "*".repeat(Math.min(props.value.length, room));
-    return (
-      <box
-        border={true}
-        borderColor={color(borderColor)}
-        paddingLeft={1}
-        paddingRight={1}
-        width={width}
-      >
-        {masked === "" ? (
-          <text fg={color(tokens.fgDisabled)}>{props.placeholder ?? ""}</text>
-        ) : (
-          <text fg={color(tokens.fg)}>{masked}</text>
-        )}
-      </box>
+    return frame(
+      masked === "" ? (
+        <text fg={color(tokens.fgDisabled)}>{props.placeholder ?? ""}</text>
+      ) : (
+        <text fg={color(tokens.fg)}>{masked}</text>
+      ),
     );
   }
 
-  return (
-    <box
-      border={true}
-      borderColor={color(borderColor)}
-      paddingLeft={1}
-      paddingRight={1}
-      width={width}
-    >
-      <input
-        focused={props.focused}
-        value={props.value}
-        placeholder={props.placeholder ?? ""}
-        onInput={(value) => props.onChange(value)}
-        backgroundColor={color(tokens.bgPanel)}
-        focusedBackgroundColor={color(tokens.bgPanel)}
-        textColor={color(tokens.fg)}
-        focusedTextColor={color(tokens.fg)}
-        placeholderColor={color(tokens.fgDisabled)}
-        cursorColor={color(tokens.cursor)}
-        selectionBg={color(tokens.selectionBg)}
-        selectionFg={color(tokens.selectionFg)}
-      />
-    </box>
+  return frame(
+    <input
+      focused={props.focused}
+      value={props.value}
+      placeholder={props.placeholder ?? ""}
+      onInput={(value) => props.onChange(value)}
+      backgroundColor={color(tokens.bgPanel)}
+      focusedBackgroundColor={color(tokens.bgPanel)}
+      textColor={color(tokens.fg)}
+      focusedTextColor={color(tokens.fg)}
+      placeholderColor={color(tokens.fgDisabled)}
+      cursorColor={color(tokens.cursor)}
+      selectionBg={color(tokens.selectionBg)}
+      selectionFg={color(tokens.selectionFg)}
+    />,
   );
 }

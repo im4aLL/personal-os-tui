@@ -521,8 +521,9 @@ export function TodoScreen(): ReactNode {
       try {
         await getRepos().workLogs.create({
           title: todo.title,
-          body: todo.description ?? "",
-          date: todayISO(),
+          description: todo.description ?? null,
+          startDate: todayISO(),
+          endDate: todayISO(),
           tags: [],
         });
         setNotice("Added to work log");

@@ -49,9 +49,59 @@ export function isoDateOffset(days: number): string {
   return toLocalISO(date);
 }
 
+/** Add `days` to a `YYYY-MM-DD` string, returning a local `YYYY-MM-DD`.
+ * Returns the input unchanged when it is not a valid calendar date. */
+export function addDaysISO(iso: string, days: number): string {
+  const date = parseLocalISO(iso);
+  if (date === null) {
+    return iso;
+  }
+  date.setDate(date.getDate() + days);
+  return toLocalISO(date);
+}
+
+/** Monday of the ISO week `weeksOffset` weeks from the current week, as a
+ * local `YYYY-MM-DD` string (0 = this week, -1 = last week). Monday is
+ * `date.getDay() === 1`, Sunday is `0`, so Sunday maps back six days. */
+export function mondayOfWeekISO(weeksOffset: number): string {
+  const date = startOfToday();
+  const dayFromMonday = date.getDay() === 0 ? 6 : date.getDay() - 1;
+  date.setDate(date.getDate() - dayFromMonday + weeksOffset * 7);
+  return toLocalISO(date);
+}
+
+/** First day of the current month as a local `YYYY-MM-DD` string. */
+export function firstOfMonthISO(): string {
+  const date = startOfToday();
+  date.setDate(1);
+  return toLocalISO(date);
+}
+
 /** True when `iso` is a real calendar date in `YYYY-MM-DD` form. */
 export function isValidISODate(iso: string): boolean {
   return parseLocalISO(iso) !== null;
+}
+
+/** Compact work-log range label: `Sep 29` for one day, `Sep 28 - Sep 29` for
+ * a range. Each endpoint gets `, YYYY` appended when its year differs from the
+ * current year. Falls back to the raw values when either date is invalid. */
+export function formatWorkLogRange(start: string, end: string): string {
+  const startDate = parseLocalISO(start);
+  const endDate = parseLocalISO(end);
+  if (startDate === null || endDate === null) {
+    return start === end ? start : `${start} - ${end}`;
+  }
+  const thisYear = new Date().getFullYear();
+  const format = (date: Date): string =>
+    date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      ...(date.getFullYear() !== thisYear ? { year: "numeric" } : {}),
+    });
+  if (start === end) {
+    return format(startDate);
+  }
+  return `${format(startDate)} - ${format(endDate)}`;
 }
 
 /** Short month + day, e.g. `Aug 12`. Falls back to the raw value when invalid. */
