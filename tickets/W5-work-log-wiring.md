@@ -2,7 +2,7 @@
 id: W5
 title: Work Log wiring
 type: wiring
-status: not-started
+status: done
 phase: work-log
 order: 17
 depends_on: [G5]
@@ -11,7 +11,7 @@ wires: M5
 
 # W5 - Work Log wiring
 
-> Type: wiring · Status: not-started · Phase: work-log
+> Type: wiring · Status: done · Phase: work-log
 
 ## Objective
 
@@ -48,3 +48,7 @@ Debounced search plus date filters issue one request per settled change. A faile
 
 - Starts only after its gate is `done`.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- Implemented `src/lib/work-logs.ts` (the desktop SQL with `?` placeholders: the `title LIKE ?` / `end_date >= ?` / `start_date <= ?` clauses joined by `AND`, `ORDER BY start_date DESC, created_at DESC`, a batched `IN (...)` tag attach ordered `created_at ASC`, `getAllUsedTags`, one-batch `create` that inserts the log row plus one `work_log_tags` row per given tag name (verbatim, matching the desktop and mock), a whitelisted `update` that advances `updated_at` and replaces tags when present via `setTagsForWorkLog`, and a tags-first one-batch `delete`) and the real `src/repos/turso/workLogs.ts` wrapper. `src/store/workLogs.ts` (including the generation guard) and `WorkLogScreen.tsx` are unchanged.
+- No serialized tag-write queue: the desktop work-log save path calls `setTagsForWorkLog` directly (unlike the notes editor's `queueTagWrite`) and the TUI form awaits a single save, so a queue would be an unused abstraction.
+- `npm run typecheck`, `npm run check`, `npm run build`, and `npm run build:prod` pass. Live-Turso checklist items remain pending credentials.
+- Reviewed by hadi-reviewer: verdict "Ready to commit (no Blockers)". Low #1 (create tag dedupe) fixed so `create` writes one `work_log_tags` row per given tag name, matching the desktop and mock. Low #2 (tags-only update not advancing `updated_at`) intentionally left as-is: it matches the desktop `setTagsForWorkLog` (no `updated_at` bump), and the tags-only path is unreachable from the screen, which always sends the scalar fields. The two nits (uncapped `IN (...)` placeholders, `created_at` tie ordering) and the no-tests gap are accepted as documented non-blocking items consistent with the existing links/notes wiring.

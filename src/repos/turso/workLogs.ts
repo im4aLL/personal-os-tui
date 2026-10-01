@@ -1,4 +1,12 @@
-// Turso stub (M0). Throws until the Work Log wiring milestone lands.
+// Real WorkLogRepo: remote rows through src/lib/work-logs.ts. Mapping only; the
+// SQL, tag serialization, and column translation live in the lib layer.
+import {
+  createWorkLog,
+  deleteWorkLog,
+  getAllUsedTags,
+  getWorkLogs,
+  updateWorkLog,
+} from "../../lib/work-logs";
 import type {
   CreateWorkLogInput,
   UpdateWorkLogInput,
@@ -7,24 +15,20 @@ import type {
   WorkLogRepo,
 } from "../types";
 
-function notWired(what: string): Error {
-  return new Error(`turso ${what} is not wired yet`);
-}
-
 export const tursoWorkLogRepo: WorkLogRepo = {
-  list(_filter?: WorkLogFilter): Promise<WorkLog[]> {
-    throw notWired("workLogs.list");
+  async list(filter?: WorkLogFilter): Promise<WorkLog[]> {
+    return getWorkLogs(filter);
   },
-  tags(): Promise<string[]> {
-    throw notWired("workLogs.tags");
+  async tags(): Promise<string[]> {
+    return getAllUsedTags();
   },
-  create(_input: CreateWorkLogInput): Promise<WorkLog> {
-    throw notWired("workLogs.create");
+  async create(input: CreateWorkLogInput): Promise<WorkLog> {
+    return createWorkLog(input);
   },
-  update(_id: string, _input: UpdateWorkLogInput): Promise<void> {
-    throw notWired("workLogs.update");
+  async update(id: string, input: UpdateWorkLogInput): Promise<void> {
+    await updateWorkLog(id, input);
   },
-  remove(_id: string): Promise<void> {
-    throw notWired("workLogs.remove");
+  async remove(id: string): Promise<void> {
+    await deleteWorkLog(id);
   },
 };
