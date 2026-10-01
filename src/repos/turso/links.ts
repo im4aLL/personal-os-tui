@@ -1,4 +1,14 @@
-// Turso stub (M0). Throws until the Save Links wiring milestone lands.
+// Real LinkRepo: remote rows through src/lib/links.ts. Mapping only; the SQL,
+// cursor encoding, and tag serialization live in the lib layer.
+import {
+  checkDuplicateUrl,
+  createLink,
+  deleteLink,
+  getAllUsedTags,
+  getLinksPage,
+  setTagsForLink,
+  updateLink,
+} from "../../lib/links";
 import type {
   CreateLinkInput,
   GetLinksPageParams,
@@ -8,30 +18,26 @@ import type {
   UpdateLinkInput,
 } from "../types";
 
-function notWired(what: string): Error {
-  return new Error(`turso ${what} is not wired yet`);
-}
-
 export const tursoLinkRepo: LinkRepo = {
-  list(_params: GetLinksPageParams): Promise<LinksPage> {
-    throw notWired("links.list");
+  async list(params: GetLinksPageParams): Promise<LinksPage> {
+    return getLinksPage(params);
   },
-  tags(): Promise<string[]> {
-    throw notWired("links.tags");
+  async tags(): Promise<string[]> {
+    return getAllUsedTags();
   },
-  checkDuplicateUrl(_url: string): Promise<boolean> {
-    throw notWired("links.checkDuplicateUrl");
+  async checkDuplicateUrl(url: string): Promise<boolean> {
+    return checkDuplicateUrl(url);
   },
-  create(_input: CreateLinkInput): Promise<Link> {
-    throw notWired("links.create");
+  async create(input: CreateLinkInput): Promise<Link> {
+    return createLink(input);
   },
-  update(_id: string, _input: UpdateLinkInput): Promise<void> {
-    throw notWired("links.update");
+  async update(id: string, input: UpdateLinkInput): Promise<void> {
+    await updateLink(id, input);
   },
-  setTags(_id: string, _tags: string[]): Promise<void> {
-    throw notWired("links.setTags");
+  async setTags(id: string, tags: string[]): Promise<void> {
+    await setTagsForLink(id, tags);
   },
-  remove(_id: string): Promise<void> {
-    throw notWired("links.remove");
+  async remove(id: string): Promise<void> {
+    await deleteLink(id);
   },
 };
