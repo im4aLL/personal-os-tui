@@ -19,7 +19,7 @@ One feature at a time: UI, then gate, then wiring.
 4. [G1](G1-setup-ui-approval.md) - Setup UI approval (gate, setup, done)
 5. [W1](W1-setup-wiring.md) - Setup wiring (wiring, setup, done)
 6. [M2](M2-todo-ui.md) - Todo UI (milestone, todo, done)
-7. [G2](G2-todo-ui-approval.md) - Todo UI approval (gate, todo, not-started)
+7. [G2](G2-todo-ui-approval.md) - Todo UI approval (gate, todo, done)
 8. [W2](W2-todo-wiring.md) - Todo wiring (wiring, todo, not-started)
 9. [M3](M3-notes-ui.md) - Notes UI (milestone, notes, not-started)
 10. [G3](G3-notes-ui-approval.md) - Notes UI approval (gate, notes, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [G2](G2-todo-ui-approval.md) | Todo UI approval | gate | todo |
 | [W2](W2-todo-wiring.md) | Todo wiring | wiring | todo |
 | [M3](M3-notes-ui.md) | Notes UI | milestone | notes |
 | [G3](G3-notes-ui-approval.md) | Notes UI approval | gate | notes |
@@ -85,6 +84,7 @@ One feature at a time: UI, then gate, then wiring.
 | [G1](G1-setup-ui-approval.md) | Setup UI approval | gate | setup |
 | [W1](W1-setup-wiring.md) | Setup wiring | wiring | setup |
 | [M2](M2-todo-ui.md) | Todo UI | milestone | todo |
+| [G2](G2-todo-ui-approval.md) | Todo UI approval | gate | todo |
 
 ## Rules
 

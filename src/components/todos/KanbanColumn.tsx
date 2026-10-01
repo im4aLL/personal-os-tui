@@ -23,6 +23,7 @@ export function KanbanColumn(props: KanbanColumnProps): ReactNode {
       flexGrow={props.flex ? 1 : 0}
       flexBasis={props.flex ? 0 : "auto"}
       flexShrink={1}
+      gap={1}
     >
       <text wrapMode="none">
         <span fg={color(headerColor)} attributes={TextAttributes.BOLD}>

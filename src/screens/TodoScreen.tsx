@@ -111,7 +111,10 @@ export function TodoScreen(): ReactNode {
   const cap = Math.max(12, width - 24);
   const wideColumnWidth = Math.max(10, Math.floor((cap - 2) / 3));
   const columnWidth = wide ? wideColumnWidth : cap;
-  const bodyHeight = Math.max(3, height - 8);
+  const bodyHeight = Math.max(3, height - 10);
+  // Each todo renders as title + meta + gap (up to 3 terminal rows), so the
+  // window size is an item count derived from the available row budget.
+  const visibleCount = Math.max(1, Math.floor(bodyHeight / 3));
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -671,11 +674,11 @@ export function TodoScreen(): ReactNode {
     // Browsing: Ctrl+D pages (Ctrl+Shift+D still reaches the mock panel).
     if (key.ctrl && !key.shift) {
       if (name === "d") {
-        moveSelection(bodyHeight);
+        moveSelection(visibleCount);
         return true;
       }
       if (name === "u") {
-        moveSelection(-bodyHeight);
+        moveSelection(-visibleCount);
         return true;
       }
       return false;
@@ -816,7 +819,7 @@ export function TodoScreen(): ReactNode {
 
   return (
     <box flexDirection="column" flexGrow={1} backgroundColor={color(tokens.bg)}>
-      <box flexDirection="row" height={1} flexShrink={0} gap={1}>
+      <box flexDirection="row" flexShrink={0} gap={1} paddingTop={1} paddingBottom={1}>
         <text fg={color(tokens.fgMuted)}>{"Search"}</text>
         <input
           focused={searchActive}
@@ -854,7 +857,7 @@ export function TodoScreen(): ReactNode {
               key={status}
               status={status}
               label={COLUMN_LABELS[status]}
-              items={windowSlice(byStatus[status], selectedIndexIn(status), bodyHeight)}
+              items={windowSlice(byStatus[status], selectedIndexIn(status), visibleCount)}
               count={byStatus[status].length}
               selectedId={index === focusedColumn ? selectedId : null}
               compact={compact}
@@ -881,7 +884,11 @@ export function TodoScreen(): ReactNode {
           <KanbanColumn
             status={focusedStatus}
             label={COLUMN_LABELS[focusedStatus]}
-            items={windowSlice(byStatus[focusedStatus], selectedIndexIn(focusedStatus), bodyHeight)}
+            items={windowSlice(
+              byStatus[focusedStatus],
+              selectedIndexIn(focusedStatus),
+              visibleCount,
+            )}
             count={byStatus[focusedStatus].length}
             selectedId={selectedId}
             compact={compact}

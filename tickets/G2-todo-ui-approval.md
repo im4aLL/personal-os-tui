@@ -2,7 +2,7 @@
 id: G2
 title: Todo UI approval
 type: gate
-status: not-started
+status: done
 phase: todo
 order: 7
 depends_on: [M2]
@@ -11,7 +11,7 @@ approves: M2
 
 # G2 - Todo UI approval
 
-> Type: gate · Status: not-started · Phase: todo
+> Type: gate · Status: done · Phase: todo
 
 ## Purpose
 
@@ -19,7 +19,8 @@ Approve the Todo UI ([M2](M2-todo-ui.md)) before its functionality is built.
 
 ## Preconditions
 
-- [ ] [M2](M2-todo-ui.md) deliverables are complete
+- [x] [M2](M2-todo-ui.md) deliverables are complete
+- [x] [M2](M2-todo-ui.md) is implemented, reviewed, and already marked `done`
 
 ## Approval checklist
 
@@ -40,5 +41,5 @@ Approve the Todo UI ([M2](M2-todo-ui.md)) before its functionality is built.
 
 ## On approval
 
-- [ ] Set this ticket and [M2](M2-todo-ui.md) to `done`.
-- [ ] Unblock the next ticket in the sequence.
+- [x] Set this ticket to `done` ([M2](M2-todo-ui.md) is already `done`).
+- [x] Unblock the next ticket in the sequence.

@@ -25,7 +25,7 @@ const PRIORITY_LABEL: Record<NonNullable<Todo["priority"]>, string> = {
 export function TodoRow(props: TodoRowProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
-  const { todo, selected, compact } = props;
+  const { todo, selected } = props;
   const completed = todo.status === "completed";
   const marker = selected ? "> " : "  ";
   const markerColor = selected ? tokens.accent : tokens.fgSubtle;
@@ -44,55 +44,24 @@ export function TodoRow(props: TodoRowProps): ReactNode {
   const titleColor = completed ? tokens.fgMuted : selected ? tokens.fg : tokens.fgMuted;
   const titleAttrs = selected ? TextAttributes.BOLD : undefined;
 
-  if (compact) {
-    const title = truncate(todo.title, Math.max(4, props.width - 2));
-    return (
-      <box flexDirection="column">
-        <text wrapMode="none">
-          <span fg={color(markerColor)}>{marker}</span>
-          <span fg={color(titleColor)} attributes={titleAttrs}>
-            {title}
-          </span>
-        </text>
-        {priority === null && dueLabel === null ? null : (
-          <text wrapMode="none">
-            <span fg={color(tokens.fgSubtle)}>{"    "}</span>
-            {priority === null ? null : (
-              <span fg={color(priorityColor)}>{`${PRIORITY_LABEL[priority]}  `}</span>
-            )}
-            {dueLabel === null ? null : <span fg={color(dueColor)}>{dueLabel}</span>}
-          </text>
-        )}
-      </box>
-    );
-  }
-
-  const badges: { text: string; color: string }[] = [];
-  if (priority !== null) {
-    badges.push({ text: PRIORITY_LABEL[priority], color: priorityColor });
-  }
-  if (dueLabel !== null) {
-    badges.push({ text: dueLabel, color: dueColor });
-  }
-
-  const room = Math.max(4, props.width - 2);
-  const badgeText = badges.map((badge) => badge.text).join("  ");
-  const title = truncate(todo.title, Math.max(6, room - badgeText.length - 2));
-  const pad =
-    badges.length === 0 ? "" : " ".repeat(Math.max(1, room - title.length - badgeText.length));
-
+  const title = truncate(todo.title, Math.max(4, props.width - 2));
   return (
-    <text wrapMode="none">
-      <span fg={color(markerColor)}>{marker}</span>
-      <span fg={color(titleColor)} attributes={titleAttrs}>
-        {title}
-      </span>
-      <span fg={color(tokens.fgSubtle)}>{pad}</span>
-      {badges.map((badge, index) => (
-        <span key={badge.text} fg={color(badge.color)}>
-          {index === 0 ? badge.text : `  ${badge.text}`}
+    <box flexDirection="column">
+      <text wrapMode="none">
+        <span fg={color(markerColor)}>{marker}</span>
+        <span fg={color(titleColor)} attributes={titleAttrs}>
+          {title}
         </span>
-      ))}
-    </text>
+      </text>
+      {priority === null && dueLabel === null ? null : (
+        <text wrapMode="none">
+          <span fg={color(tokens.fgSubtle)}>{"  "}</span>
+          {priority === null ? null : (
+            <span fg={color(priorityColor)}>{`${PRIORITY_LABEL[priority]}  `}</span>
+          )}
+          {dueLabel === null ? null : <span fg={color(dueColor)}>{dueLabel}</span>}
+        </text>
+      )}
+    </box>
   );
 }
