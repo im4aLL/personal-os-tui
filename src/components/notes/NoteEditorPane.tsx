@@ -3,10 +3,10 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { EmptyState } from "../ui/EmptyState";
+import { TagInput } from "../ui/TagInput";
 import { TextArea } from "../ui/TextArea";
 import type { NoteEditorPaneProps } from "./NoteEditorPane.types";
 import { NoteToolbar } from "./NoteToolbar";
-import { TagInput } from "./TagInput";
 
 /** Body placeholder while the selected note loads. */
 function EditorSkeleton(): ReactNode {

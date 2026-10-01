@@ -2,7 +2,7 @@
 id: G4
 title: Save Links UI approval
 type: gate
-status: not-started
+status: done
 phase: links
 order: 13
 depends_on: [M4]
@@ -11,7 +11,7 @@ approves: M4
 
 # G4 - Save Links UI approval
 
-> Type: gate · Status: not-started · Phase: links
+> Type: gate · Status: done · Phase: links
 
 ## Purpose
 
@@ -19,7 +19,8 @@ Approve the Save Links UI ([M4](M4-save-links-ui.md)) before its functionality i
 
 ## Preconditions
 
-- [ ] [M4](M4-save-links-ui.md) deliverables are complete
+- [x] [M4](M4-save-links-ui.md) deliverables are complete
+- [x] [M4](M4-save-links-ui.md) is implemented, reviewed, and already marked `done`
 
 ## Approval checklist
 
@@ -38,5 +39,13 @@ Approve the Save Links UI ([M4](M4-save-links-ui.md)) before its functionality i
 
 ## On approval
 
-- [ ] Set this ticket and [M4](M4-save-links-ui.md) to `done`.
-- [ ] Unblock the next ticket in the sequence.
+- [x] Set this ticket and [M4](M4-save-links-ui.md) to `done`.
+- [x] Unblock the next ticket in the sequence.
+
+## Notes
+
+- M4 and G4 were set to `done` by explicit instruction, with the manual interactive pass still outstanding.
+- The interactive approval checklist remains a manual pass by the user. The two explicitly interactive items stay unchecked: the narrow-terminal pass at 120, 90, 70, and 55 columns, and the subjective approval of row density, tag-pill styling, and the search/pill relationship.
+- Every code-verifiable checklist item above was confirmed during the M4 review: first-load pagination (50 then 13, no duplicates), clean termination with the "all shown" hint, tags-derived pills with Tab/Enter behavior, the zero-match filtered empty state, debounced case-insensitive search with the generation guard, save with a typed title and tags plus the duplicate error, blank-title domain fallback, inline edit commit/revert with no layout shift, open/copy with the copied-URL fallback, and delete confirmation.
+- Do not check the two interactive boxes until the user runs the interactive pass.
+

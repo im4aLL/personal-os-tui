@@ -17,7 +17,8 @@ import { useTodos } from "../store/todos";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { messageOf } from "../utils/error";
-import { noteDisplayTitle, truncate } from "../utils/notes";
+import { noteDisplayTitle } from "../utils/notes";
+import { truncate } from "../utils/text";
 import { windowSlice } from "../utils/window";
 import type { NoteConfirmState, NoteNotice } from "./NotesScreen.types";
 
@@ -875,10 +876,6 @@ export function NotesScreen(): ReactNode {
           body={confirm.body}
           confirmLabel={confirm.confirmLabel}
           destructive={confirm.destructive}
-          onConfirm={() => {
-            void runDelete();
-          }}
-          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </box>

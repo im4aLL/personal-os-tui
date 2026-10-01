@@ -943,10 +943,6 @@ export function TodoScreen(): ReactNode {
           body={confirm.body}
           confirmLabel={confirm.confirmLabel}
           destructive={confirm.destructive}
-          onConfirm={() => {
-            void runConfirm();
-          }}
-          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </box>

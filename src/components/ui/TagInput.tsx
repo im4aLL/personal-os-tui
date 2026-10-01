@@ -4,7 +4,8 @@ import type { TagInputProps } from "./TagInput.types";
 
 // Tag chips plus an editable input and a keyboard-driven suggestion strip. The
 // screen owns the keyboard (Enter adds, Backspace on an empty input removes the
-// last, Up/Down move the highlight), so this component only renders.
+// last, Up/Down move the highlight), so this component only renders. Shared by
+// the Notes editor and the Save link form.
 export function TagInput(props: TagInputProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;

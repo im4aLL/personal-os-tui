@@ -1,7 +1,7 @@
 import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
-import { truncate } from "../../utils/notes";
+import { truncate } from "../../utils/text";
 import type { NoteToolbarProps } from "./NoteToolbar.types";
 
 // Editor toolbar: Edit/Preview state, the save indicator, and the action hints.

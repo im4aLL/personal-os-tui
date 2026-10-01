@@ -2,7 +2,7 @@
 id: M4
 title: Save Links UI
 type: milestone
-status: not-started
+status: done
 phase: links
 order: 12
 depends_on: [W3]
@@ -11,7 +11,7 @@ gate: G4
 
 # M4 - Save Links UI
 
-> Type: milestone · Status: not-started · Phase: links
+> Type: milestone · Status: done · Phase: links
 
 ## Objective
 
@@ -19,21 +19,21 @@ The Links screen on fixtures: search, tag filter pills, paginated list, save for
 
 ## Deliverables
 
-- [ ] `src/screens/LinksScreen.tsx` with the search bar, pill row, paginated list, and status line.
-- [ ] `src/components/links/LinkRow.tsx`, `LinkForm.tsx`, and `TagFilterBar.tsx`.
-- [ ] Pagination: 63 fixtures so the first page is exactly 50 and the second is 13; a bottom sentinel loads the next page on `j`, and an "all shown" hint replaces the load-more row at the end.
-- [ ] Debounced search filtering by title and URL substring, case-insensitively, with a generation guard so a slow response never overwrites a newer query.
-- [ ] Tag filter pills from all used tags; `Tab`/`Shift+Tab` cycle pills, `Enter` applies or clears.
-- [ ] Save form (`n`) with a manually typed title and tags; a blank title defaults to the domain; duplicate URLs show "This link is already saved".
-- [ ] Inline title editing with `e`: `Enter` commits, `Esc` reverts with no write, and there is no layout shift.
-- [ ] `Enter` opens the URL in the system browser; `c` copies it; a non-`http` scheme shows the open-URL failure message.
-- [ ] Delete with confirmation (`d`).
-- [ ] Empty states: "No links yet" plus "Save your first link to get started"; filtered empty: "No links match your search" plus guidance.
-- [ ] Loading: three skeleton rows on first load; a two-row skeleton plus `loading more` at the pagination sentinel.
-- [ ] Error: an invalid URL shows the parse error; a load-more failure keeps existing rows and shows a retry hint with `r`.
-- [ ] Narrow: below 90 columns tags move under the title and the date column is dropped; below 60 the URL line truncates from the middle so the domain stays visible.
-- [ ] Fixtures: 63 links; 5-7 tags including one that matches a single link and one that matches zero; two links with identical titles but different URLs; one very long path; one non-`http` scheme; `created_at` spread over months.
-- [ ] Scenario transforms: `empty`, `loading`, `large` (600 links), `error`.
+- [x] `src/screens/LinksScreen.tsx` with the search bar, pill row, paginated list, and status line.
+- [x] `src/components/links/LinkRow.tsx`, `LinkForm.tsx`, and `TagFilterBar.tsx`.
+- [x] Pagination: 63 fixtures so the first page is exactly 50 and the second is 13; a bottom sentinel loads the next page on `j`, and an "all shown" hint replaces the load-more row at the end.
+- [x] Debounced search filtering by title and URL substring, case-insensitively, with a generation guard so a slow response never overwrites a newer query.
+- [x] Tag filter pills from all used tags; `Tab`/`Shift+Tab` cycle pills, `Enter` applies or clears.
+- [x] Save form (`n`) with a manually typed title and tags; a blank title defaults to the domain; duplicate URLs show "This link is already saved".
+- [x] Inline title editing with `e`: `Enter` commits, `Esc` reverts with no write, and there is no layout shift.
+- [x] `Enter` opens the URL in the system browser; `c` copies it; a non-`http` scheme shows the open-URL failure message.
+- [x] Delete with confirmation (`d`).
+- [x] Empty states: "No links yet" plus "Save your first link to get started"; filtered empty: "No links match your search" plus guidance.
+- [x] Loading: three skeleton rows on first load; a two-row skeleton plus `loading more` at the pagination sentinel.
+- [x] Error: an invalid URL shows the parse error; a load-more failure keeps existing rows and shows a retry hint with `r`.
+- [x] Narrow: below 90 columns tags move under the title and the date column is dropped; below 60 the URL line truncates from the middle so the domain stays visible.
+- [x] Fixtures: 63 links; 5-7 tags including one that matches a single link and one that matches zero; two links with identical titles but different URLs; one very long path; one non-`http` scheme; `created_at` spread over months.
+- [x] Scenario transforms: `empty`, `loading`, `large` (600 links), `error`.
 
 ## Design notes
 
@@ -108,3 +108,13 @@ Approved at [G4](G4-save-links-ui-approval.md). Do not start the next ticket unt
 ## Notes
 
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- `npm run typecheck`, `npm run check`, and `npm run build` all pass. The interactive G4 checklist remains a manual pass.
+- Repo seam: `LinkRepo` gained `checkDuplicateUrl(url)` and `setTags(id, tags)` (the latter for W4); `LinksPage` gained an optional `total` so the status line can read "50 of 63 shown". The Turso implementations stay W4 `notWired` stubs. `list` maps to the desktop `getLinksPage`, `tags()` to `getAllUsedTags`, so W4 swaps the mock for a mechanical wrapper without touching the store.
+- Store mirrors `personal-os/src/store/links.ts` including the module-level `linksGeneration` guard and the zero-progress `loadMore` termination. Two additions beyond the desktop store (which logs to the console): an `error`/`errorScope` pair and a `retry()` that repeats the last failed request so `r` can distinguish a failed page load from a failed load-more. `total` is tracked alongside.
+- The cursor stays an opaque `string | null` (the mock uses a numeric window offset) rather than the desktop `{created_at, id}` object; W4 encodes/decodes that object into this string, which keeps the store final for the wiring ticket.
+- `TagInput` moved from `src/components/notes/` to `src/components/ui/` and is now shared by the Notes editor and the save form; the `truncate` helper moved to `src/utils/text.ts` (with the new `truncateMiddle`) and Notes importers were updated.
+- `c` and the non-http/open-failure fallback use the OpenTUI renderer clipboard (`renderer.copyToClipboardOSC52`), and `src/lib/open-url.ts` launches the system browser with `node:child_process` (`open`/`xdg-open`/`explorer.exe`, the last chosen over `cmd /c start` so the URL is a single argv entry and cmd cannot re-parse it) returning `{ok}` so the screen can fall back to a copied-URL message.
+- Narrow rule reading: below 90 columns the date column is dropped and tags move to their own line under the title/URL block (desktop order title -> URL -> tags); below 60 the URL label middle-truncates so the domain stays visible.
+- Tag input field: `Enter` on the URL or Title field submits, `Enter` on the Tags field adds a tag (matching the Notes tag input), and `Ctrl+Enter` submits from anywhere in the form.
+- Pill focus is a screen-level mode: `Tab`/`Shift+Tab` (or `backtab`) focus and cycle the pill row, `Enter` applies or clears the highlighted pill, and `Esc` returns focus to the list before it clears the tag then the search.
+- Fixtures add 63 links and a 7-name tag pool (`dev`, `db`, `reading`, `tools`, `design`, `ui`, `rust`); `rust` is an orphan with no link (mirrors the desktop `link_tags` table), `design` matches exactly one link, and two "OpenTUI components" rows differ only by URL.

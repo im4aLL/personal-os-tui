@@ -113,6 +113,8 @@ export interface GetLinksPageParams {
 export interface LinksPage {
   links: Link[];
   nextCursor: string | null;
+  /** Total rows matching the current filter, when the repo can report it. */
+  total?: number;
 }
 
 export interface CreateLinkInput {
@@ -130,8 +132,11 @@ export interface UpdateLinkInput {
 export interface LinkRepo {
   list(params: GetLinksPageParams): Promise<LinksPage>;
   tags(): Promise<string[]>;
+  checkDuplicateUrl(url: string): Promise<boolean>;
   create(input: CreateLinkInput): Promise<Link>;
   update(id: string, input: UpdateLinkInput): Promise<void>;
+  /** Replace a link's full tag set (mirrors the desktop `setTagsForLink`). */
+  setTags(id: string, tags: string[]): Promise<void>;
   remove(id: string): Promise<void>;
 }
 

@@ -19,11 +19,17 @@ export const tursoLinkRepo: LinkRepo = {
   tags(): Promise<string[]> {
     throw notWired("links.tags");
   },
+  checkDuplicateUrl(_url: string): Promise<boolean> {
+    throw notWired("links.checkDuplicateUrl");
+  },
   create(_input: CreateLinkInput): Promise<Link> {
     throw notWired("links.create");
   },
   update(_id: string, _input: UpdateLinkInput): Promise<void> {
     throw notWired("links.update");
+  },
+  setTags(_id: string, _tags: string[]): Promise<void> {
+    throw notWired("links.setTags");
   },
   remove(_id: string): Promise<void> {
     throw notWired("links.remove");

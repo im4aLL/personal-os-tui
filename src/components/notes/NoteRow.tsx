@@ -2,7 +2,8 @@ import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { relativeTime } from "../../utils/date";
-import { noteDisplayTitle, truncate } from "../../utils/notes";
+import { noteDisplayTitle } from "../../utils/notes";
+import { truncate } from "../../utils/text";
 import type { NoteRowProps } from "./NoteRow.types";
 
 // Fixed mask widths (not derived from content) so toggling privacy never

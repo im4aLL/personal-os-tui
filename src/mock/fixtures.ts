@@ -3,6 +3,8 @@
 // archived todos with stale timestamps. Notes carry the full M3 surface: 14
 // notes (3 pinned, one untitled, a long markdown body, a single long line, 4
 // tagged, relative dates across today/yesterday/last week/last year).
+
+import type { Link } from "../repos/types";
 import { isoDateOffset } from "../utils/date";
 import type { Fixtures } from "./fixtures.types";
 
@@ -143,6 +145,206 @@ const LONG_MARKDOWN = [
   "fit on one screen and revisit it after every release. Delete the lines that",
   "never catch anything, and add a line only after a real failure.",
 ].join("\n");
+
+// Save Links review set: exactly 63 rows so the first page is 50 and the
+// second 13. `createdAt` is spread over months. Two rows share a title on
+// different URLs (duplicate detection is URL-based), one has a very long path,
+// one is a `mailto:` scheme, `design` matches a single row, and `rust` is an
+// orphan in the tag pool so a zero-match pill can reach the filtered-empty
+// state.
+const LINK_TAGS = ["dev", "db", "reading", "tools", "design", "ui", "rust"];
+
+type LinkSpec = [title: string, url: string, tags: string[], daysAgo: number, hour: number];
+
+const LINK_SPECS: LinkSpec[] = [
+  ["Turso docs", "https://docs.turso.tech/introduction", ["dev", "db"], 2, 9],
+  ["OpenTUI components", "https://opentui.com/docs/components", ["dev", "ui"], 3, 10],
+  ["OpenTUI components", "https://github.com/sst/opentui", ["dev", "ui"], 4, 11],
+  ["SQLite foreign keys", "https://sqlite.org/foreignkeys.html", ["db"], 5, 12],
+  ["Designing Data-Intensive Applications", "https://dataintensive.net", ["reading", "db"], 6, 13],
+  [
+    "The Pragmatic Programmer",
+    "https://pragprog.com/titles/tpp20/the-pragmatic-programmer",
+    ["reading"],
+    8,
+    9,
+  ],
+  [
+    "Zustand docs",
+    "https://zustand.docs.pmnd.rs/getting-started/introduction",
+    ["dev", "tools"],
+    9,
+    10,
+  ],
+  ["React hooks reference", "https://react.dev/reference/react/hooks", ["dev"], 10, 11],
+  [
+    "A very long path",
+    "https://example.com/a/very/long/path/that/keeps/going/and/going/for/truncation/review/with/a/file.html",
+    ["reading"],
+    11,
+    12,
+  ],
+  ["Team mailing list", "mailto:team@example.com", ["tools"], 12, 13],
+  ["Catppuccin palette", "https://catppuccin.com/palette", ["design"], 14, 9],
+  [
+    "TypeScript handbook",
+    "https://www.typescriptlang.org/docs/handbook/intro.html",
+    ["dev", "reading"],
+    15,
+    10,
+  ],
+  ["Node.js child_process", "https://nodejs.org/api/child_process.html", ["dev", "tools"], 16, 11],
+  ["OpenTUI renderer", "https://opentui.com/docs/renderer", ["dev", "ui"], 17, 12],
+  ["SQLite WAL mode", "https://sqlite.org/wal.html", ["db"], 18, 13],
+  ["Biome linter", "https://biomejs.dev/linter/rules", ["dev", "tools"], 20, 9],
+  [
+    "Zig language reference",
+    "https://ziglang.org/documentation/master",
+    ["dev", "reading"],
+    21,
+    10,
+  ],
+  ["Turso CLI", "https://docs.turso.tech/cli/introduction", ["dev", "db"], 22, 11],
+  ["Deno KV", "https://docs.deno.com/deploy/kv/manual", ["db"], 23, 12],
+  ["Latency numbers", "https://gist.github.com/jboner/2841832", ["reading", "tools"], 24, 13],
+  [
+    "Distributed systems reading",
+    "https://github.com/theanalyst/awesome-distributed-systems",
+    ["reading"],
+    26,
+    9,
+  ],
+  ["React patterns", "https://reactpatterns.com", ["dev"], 27, 10],
+  ["CSS grid guide", "https://css-tricks.com/snippets/css/complete-guide-grid", ["ui"], 28, 11],
+  ["Flexbox guide", "https://css-tricks.com/snippets/css/a-guide-to-flexbox", ["ui"], 29, 12],
+  [
+    "Terminal escape codes",
+    "https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797",
+    ["dev", "tools"],
+    30,
+    13,
+  ],
+  ["SQLite query planner", "https://sqlite.org/optoverview.html", ["db"], 32, 9],
+  ["The Rust book", "https://doc.rust-lang.org/book", ["reading"], 33, 10],
+  ["Go by example", "https://gobyexample.com", ["reading", "dev"], 34, 11],
+  ["Vim motions", "https://vim.rtorr.com", ["tools"], 35, 12],
+  ["tmux cheatsheet", "https://tmuxcheatsheet.com", ["tools"], 36, 13],
+  [
+    "Git internals",
+    "https://git-scm.com/book/en/v2/Git-Internals-Plumbing-and-Porcelain",
+    ["dev", "reading"],
+    38,
+    9,
+  ],
+  [
+    "npm workspaces",
+    "https://docs.npmjs.com/cli/v10/using-npm/workspaces",
+    ["dev", "tools"],
+    39,
+    10,
+  ],
+  ["tsdown bundler", "https://tsdown.dev", ["dev", "tools"], 40, 11],
+  ["tsx runner", "https://tsx.is", ["dev", "tools"], 41, 12],
+  ["Tree-sitter", "https://tree-sitter.github.io/tree-sitter", ["dev"], 42, 13],
+  [
+    "Zustand store patterns",
+    "https://zustand.docs.pmnd.rs/guides/practice-with-no-store-actions",
+    ["dev"],
+    44,
+    9,
+  ],
+  [
+    "HTTP methods",
+    "https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods",
+    ["dev", "reading"],
+    45,
+    10,
+  ],
+  ["Fetch API", "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API", ["dev"], 46, 11],
+  [
+    "Intl.DateTimeFormat",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat",
+    ["dev"],
+    47,
+    12,
+  ],
+  ["SQLite date functions", "https://sqlite.org/lang_datefunc.html", ["db"], 48, 13],
+  ["AWK one-liners", "https://www.pement.org/awk/awk1line.txt", ["tools"], 50, 9],
+  [
+    "The Art of Unix Programming",
+    "https://www.catb.org/esr/writings/taoup/html",
+    ["reading", "tools"],
+    51,
+    10,
+  ],
+  ["Refactoring catalog", "https://refactoring.com/catalog", ["dev"], 52, 11],
+  [
+    "Clean Architecture",
+    "https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html",
+    ["reading"],
+    53,
+    12,
+  ],
+  ["Twelve-Factor App", "https://12factor.net", ["dev", "reading"], 54, 13],
+  ["Semantic Versioning", "https://semver.org", ["dev"], 56, 9],
+  [
+    "Conventional Commits",
+    "https://www.conventionalcommits.org/en/v1.0.0",
+    ["dev", "tools"],
+    57,
+    10,
+  ],
+  ["Keep a Changelog", "https://keepachangelog.com/en/1.1.0", ["tools"], 58, 11],
+  ["Open Source Guides", "https://opensource.guide", ["reading"], 59, 12],
+  ["SQLite in production", "https://blog.pecar.me/sqlite-prod", ["db"], 60, 13],
+  [
+    "Command line text processing",
+    "https://github.com/learnbyexample/Command-line-text-processing",
+    ["tools", "reading"],
+    65,
+    9,
+  ],
+  ["Regular expressions", "https://regex101.com", ["dev", "tools"], 70, 10],
+  ["JSON schema", "https://json-schema.org", ["dev"], 75, 11],
+  ["Unicode console", "https://www.unicode.org/reports/tr11", ["dev", "reading"], 80, 12],
+  ["ANSI colors", "https://en.wikipedia.org/wiki/ANSI_escape_code", ["dev", "ui"], 90, 13],
+  [
+    "Performance profiling",
+    "https://nodejs.org/en/learn/getting-started/profiling",
+    ["dev"],
+    100,
+    9,
+  ],
+  ["Database indexing", "https://use-the-index-luke.com", ["db", "reading"], 120, 10],
+  [
+    "System design primer",
+    "https://github.com/donnemartin/system-design-primer",
+    ["reading"],
+    150,
+    11,
+  ],
+  ["Kubernetes docs", "https://kubernetes.io/docs/home", ["tools"], 180, 12],
+  ["Docker get started", "https://docs.docker.com/get-started", ["tools"], 220, 13],
+  [
+    "Linux permissions",
+    "https://wiki.archlinux.org/title/File_permissions_and_attributes",
+    ["tools"],
+    280,
+    9,
+  ],
+  ["SSH config", "https://www.ssh.com/academy/ssh/config", ["tools"], 340, 10],
+  ["Emacs org mode", "https://orgmode.org/manual/Introduction.html", ["reading"], 420, 11],
+];
+
+function linkFixtures(): Link[] {
+  return LINK_SPECS.map(([title, url, tags, daysAgo, hour], index) => ({
+    id: `link-${String(index + 1).padStart(2, "0")}`,
+    title,
+    url,
+    tags: [...tags],
+    createdAt: dayStamp(-daysAgo, hour),
+  }));
+}
 
 export function createFixtures(): Fixtures {
   const stamp = now();
@@ -520,7 +722,8 @@ export function createFixtures(): Fixtures {
         updatedAt: hoursAgo(24 * 5 + 12),
       },
     ],
-    links: [],
+    links: linkFixtures(),
+    linkTags: [...LINK_TAGS],
     workLogs: [],
     projects: [],
   };
