@@ -205,15 +205,22 @@ function Shell(props: ShellProps): ReactNode {
       return;
     }
 
-    // H2: Setup covers the content area until dismissed, but the shell stays
-    // browsable in mock mode. `d` continues with mock data (PLAN M1 Demo
-    // data affordance); navigation dismisses via ctx.navigate above. Palette,
-    // help, theme, and quit still run on top of Setup without dismissing it.
+    // A focused control owns its plain keys, and so does the Setup screen as
+    // a whole: while Setup is visible (or any form holds `ui.focusedField`),
+    // `t`, `/`, `?`, and `q` must not cycle the theme, open the palette, or
+    // quit, including the connecting/failure steps where Setup clears its
+    // focus. Modified keys cannot be typed, so they still resolve: Alt+1..6
+    // navigates away and dismisses Setup in mock mode (M0: `d` or Alt+1..6
+    // reaches the six screens), and Ctrl+P opens the palette on top. Ctrl+Q
+    // stays reachable above.
     const session = useSession.getState();
-    const setupVisible = !session.configComplete && !useUi.getState().setupDismissed;
-    const canDemo = isMockEnabled() && session.repoMode === "mock" && !session.configComplete;
-    if (setupVisible && canDemo && !key.ctrl && !key.meta && key.name.toLowerCase() === "d") {
-      useUi.getState().dismissSetup();
+    const setupVisible = !session.configComplete && !state.setupDismissed;
+    if (
+      (state.focusedField !== null || setupVisible) &&
+      !key.ctrl &&
+      !key.meta &&
+      key.option !== true
+    ) {
       return;
     }
 
@@ -235,7 +242,11 @@ function Shell(props: ShellProps): ReactNode {
 
   return (
     <Layout screen={screen} sidebarHidden={sidebarHidden} sidebarRail={sidebarRail}>
-      {showSetup ? <SetupScreen /> : <ScreenContent key={screen} screen={screen} />}
+      {showSetup ? (
+        <SetupScreen setup={props.setup} settings={props.settings} quit={props.quit} />
+      ) : (
+        <ScreenContent key={screen} screen={screen} />
+      )}
       {modal === "command-palette" ? <CommandPalette /> : null}
       {modal === "help" ? <HelpScreen /> : null}
       {modal === "mock-panel" &&
@@ -251,7 +262,7 @@ export function App(props: AppBootstrap): ReactNode {
 
   return (
     <ThemeProvider themeId={themeId}>
-      <Shell quit={props.onRequestQuit} />
+      <Shell quit={props.onRequestQuit} setup={props.setup} settings={props.settings} />
     </ThemeProvider>
   );
 }

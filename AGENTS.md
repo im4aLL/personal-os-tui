@@ -2,3 +2,4 @@
 - Types live in `<name>.types.ts`, runtime in `<name>.ts`/`<name>.tsx`; never mix exported types/interfaces with runtime functions/consts/classes in one file.
 - Runtime files import types via `import type ... from "./<name>.types"`; `src/repos/types.ts` and `src/theme/types.ts` stay as shared types-only modules.
 - Preserve exported names and behavior when splitting; update all importers to the new `.types` path.
+- Only create a custom component if OpenTUI (@opentui/react / @opentui/core) does not provide it; otherwise use the OpenTUI primitive/component as much as possible (box, text, input, select, textarea, scrollbox, tab-select, code, markdown, etc.). Available components can be found in https://opentui.com/docs/components/

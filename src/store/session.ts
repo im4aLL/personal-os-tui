@@ -28,6 +28,9 @@ export const useSession = create<SessionState>((set, get) => {
     cycleTheme: () => {
       set((state) => ({ themeId: nextThemeId(state.themeId) }));
     },
+    setProfileName: (profileName: string) => {
+      set({ profileName });
+    },
     setScenario: (scenario: MockScenario) => {
       const api = get().mockUi;
       if (api === null) {

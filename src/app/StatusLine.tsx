@@ -1,6 +1,7 @@
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useSession } from "../store/session";
+import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 
 const HINT_SEGMENTS = ["/ commands", "? help", "t theme", "q quit"];
@@ -26,11 +27,14 @@ export function StatusLine(): ReactNode {
   const tokens = theme.tokens;
   const { width } = useTerminalDimensions();
   const repoMode = useSession((state) => state.repoMode);
+  const configComplete = useSession((state) => state.configComplete);
   const scenarios = useSession((state) => state.scenarios);
   const latencyMs = useSession((state) => state.latencyMs);
   const scenario = useSession((state) => state.scenario);
   const loosePermissions = useSession((state) => state.loosePermissions);
   const fromEnv = useSession((state) => state.fromEnv);
+  const focusedField = useUi((state) => state.focusedField);
+  const setupDismissed = useUi((state) => state.setupDismissed);
 
   // Latency is a mock concept; without mock UI state the segment is absent
   // rather than a misleading "0 ms".
@@ -44,12 +48,17 @@ export function StatusLine(): ReactNode {
   ];
 
   const inner = Math.max(0, width - 2);
+  // Setup owns the viewport until it is complete or dismissed, and its own
+  // body prints the Setup keymap, so the global browsing hints would be
+  // wrong there. The mock/latency readout stays.
+  const setupVisible = !configComplete && !setupDismissed;
+  const hintSegments = setupVisible || focusedField !== null ? [] : HINT_SEGMENTS;
   // The right-hand readout wins: fit it first (dropping its own trailing
   // segments when extremely narrow), then fill the remainder with hints.
   const rightFitted = fitSegments(rightSegments, " | ", inner);
   const right = rightFitted.join(" | ");
   const hintRoom = right.length === 0 ? inner : Math.max(0, inner - right.length - MIN_GAP);
-  const hints = fitSegments(HINT_SEGMENTS, HINT_GAP, hintRoom).join(HINT_GAP);
+  const hints = fitSegments(hintSegments, HINT_GAP, hintRoom).join(HINT_GAP);
   const gap =
     hints.length === 0 || right.length === 0
       ? ""

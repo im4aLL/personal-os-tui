@@ -51,3 +51,4 @@ The three-stage progress list becomes three real stages with real durations. A 4
 
 - Starts only after its gate is `done`.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- Token editing: M1's secure field supports only append and Backspace (no arrows/Home/End/Delete/selection/Ctrl+U; paste appends at the end). Real Turso tokens are long and opaque, so add at least a clear/select-all affordance here (round-3 review of M1, finding N2).

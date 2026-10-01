@@ -15,7 +15,7 @@ One feature at a time: UI, then gate, then wiring.
 0. [B0](B0-project-bootstrap.md) - Project bootstrap (init, dependencies, config, license) (bootstrap, foundation, done)
 1. [M0](M0-skeleton-and-repo-seam.md) - Skeleton, theme, shell, navigation, and the repository seam (milestone, foundation, done)
 2. [G0](G0-shell-ui-approval.md) - Shell UI approval (gate, foundation, done)
-3. [M1](M1-setup-ui.md) - Setup UI (mock connection) (milestone, setup, not-started)
+3. [M1](M1-setup-ui.md) - Setup UI (mock connection) (milestone, setup, done)
 4. [G1](G1-setup-ui-approval.md) - Setup UI approval (gate, setup, not-started)
 5. [W1](W1-setup-wiring.md) - Setup wiring (wiring, setup, not-started)
 6. [M2](M2-todo-ui.md) - Todo UI (milestone, todo, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [M1](M1-setup-ui.md) | Setup UI (mock connection) | milestone | setup |
 | [G1](G1-setup-ui-approval.md) | Setup UI approval | gate | setup |
 | [W1](W1-setup-wiring.md) | Setup wiring | wiring | setup |
 | [M2](M2-todo-ui.md) | Todo UI | milestone | todo |
@@ -75,7 +74,8 @@ One feature at a time: UI, then gate, then wiring.
 
 ## in-progress
 
-None yet.
+| Ticket | Title | Type | Phase |
+| --- | --- | --- | --- |
 
 ## done
 
@@ -84,6 +84,7 @@ None yet.
 | [B0](B0-project-bootstrap.md) | Project bootstrap (init, dependencies, config, license) | bootstrap | foundation |
 | [M0](M0-skeleton-and-repo-seam.md) | Skeleton, theme, shell, navigation, and the repository seam | milestone | foundation |
 | [G0](G0-shell-ui-approval.md) | Shell UI approval | gate | foundation |
+| [M1](M1-setup-ui.md) | Setup UI (mock connection) | milestone | setup |
 
 ## Rules
 

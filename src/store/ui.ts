@@ -37,6 +37,7 @@ export const useUi = create<UiState>((set) => {
     paletteQuery: "",
     paletteIndex: 0,
     setupDismissed: false,
+    focusedField: null,
     setScreen: (screen: Screen) => {
       set({ screen, modal: "none" });
     },
@@ -58,11 +59,16 @@ export const useUi = create<UiState>((set) => {
     setPaletteIndex: (paletteIndex: number) => {
       set({ paletteIndex });
     },
+    setFocusedField: (focusedField: string | null) => {
+      set({ focusedField });
+    },
     dismissSetup: () => {
-      set({ setupDismissed: true, modal: "none" });
+      // Releasing focus: a dismissed Setup must never keep the global
+      // handler deferred (e.g. Alt+1..6 away from a focused setup field).
+      set({ setupDismissed: true, modal: "none", focusedField: null });
     },
     showSetupScreen: () => {
-      set({ setupDismissed: false, modal: "none" });
+      set({ setupDismissed: false, modal: "none", focusedField: null });
     },
   };
 });

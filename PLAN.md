@@ -656,7 +656,13 @@ Step 3 - profile (only when the database has no profile)
 
 #### Files touched
 
-`src/app/SetupScreen.tsx`, `src/components/ui/TextField.tsx`, `Field.tsx`, `Button.tsx`, `src/repos/types.ts`, `src/repos/mock/setup.ts`, `src/repos/mock/settings.ts`, `src/repos/resolve.ts`.
+App shell and Setup flow: `src/app/SetupScreen.tsx` (new `SetupScreen.types.ts`), `src/app/App.tsx`, `src/app/App.types.ts`, `src/app/StatusLine.tsx`, `src/cli.tsx`.
+
+UI components: `src/components/ui/TextField.tsx` (new `TextField.types.ts`), `Field.tsx` (new `Field.types.ts`), `Button.tsx`, `Button.types.ts`.
+
+State and logic: `src/store/ui.ts`, `src/store/ui.types.ts`, `src/store/session.ts`, `src/store/session.types.ts`, `src/lib/validate.ts` (new).
+
+Repos and mock: `src/repos/types.ts`, `src/repos/mock/setup.ts`, `src/repos/mock/settings.ts`, `src/repos/resolve.ts`.
 
 #### Approval checklist (G1)
 

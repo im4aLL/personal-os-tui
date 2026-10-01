@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { List } from "../components/ui/List";
 import { Modal } from "../components/ui/Modal";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
@@ -25,29 +26,28 @@ export function CommandPalette(): ReactNode {
           value={query}
           placeholder="Type a command..."
           onInput={(value) => setQuery(value)}
+          backgroundColor={color(tokens.bgPanel)}
+          focusedBackgroundColor={color(tokens.bgPanel)}
+          textColor={color(tokens.fg)}
+          focusedTextColor={color(tokens.fg)}
+          placeholderColor={color(tokens.fgDisabled)}
+          cursorColor={color(tokens.cursor)}
+          selectionBg={color(tokens.selectionBg)}
+          selectionFg={color(tokens.selectionFg)}
         />
       </box>
       <box flexDirection="column" paddingTop={1}>
         {results.length === 0 ? (
           <text fg={color(tokens.fgSubtle)}>{"No matching commands."}</text>
         ) : (
-          results.map((command, index) => {
-            const active = index === selected;
-            return (
-              <box
-                key={command.id}
-                flexDirection="row"
-                backgroundColor={active ? color(tokens.sidebarActiveBg) : undefined}
-              >
-                <text fg={color(active ? tokens.sidebarActiveFg : tokens.fg)}>
-                  {`${active ? "> " : "  "}${command.title}`}
-                </text>
-                {command.hint !== "" ? (
-                  <text fg={color(tokens.fgSubtle)}>{`  ${command.hint}`}</text>
-                ) : null}
-              </box>
-            );
-          })
+          <List
+            items={results.map((command) => ({
+              id: command.id,
+              label: command.title,
+              detail: command.hint === "" ? undefined : command.hint,
+            }))}
+            selected={selected}
+          />
         )}
       </box>
       <box paddingTop={1}>

@@ -138,7 +138,13 @@ async function runApp(args: string[]): Promise<number> {
       backgroundColor: theme.tokens.bg,
     });
     const root = createRoot(renderer);
-    root.render(<App onRequestQuit={() => requestShutdown()} />);
+    root.render(
+      <App
+        onRequestQuit={() => requestShutdown()}
+        setup={bundle.setup}
+        settings={bundle.repos.settings}
+      />,
+    );
     await shutdown;
     root.unmount();
   } catch (error) {

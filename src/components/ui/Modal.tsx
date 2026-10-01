@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import type { ModalProps } from "./Modal.types";
 
+// OpenTUI has no native modal/dialog primitive, so this stays a box+text composition.
 export function Modal(props: ModalProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;

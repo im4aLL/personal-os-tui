@@ -16,6 +16,7 @@ export interface SessionState {
   mockUi: MockUiState | null;
   resetMockData: (() => void) | null;
   cycleTheme: () => void;
+  setProfileName: (name: string) => void;
   setScenario: (scenario: MockScenario) => void;
   setLatencyMs: (ms: number) => void;
 }

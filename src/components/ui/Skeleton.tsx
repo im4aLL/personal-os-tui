@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import type { BlockProps, SkeletonProps } from "./Skeleton.types";
 
+// OpenTUI has no native skeleton/placeholder primitive, so this stays a box+text composition.
 function Block(props: BlockProps): ReactNode {
   const { theme, color } = useTheme();
   return <text fg={color(theme.tokens.bgHover)}>{"█".repeat(props.width)}</text>;

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import type { EmptyStateProps } from "./EmptyState.types";
 
+// OpenTUI has no native empty-state primitive, so this stays a box+text composition.
 export function EmptyState(props: EmptyStateProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
