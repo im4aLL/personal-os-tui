@@ -13,6 +13,10 @@ import type {
 } from "../types";
 import { applyListScenario, isEmptyScenario, mockCall } from "./guard";
 
+/** M2 fixtures: `large` renders 150 todos even though the active fixture set
+ * is 12, enough to prove column scrolling. */
+const LARGE_TODO_TOTAL = 150;
+
 let rows: Todo[] = createFixtures().todos;
 
 export function resetTodoFixtures(fixtures: Fixtures): void {
@@ -27,13 +31,21 @@ function sortedActive(): Todo[] {
   return rows.filter((todo) => !todo.archived).sort((a, b) => a.position - b.position);
 }
 
+// `large` is a read-only scrolling mode: each cloned row's id becomes
+// `<id>-large-<n>`, which maps back to no source row, so mutating a clone
+// (update/remove/reorder) throws "mock todo not found". The fixtures review
+// scrolls `large`; it is not an edit surface.
 export const mockTodoRepo: TodoRepo = {
   list(): Promise<Todo[]> {
     return mockCall(() =>
-      applyListScenario(sortedActive(), (row, index) => ({
-        ...row,
-        id: `${row.id}-large-${index}`,
-      })),
+      applyListScenario(
+        sortedActive(),
+        (row, index) => ({
+          ...row,
+          id: `${row.id}-large-${index}`,
+        }),
+        LARGE_TODO_TOTAL,
+      ),
     );
   },
 
@@ -42,6 +54,7 @@ export const mockTodoRepo: TodoRepo = {
       applyListScenario(
         sortedActive().filter((todo) => todo.status === status),
         (row, index) => ({ ...row, id: `${row.id}-large-${index}` }),
+        LARGE_TODO_TOTAL,
       ),
     );
   },
@@ -52,7 +65,12 @@ export const mockTodoRepo: TodoRepo = {
         return [];
       }
       const needle = query.trim().toLowerCase();
-      return sortedActive().filter((todo) => todo.title.toLowerCase().includes(needle));
+      return sortedActive().filter((todo) => {
+        if (todo.title.toLowerCase().includes(needle)) {
+          return true;
+        }
+        return todo.description?.toLowerCase().includes(needle) ?? false;
+      });
     });
   },
 
@@ -66,8 +84,9 @@ export const mockTodoRepo: TodoRepo = {
       const todo: Todo = {
         id: randomUUID(),
         title: input.title,
+        description: input.description ?? null,
         status: input.status ?? "todo",
-        priority: input.priority ?? "medium",
+        priority: input.priority ?? null,
         dueDate: input.dueDate ?? null,
         position: rows.length,
         archived: false,

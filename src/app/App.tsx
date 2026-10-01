@@ -11,6 +11,7 @@ import {
   matchesKey,
 } from "../commands/registry";
 import type { CommandContext } from "../commands/registry.types";
+import { resolveKeyScope } from "../hooks/useKeyboardScope";
 import { DashboardScreen } from "../screens/DashboardScreen";
 import { LinksScreen } from "../screens/LinksScreen";
 import { NotesScreen } from "../screens/NotesScreen";
@@ -202,6 +203,16 @@ function Shell(props: ShellProps): ReactNode {
         session.setLatencyMs(Math.min(5000, Math.max(0, session.latencyMs + delta)));
         return;
       }
+      return;
+    }
+
+    // Screen-owned scope runs before the global registry so a screen key can
+    // preempt a global one (Todo's Ctrl+D pages instead of opening the mock
+    // panel). A scope that returns false lets the global keys above/below
+    // proceed, and the focused-field deferral still hands plain characters to
+    // a focused `<input>`/`<textarea>`.
+    if (resolveKeyScope(key)) {
+      key.stopPropagation();
       return;
     }
 

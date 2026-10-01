@@ -8,8 +8,9 @@ export type TodoPriority = "high" | "medium" | "low";
 export interface Todo {
   id: string;
   title: string;
+  description: string | null;
   status: TodoStatus;
-  priority: TodoPriority;
+  priority: TodoPriority | null;
   dueDate: string | null;
   position: number;
   archived: boolean;
@@ -19,15 +20,17 @@ export interface Todo {
 
 export interface CreateTodoInput {
   title: string;
+  description?: string | null;
   status?: TodoStatus;
-  priority?: TodoPriority;
+  priority?: TodoPriority | null;
   dueDate?: string | null;
 }
 
 export interface UpdateTodoInput {
   title?: string;
+  description?: string | null;
   status?: TodoStatus;
-  priority?: TodoPriority;
+  priority?: TodoPriority | null;
   dueDate?: string | null;
   position?: number;
   archived?: boolean;

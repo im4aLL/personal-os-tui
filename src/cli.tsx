@@ -17,6 +17,7 @@ import { configPath, effectiveCredentials } from "./lib/config";
 import { setTursoConfig } from "./lib/turso";
 import { getRepos } from "./repos/index";
 import type { RepoBundle } from "./repos/index.types";
+import { setRepos } from "./store/repos";
 import { initSession, useSession } from "./store/session";
 import { useUi } from "./store/ui";
 import { getTheme } from "./theme/registry";
@@ -113,6 +114,8 @@ async function runApp(args: string[]): Promise<number> {
     resetMockData: bundle.resetMockData,
     mockUi: bundle.mockUi,
   });
+  // Repository seam: every domain store reads repos through this module.
+  setRepos(bundle.repos);
   useUi.getState().setSidebarCollapsed(bundle.loaded.config?.ui.sidebarCollapsed ?? false);
 
   if (bundle.mode === "turso") {
