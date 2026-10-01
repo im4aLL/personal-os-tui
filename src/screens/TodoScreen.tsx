@@ -38,7 +38,7 @@ const CREATE_FIELDS: TodoFormField[] = ["title", "description", "priority", "due
 const EDIT_FIELDS: TodoFormField[] = ["title", "description", "priority", "due", "status"];
 
 const HINT =
-  "n new  Enter edit  m cycle status  H/L move column  K/J reorder  d delete  a archived  A archive done  X clear done";
+  "n new  Enter edit  m cycle status  H/L move column  K/J reorder  / search  d delete  a archived  A archive done  X clear done";
 
 const EMPTY_FORM: TodoFormState = {
   open: false,

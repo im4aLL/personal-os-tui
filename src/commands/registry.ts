@@ -64,10 +64,14 @@ export const NAV_COMMANDS: Command[] = [
   },
 ];
 
+// Ctrl+P is the universal palette key. `/` is a fallback binding that the
+// Notes and Todo screen scopes preempt to focus list search (App resolves the
+// screen scope before globals), so it is not universally reachable and help
+// does not advertise it as the palette key.
 const paletteCommand: Command = {
   id: "global.palette",
   title: "Open command palette",
-  hint: "/ or Ctrl+P",
+  hint: "Ctrl+P",
   group: "global",
   keys: [{ name: "/" }, { name: "p", ctrl: true }],
   run: (ctx) => ctx.openPalette(),

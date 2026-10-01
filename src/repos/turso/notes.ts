@@ -1,36 +1,44 @@
-// Turso stub (M0). Throws until the Notes wiring milestone lands.
+// Real NoteRepo: remote rows through src/lib/notes.ts. Mapping only; the SQL,
+// tag serialization, and column translation live in the lib layer.
+import {
+  createNote,
+  deleteNote,
+  getAllTags,
+  getNoteById,
+  getNotesList,
+  searchNotes,
+  setNotePinned,
+  setTagsForNote,
+  updateNote,
+} from "../../lib/notes";
 import type { CreateNoteInput, Note, NoteRepo, UpdateNoteInput } from "../types";
 
-function notWired(what: string): Error {
-  return new Error(`turso ${what} is not wired yet`);
-}
-
 export const tursoNoteRepo: NoteRepo = {
-  list(): Promise<Note[]> {
-    throw notWired("notes.list");
+  async list(): Promise<Note[]> {
+    return getNotesList();
   },
-  getById(_id: string): Promise<Note | null> {
-    throw notWired("notes.getById");
+  async getById(id: string): Promise<Note | null> {
+    return getNoteById(id);
   },
-  search(_query: string): Promise<Note[]> {
-    throw notWired("notes.search");
+  async search(query: string): Promise<Note[]> {
+    return searchNotes(query);
   },
-  create(_input: CreateNoteInput): Promise<Note> {
-    throw notWired("notes.create");
+  async create(input: CreateNoteInput): Promise<Note> {
+    return createNote(input);
   },
-  update(_id: string, _input: UpdateNoteInput): Promise<void> {
-    throw notWired("notes.update");
+  async update(id: string, input: UpdateNoteInput): Promise<void> {
+    await updateNote(id, input);
   },
-  remove(_id: string): Promise<void> {
-    throw notWired("notes.remove");
+  async remove(id: string): Promise<void> {
+    await deleteNote(id);
   },
-  setPinned(_id: string, _pinned: boolean): Promise<void> {
-    throw notWired("notes.setPinned");
+  async setPinned(id: string, pinned: boolean): Promise<void> {
+    await setNotePinned(id, pinned);
   },
-  allTags(): Promise<string[]> {
-    throw notWired("notes.allTags");
+  async allTags(): Promise<string[]> {
+    return getAllTags();
   },
-  setTags(_id: string, _tags: string[]): Promise<void> {
-    throw notWired("notes.setTags");
+  async setTags(id: string, tags: string[]): Promise<void> {
+    await setTagsForNote(id, tags);
   },
 };

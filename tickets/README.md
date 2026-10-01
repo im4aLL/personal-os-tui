@@ -23,7 +23,7 @@ One feature at a time: UI, then gate, then wiring.
 8. [W2](W2-todo-wiring.md) - Todo wiring (wiring, todo, done)
 9. [M3](M3-notes-ui.md) - Notes UI (milestone, notes, done)
 10. [G3](G3-notes-ui-approval.md) - Notes UI approval (gate, notes, done)
-11. [W3](W3-notes-wiring.md) - Notes wiring (wiring, notes, not-started)
+11. [W3](W3-notes-wiring.md) - Notes wiring (wiring, notes, done)
 12. [M4](M4-save-links-ui.md) - Save Links UI (milestone, links, not-started)
 13. [G4](G4-save-links-ui-approval.md) - Save Links UI approval (gate, links, not-started)
 14. [W4](W4-links-wiring.md) - Links wiring (wiring, links, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [W3](W3-notes-wiring.md) | Notes wiring | wiring | notes |
 | [M4](M4-save-links-ui.md) | Save Links UI | milestone | links |
 | [G4](G4-save-links-ui-approval.md) | Save Links UI approval | gate | links |
 | [W4](W4-links-wiring.md) | Links wiring | wiring | links |
@@ -85,6 +84,7 @@ One feature at a time: UI, then gate, then wiring.
 | [W2](W2-todo-wiring.md) | Todo wiring | wiring | todo |
 | [M3](M3-notes-ui.md) | Notes UI | milestone | notes |
 | [G3](G3-notes-ui-approval.md) | Notes UI approval | gate | notes |
+| [W3](W3-notes-wiring.md) | Notes wiring | wiring | notes |
 
 ## Rules
 

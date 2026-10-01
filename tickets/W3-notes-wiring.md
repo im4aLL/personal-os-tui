@@ -2,7 +2,7 @@
 id: W3
 title: Notes wiring
 type: wiring
-status: not-started
+status: done
 phase: notes
 order: 11
 depends_on: [G3]
@@ -11,7 +11,7 @@ wires: M3
 
 # W3 - Notes wiring
 
-> Type: wiring · Status: not-started · Phase: notes
+> Type: wiring · Status: done · Phase: notes
 
 ## Objective
 
@@ -50,3 +50,5 @@ Note switching flushes the previous note before loading the next, so no write is
 
 - Starts only after its gate is `done`.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- Implemented `src/lib/notes.ts` (desktop SQL with `?` placeholders, the list projection including `content` for the screen's client-side search, batched tag replace, and the per-note serialized tag-write queue) and `src/repos/turso/notes.ts`. `src/store/notes.ts` and `NoteEditorPane.tsx` are unchanged: the save-error surface and the load-failure retry affordance already exist.
+- `npm run typecheck`, `npm run check`, `npm run build`, and `npm run build:prod` pass. Live-Turso checklist items remain pending credentials.

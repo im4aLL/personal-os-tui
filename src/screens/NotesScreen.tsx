@@ -31,7 +31,7 @@ const SAVED_MS = 2000;
 const LIST_ROW_ROWS = 3;
 
 const HINT =
-  "n new  p preview  b pin  v privacy  x export  d delete  Enter open  Ctrl+S save  Ctrl+Enter todo";
+  "n new  p preview  b pin  v privacy  x export  d delete  / search  Enter open  Ctrl+S save  Ctrl+Enter todo";
 
 const EXPORT_OPTIONS = [
   { kind: "txt" as const, label: "Plain text (.txt)", detail: "markdown stripped" },
