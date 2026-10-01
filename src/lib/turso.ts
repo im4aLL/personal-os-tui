@@ -102,24 +102,42 @@ function isRetryable(status: number, error?: Error): boolean {
   return status === 429 || status >= 500;
 }
 
+/** Bounded per-attempt timeout for every Turso request. A hung request aborts
+ * and throws a `timed out` error instead of leaving the skeleton or an
+ * optimistic write in place forever. The timeout is deliberately not retried:
+ * `pipeline` only retries transient network and 429/5xx failures. */
+const REQUEST_TIMEOUT_MS = 15000;
+
 async function postPipeline(
   url: string,
   token: string,
   items: PipelineItem[],
 ): Promise<PipelineResponse> {
-  const response = await fetch(`${url}/v2/pipeline`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ requests: items }),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Turso HTTP ${response.status}: ${text || response.statusText}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${url}/v2/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ requests: items }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Turso HTTP ${response.status}: ${text || response.statusText}`);
+    }
+    return (await response.json()) as PipelineResponse;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`Turso request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
   }
-  return (await response.json()) as PipelineResponse;
 }
 
 async function pipeline(items: PipelineItem[]): Promise<TursoResult[]> {
@@ -224,6 +242,21 @@ function buildItems(statements: TursoStatement[]): PipelineItem[] {
 
 export async function tursoExecute(sql: string, args: unknown[] = []): Promise<void> {
   await pipeline(buildItems([{ sql, args }]));
+}
+
+/** Run a batch of statements in one `/v2/pipeline` request (N executes +
+ * close). A failed statement throws with its index, so a bad position write is
+ * attributable. An empty batch is a no-op.
+ *
+ * Caveat: the Turso v2 pipeline applies statements one at a time and is not
+ * transactional, so a mid-batch failure leaves the earlier statements
+ * committed. This is the same exposure the desktop has with sequential writes;
+ * callers reload on error to reconcile. */
+export async function tursoBatchExecute(statements: TursoStatement[]): Promise<void> {
+  if (statements.length === 0) {
+    return;
+  }
+  await pipeline(buildItems(statements));
 }
 
 export async function tursoSelect<T>(sql: string, args: unknown[] = []): Promise<T[]> {

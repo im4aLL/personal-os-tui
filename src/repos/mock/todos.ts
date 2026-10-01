@@ -28,7 +28,9 @@ function stamp(): string {
 }
 
 function sortedActive(): Todo[] {
-  return rows.filter((todo) => !todo.archived).sort((a, b) => a.position - b.position);
+  return rows
+    .filter((todo) => !todo.archived)
+    .sort((a, b) => a.position - b.position || a.createdAt.localeCompare(b.createdAt));
 }
 
 // `large` is a read-only scrolling mode: each cloned row's id becomes
@@ -88,7 +90,7 @@ export const mockTodoRepo: TodoRepo = {
         status: input.status ?? "todo",
         priority: input.priority ?? null,
         dueDate: input.dueDate ?? null,
-        position: rows.length,
+        position: input.position ?? 0,
         archived: false,
         createdAt: now,
         updatedAt: now,
@@ -147,11 +149,14 @@ export const mockTodoRepo: TodoRepo = {
 
   updatePositions(updates: PositionUpdate[]): Promise<void> {
     return mockCall(() => {
-      const positions = new Map(updates.map((item) => [item.id, item.position]));
+      const byId = new Map(updates.map((item) => [item.id, item]));
       for (const row of rows) {
-        const next = positions.get(row.id);
-        if (next !== undefined) {
-          row.position = next;
+        const update = byId.get(row.id);
+        if (update !== undefined) {
+          row.position = update.position;
+          if (update.status !== undefined) {
+            row.status = update.status;
+          }
           row.updatedAt = stamp();
         }
       }

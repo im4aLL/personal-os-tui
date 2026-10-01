@@ -24,6 +24,7 @@ export interface CreateTodoInput {
   status?: TodoStatus;
   priority?: TodoPriority | null;
   dueDate?: string | null;
+  position?: number;
 }
 
 export interface UpdateTodoInput {
@@ -39,6 +40,9 @@ export interface UpdateTodoInput {
 export interface PositionUpdate {
   id: string;
   position: number;
+  /** Set only on a column move, so the moved row's status and the target
+   * column's positions persist in one batch. */
+  status?: TodoStatus;
 }
 
 export interface TodoRepo {

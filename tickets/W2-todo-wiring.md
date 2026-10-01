@@ -2,7 +2,7 @@
 id: W2
 title: Todo wiring
 type: wiring
-status: not-started
+status: done
 phase: todo
 order: 8
 depends_on: [G2]
@@ -11,7 +11,7 @@ wires: M2
 
 # W2 - Todo wiring
 
-> Type: wiring · Status: not-started · Phase: todo
+> Type: wiring · Status: done · Phase: todo
 
 ## Objective
 
@@ -51,3 +51,5 @@ Initial load shows skeletons; refresh after sync-style events is silent. A faile
 
 - Starts only after its gate is `done`.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- The checklist item "`w` on a completed todo writes a real `work_logs` row" depends on W5 (work-log wiring): the `w` action is wired to `TodoRepo`/`WorkLogRepo`, but `tursoWorkLogRepo.create` is still a W5 stub, so the item is verified in mock mode now and against real Turso after W5.
+- Implemented and reviewed via hadi-reviewer; `npm run typecheck`, `npm run check`, `npm run build`, and `npm run build:prod` pass. Live-Turso checklist items remain pending credentials.

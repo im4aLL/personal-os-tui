@@ -323,6 +323,7 @@ export function TodoScreen(): ReactNode {
           priority,
           dueDate: due === "" ? null : due,
           status: values.status,
+          position: fullByStatus[values.status].length,
         });
         useTodos.getState().addTodo(created);
         setSelectedId(created.id);
@@ -351,9 +352,12 @@ export function TodoScreen(): ReactNode {
     setActionError(null);
     void (async () => {
       try {
-        await getRepos().todos.update(todo.id, { status });
         await getRepos().todos.updatePositions(
-          targetIds.map((item, index) => ({ id: item, position: index })),
+          targetIds.map((item, index) => ({
+            id: item,
+            position: index,
+            ...(item === todo.id ? { status } : {}),
+          })),
         );
       } catch (error) {
         setActionError(messageOf(error));
@@ -388,9 +392,12 @@ export function TodoScreen(): ReactNode {
     setActionError(null);
     void (async () => {
       try {
-        await getRepos().todos.update(id, { status: targetStatus });
         await getRepos().todos.updatePositions(
-          targetIds.map((item, index) => ({ id: item, position: index })),
+          targetIds.map((item, index) => ({
+            id: item,
+            position: index,
+            ...(item === id ? { status: targetStatus } : {}),
+          })),
         );
       } catch (error) {
         setActionError(messageOf(error));

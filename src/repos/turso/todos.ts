@@ -1,5 +1,18 @@
-// Turso stubs (M0). Each method throws until its wiring milestone lands.
-// The file set mirrors src/repos/mock/* one-for-one.
+// Real TodoRepo: remote rows through src/lib/todos.ts. Mapping and batching
+// only; the SQL and status/column translation live in the lib layer.
+import {
+  archiveTodos,
+  createTodo,
+  deleteTodo,
+  deleteTodos,
+  getArchivedTodos,
+  getTodos,
+  getTodosByStatus,
+  restoreTodos,
+  searchTodos,
+  updateTodo,
+  updateTodoPositions,
+} from "../../lib/todos";
 import type {
   CreateTodoInput,
   PositionUpdate,
@@ -9,42 +22,38 @@ import type {
   UpdateTodoInput,
 } from "../types";
 
-function notWired(what: string): Error {
-  return new Error(`turso ${what} is not wired yet`);
-}
-
 export const tursoTodoRepo: TodoRepo = {
-  list(): Promise<Todo[]> {
-    throw notWired("todos.list");
+  async list(): Promise<Todo[]> {
+    return getTodos();
   },
-  listByStatus(_status: TodoStatus): Promise<Todo[]> {
-    throw notWired("todos.listByStatus");
+  async listByStatus(status: TodoStatus): Promise<Todo[]> {
+    return getTodosByStatus(status);
   },
-  search(_query: string): Promise<Todo[]> {
-    throw notWired("todos.search");
+  async search(query: string): Promise<Todo[]> {
+    return searchTodos(query);
   },
-  archived(): Promise<Todo[]> {
-    throw notWired("todos.archived");
+  async archived(): Promise<Todo[]> {
+    return getArchivedTodos();
   },
-  create(_input: CreateTodoInput): Promise<Todo> {
-    throw notWired("todos.create");
+  async create(input: CreateTodoInput): Promise<Todo> {
+    return createTodo(input);
   },
-  update(_id: string, _input: UpdateTodoInput): Promise<void> {
-    throw notWired("todos.update");
+  async update(id: string, input: UpdateTodoInput): Promise<void> {
+    await updateTodo(id, input);
   },
-  remove(_id: string): Promise<void> {
-    throw notWired("todos.remove");
+  async remove(id: string): Promise<void> {
+    await deleteTodo(id);
   },
-  removeMany(_ids: string[]): Promise<void> {
-    throw notWired("todos.removeMany");
+  async removeMany(ids: string[]): Promise<void> {
+    await deleteTodos(ids);
   },
-  archive(_ids: string[]): Promise<void> {
-    throw notWired("todos.archive");
+  async archive(ids: string[]): Promise<void> {
+    await archiveTodos(ids);
   },
-  restore(_ids: string[]): Promise<void> {
-    throw notWired("todos.restore");
+  async restore(ids: string[]): Promise<void> {
+    await restoreTodos(ids);
   },
-  updatePositions(_updates: PositionUpdate[]): Promise<void> {
-    throw notWired("todos.updatePositions");
+  async updatePositions(updates: PositionUpdate[]): Promise<void> {
+    await updateTodoPositions(updates);
   },
 };
