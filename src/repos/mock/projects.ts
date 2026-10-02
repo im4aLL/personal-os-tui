@@ -23,7 +23,7 @@ import type {
 } from "../types";
 import { applyListScenario, assertNotLargeClone, mockCall, mockMutationError } from "./guard";
 
-/** Work item rows the `large` scenario grows to (PLAN M6: 40 items, 52 weeks). */
+/** Work item rows the `large` scenario grows to: 40 items over 52 weeks. */
 const LARGE_WORK_ITEMS = 40;
 
 const seed = createFixtures();

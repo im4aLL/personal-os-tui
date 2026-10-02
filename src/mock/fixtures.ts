@@ -1,8 +1,8 @@
-// Mock fixture set. Todos carry the full M2 review surface: 12 active todos
+// Mock fixture set. Todos carry the full review surface: 12 active todos
 // with mixed statuses, priorities, due dates (gappy positions), plus 3
 // archived todos with stale timestamps. The active set also seeds the
 // Dashboard focus list: 2 overdue and 3 due today, one of them high priority.
-// Notes carry the full M3 surface: 14
+// Notes carry the full review surface: 14
 // notes (3 pinned, one untitled, a long markdown body, a single long line, 4
 // tagged, relative dates across today/yesterday/last week/last year).
 
@@ -530,7 +530,7 @@ function workItemStamp(index: number): string {
   return `${isoDateOffset(-(45 - index))}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`;
 }
 
-// Project Planner review set (PLAN M6). Five projects cover the windowing
+// Project Planner review set. Five projects cover the windowing
 // bounds: the 12-week default, an 8-week project that has not started, a
 // 6-week project that already ended, a 24-week project for windowed scrolling,
 // and a 52-week project for the upper bound on an 80-column terminal. All
@@ -978,7 +978,7 @@ export function createFixtures(): Fixtures {
       {
         id: "todo-05",
         title: "Draft the weekly summary",
-        description: "Cover the ticket board, the setup wiring, and the open questions.",
+        description: "Cover the release notes, the setup work, and the open questions.",
         status: "todo",
         priority: "high",
         dueDate: isoDateOffset(5),

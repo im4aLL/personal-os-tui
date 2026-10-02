@@ -1,4 +1,4 @@
-// Turso bundle factory (M0 stubs; real wrappers arrive per wiring milestone).
+// Turso bundle factory.
 import type { ReposBundle } from "../types";
 import { tursoDashboardRepo } from "./dashboard";
 import { tursoLinkRepo } from "./links";

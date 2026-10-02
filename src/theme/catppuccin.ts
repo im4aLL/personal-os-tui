@@ -1,4 +1,4 @@
-// The four Catppuccin variants, verbatim hex from PLAN.md. Mocha is default.
+// The four Catppuccin variants, verbatim upstream hex. Mocha is default.
 import type { ThemePalette } from "./types";
 
 export const latte: ThemePalette = {

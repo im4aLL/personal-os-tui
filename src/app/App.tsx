@@ -404,7 +404,7 @@ function Shell(props: ShellProps): ReactNode {
     // `t`, `/`, `?`, and `q` must not cycle the theme, open the palette, or
     // quit, including the connecting/failure steps where Setup clears its
     // focus. Modified keys cannot be typed, so they still resolve: Alt+1..6
-    // navigates away and dismisses Setup in mock mode (M0: `d` or Alt+1..6
+    // navigates away and dismisses Setup in mock mode (`d` or Alt+1..6
     // reaches the six screens), and Ctrl+P opens the palette on top. Ctrl+Q
     // stays reachable above. Ctrl+C with a text selection was consumed by the
     // copy handler above; with no selection it falls through to here, so a

@@ -1,4 +1,4 @@
-// Config file read path (M0). Write path arrives with Setup wiring (W1).
+// Config file read and write path.
 //
 // Location precedence: POS_CONFIG_DIR > XDG_CONFIG_HOME > platform default
 // (~/.config, or %APPDATA% on Windows), joined with personal-os-tui/config.json.

@@ -97,7 +97,7 @@ export function resolveColor(hex: string, caps: ColorCaps): ColorInput {
 }
 
 /** Blend a hex color toward a base hex (text background alpha is not blended reliably).
- * Seam for the M6 Projects Gantt status shades; no M0 caller yet. */
+ * Seam for the Projects Gantt status shades. */
 export function mixWithBase(colorHex: string, baseHex: string, ratio: number): string {
   const clamped = Math.min(1, Math.max(0, ratio));
   const [r1, g1, b1] = hexToTriple(colorHex);

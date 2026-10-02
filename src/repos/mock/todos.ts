@@ -19,7 +19,7 @@ import {
   mockMutationError,
 } from "./guard";
 
-/** M2 fixtures: `large` renders 150 todos even though the active fixture set
+/** Todo fixtures: `large` renders 150 todos even though the active fixture set
  * is 12, enough to prove column scrolling. */
 const LARGE_TODO_TOTAL = 150;
 

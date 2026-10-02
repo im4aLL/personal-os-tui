@@ -84,7 +84,7 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
 
 /** The column and DB representation for one updatable field. A key present in
  * the input with an `undefined` value writes NULL (`value ?? null`), matching
- * the W2 `updateTodo` pattern. Unknown runtime keys throw instead of emitting
+ * the `updateTodo` pattern. Unknown runtime keys throw instead of emitting
  * invalid SQL. */
 function updateAssignment(field: string, raw: unknown): { column: string; value: unknown } {
   const value = raw ?? null;

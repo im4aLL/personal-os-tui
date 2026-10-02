@@ -1,4 +1,4 @@
-// Hand-written validators for the Setup flow (M1). A handful of simple forms
+// Hand-written validators for the Setup flow. A handful of simple forms
 // do not need a schema library; these pure functions return an error message
 // or null when the value is valid. No exported types: nothing here needs a
 // `validate.types.ts` companion.

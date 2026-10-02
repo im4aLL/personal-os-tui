@@ -9,8 +9,7 @@ import { currentLatencyMs, delay } from "../../mock/latency";
 import { currentScenario } from "../../mock/scenario";
 
 /** Shared `large` default: the total row count a list reaches by repeating its
- * fixture rows. PLAN's per-domain counts (M2-M7) replace this once each
- * feature's fixtures land; until then every list gets the same reviewable size. */
+ * fixture rows, so every list gets the same reviewable size. */
 const LARGE_SCENARIO_ROWS = 200;
 
 /** Extra delay for the `slow` scenario, on top of the configured latency, so
@@ -21,11 +20,10 @@ export async function mockCall<T>(fn: () => T): Promise<T> {
   const scenario = currentScenario();
   if (scenario === "loading") {
     // Sticky-ish delay so the UI shows skeletons long enough to review.
-    // PLAN documents `loading` as 1500 ms for the shared guard.
     await delay(1500);
   } else if (scenario === "slow") {
-    // `slow` exists only to review patience and cancel affordances; PLAN fixes
-    // it at 3 s so every call is long enough to reach for the keyboard.
+    // `slow` exists only to review patience and cancel affordances; 3 s is
+    // long enough for every call to reach for the keyboard.
     await delay(currentLatencyMs() + SLOW_SCENARIO_MS);
   } else {
     await delay(currentLatencyMs());
@@ -49,7 +47,7 @@ export function currentErrorInjection(): boolean {
 /** Apply the empty/large scenarios to a list result. `largeTotal` is the
  * target row count for the `large` scenario (default `LARGE_SCENARIO_ROWS`);
  * rows repeat until the list reaches it, so a domain with a small fixture set
- * can request its own reviewable size (M2 todos use 150). */
+ * can request its own reviewable size (todos use 150). */
 export function applyListScenario<T>(
   rows: T[],
   clone: (row: T, index: number) => T,

@@ -1,4 +1,4 @@
-// UI store: screen, modal, sidebar. No data fetching lives here in M0.
+// UI store: screen, modal, sidebar. No data fetching lives here.
 import { create } from "zustand";
 import { saveUiPreferences } from "../lib/config";
 import type { ModalKind, Screen, UiState } from "./ui.types";

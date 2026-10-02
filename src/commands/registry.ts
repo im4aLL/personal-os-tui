@@ -127,7 +127,7 @@ const sidebarCommand: Command = {
 // Ctrl+Shift+D plus a plain Ctrl+D fallback. Terminals without kitty or
 // modifyOtherKeys report Ctrl+Shift+D as the single byte 0x04, so the raw
 // parser sees name "d" with ctrl true and shift false - the shift:true
-// binding alone is unreachable there (see M6). An undeclared shift is
+// binding alone is unreachable there. An undeclared shift is
 // ignored by matchesKey, so the fallback matches everywhere while the
 // primary keeps the Ctrl+Shift+D label in help.
 const mockPanelCommand: Command = {

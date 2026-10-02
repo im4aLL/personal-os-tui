@@ -20,7 +20,7 @@ import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import type { ConnectStage, SetupScreenProps, SetupStep } from "./SetupScreen.types";
 
-// First-run Setup (M1 + W1): connect form, three-stage connecting state,
+// First-run Setup: connect form, three-stage connecting state,
 // inline failure, and profile. Credentials are validated with a real SELECT 1,
 // schema is applied idempotently, and the profile lives in remote
 // app_settings. On success the config file is persisted and onboarding is
@@ -29,7 +29,7 @@ import type { ConnectStage, SetupScreenProps, SetupStep } from "./SetupScreen.ty
 // Focus model: one of url/token/connect (step 1) or name/email/start
 // (profile) owns the keyboard, synced into `ui.focusedField` so the global
 // App handler defers instead of hijacking typing. Step 1 opens with Connect
-// focused: `d` demos immediately (G1), Enter attempts Connect, and typing a
+// focused: `d` demos immediately, Enter attempts Connect, and typing a
 // printable character jumps into the URL field with that character (so the
 // primary path still types instantly). Tab cycles all three stops.
 const FOCUS_URL = "setup-url";
@@ -352,7 +352,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   }
 
   function demoWithMockData(): void {
-    // Dev-only affordance (M0 `d` behavior, now step-aware): skip the form
+    // Dev-only affordance (`d` behavior, now step-aware): skip the form
     // and browse the app on mock data. The footer hint carrying this string
     // sits behind the same inline mock guard, so production drops both.
     if (editing) {

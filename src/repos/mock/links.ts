@@ -22,7 +22,7 @@ import {
 
 export const LINKS_PAGE_SIZE = 50;
 
-/** Rows the `large` scenario grows to (PLAN M4). */
+/** Rows the `large` scenario grows to. */
 const LARGE_TOTAL = 600;
 
 const seed = createFixtures();

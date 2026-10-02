@@ -19,7 +19,7 @@ export interface UiState {
   setupOpen: boolean;
   /** Id of the control that owns the keyboard, or null for form-level keys.
    * Text inputs set this while focused so the global key handler in App can
-   * defer to them instead of hijacking typing (PLAN: global defers via
+   * defer to them instead of hijacking typing (the global handler defers via
    * `ui.focusedField`). Setup owns its ids (`setup-url`, ...). */
   focusedField: string | null;
   /** True while the `:` ex-line prompt owns the status line. */

@@ -53,7 +53,7 @@ export async function getRepos(options: GetReposOptions): Promise<RepoBundle> {
   return { mode, reason, loaded, resetMockData: noop, mockUi: null, ...createTursoRepos() };
 }
 
-/** Setup seam for the M1 Setup screen (wired in W1); the shell does not consume it yet. */
+/** Setup seam for the Setup screen; the shell does not consume it yet. */
 export async function getSetupRepo(options: GetReposOptions): Promise<SetupBundle> {
   const bundle = await getRepos(options);
   return { mode: bundle.mode, reason: bundle.reason, loaded: bundle.loaded, setup: bundle.setup };

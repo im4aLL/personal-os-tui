@@ -13,8 +13,7 @@ export const mockSetupRepo: SetupRepo = {
       }
       if (token.length < 8 || token === "bad") {
         // `token === "bad"` is already covered by the length check (bad is 3
-        // characters); it is kept for spec fidelity because the ticket names
-        // `bad` explicitly as the failure token.
+        // characters); it is kept because `bad` is the documented failure token.
         return { ok: false, error: "Turso HTTP 401: unauthorized", kind: "credentials" };
       }
       return { ok: true };

@@ -21,7 +21,7 @@ import {
   mockMutationError,
 } from "./guard";
 
-/** Rows the `large` scenario grows to (PLAN M5). */
+/** Rows the `large` scenario grows to. */
 const LARGE_TOTAL = 300;
 
 const seed = createFixtures();
