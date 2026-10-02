@@ -1,4 +1,22 @@
-// Turso stub (M0). Throws until the Project Planner wiring milestone lands.
+// Real ProjectRepo: remote rows through src/lib/projects.ts. Mapping only; the
+// SQL, phase resolution, and column/boolean translation live in the lib layer.
+import {
+  createPhase,
+  createProject,
+  createWorkItem,
+  deletePhase,
+  deleteProject,
+  deleteWorkItem,
+  getPhasesForProject,
+  getProjectProgress,
+  getProjects,
+  getWorkItemsForProject,
+  reorderProjects,
+  reorderWorkItems,
+  updatePhase,
+  updateProject,
+  updateWorkItem,
+} from "../../lib/projects";
 import type {
   CreatePhaseInput,
   CreateProjectInput,
@@ -13,54 +31,50 @@ import type {
   WorkItemWithPhase,
 } from "../types";
 
-function notWired(what: string): Error {
-  return new Error(`turso ${what} is not wired yet`);
-}
-
 export const tursoProjectRepo: ProjectRepo = {
-  list(): Promise<Project[]> {
-    throw notWired("projects.list");
+  async list(): Promise<Project[]> {
+    return getProjects();
   },
-  create(_input: CreateProjectInput): Promise<Project> {
-    throw notWired("projects.create");
+  async create(input: CreateProjectInput): Promise<Project> {
+    return createProject(input);
   },
-  update(_id: string, _input: UpdateProjectInput): Promise<void> {
-    throw notWired("projects.update");
+  async update(id: string, input: UpdateProjectInput): Promise<void> {
+    await updateProject(id, input);
   },
-  remove(_id: string): Promise<void> {
-    throw notWired("projects.remove");
+  async remove(id: string): Promise<void> {
+    await deleteProject(id);
   },
-  reorder(_orderedIds: string[]): Promise<void> {
-    throw notWired("projects.reorder");
+  async reorder(orderedIds: string[]): Promise<void> {
+    await reorderProjects(orderedIds);
   },
-  phases(_projectId: string): Promise<ProjectPhase[]> {
-    throw notWired("projects.phases");
+  async phases(projectId: string): Promise<ProjectPhase[]> {
+    return getPhasesForProject(projectId);
   },
-  createPhase(_projectId: string, _input: CreatePhaseInput): Promise<ProjectPhase> {
-    throw notWired("projects.createPhase");
+  async createPhase(projectId: string, input: CreatePhaseInput): Promise<ProjectPhase> {
+    return createPhase(projectId, input);
   },
-  updatePhase(_id: string, _input: UpdatePhaseInput): Promise<void> {
-    throw notWired("projects.updatePhase");
+  async updatePhase(id: string, input: UpdatePhaseInput): Promise<void> {
+    await updatePhase(id, input);
   },
-  removePhase(_id: string): Promise<void> {
-    throw notWired("projects.removePhase");
+  async removePhase(id: string): Promise<void> {
+    await deletePhase(id);
   },
-  workItems(_projectId: string): Promise<WorkItemWithPhase[]> {
-    throw notWired("projects.workItems");
+  async workItems(projectId: string): Promise<WorkItemWithPhase[]> {
+    return getWorkItemsForProject(projectId);
   },
-  createWorkItem(_projectId: string, _input: CreateWorkItemInput): Promise<WorkItemWithPhase> {
-    throw notWired("projects.createWorkItem");
+  async createWorkItem(projectId: string, input: CreateWorkItemInput): Promise<WorkItemWithPhase> {
+    return createWorkItem(projectId, input);
   },
-  updateWorkItem(_id: string, _input: UpdateWorkItemInput): Promise<void> {
-    throw notWired("projects.updateWorkItem");
+  async updateWorkItem(id: string, input: UpdateWorkItemInput): Promise<void> {
+    await updateWorkItem(id, input);
   },
-  removeWorkItem(_id: string): Promise<void> {
-    throw notWired("projects.removeWorkItem");
+  async removeWorkItem(id: string): Promise<void> {
+    await deleteWorkItem(id);
   },
-  reorderWorkItems(_projectId: string, _orderedIds: string[]): Promise<void> {
-    throw notWired("projects.reorderWorkItems");
+  async reorderWorkItems(projectId: string, orderedIds: string[]): Promise<void> {
+    await reorderWorkItems(projectId, orderedIds);
   },
-  progress(): Promise<ProjectProgress[]> {
-    throw notWired("projects.progress");
+  async progress(): Promise<ProjectProgress[]> {
+    return getProjectProgress();
   },
 };

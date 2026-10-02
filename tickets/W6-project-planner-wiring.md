@@ -2,7 +2,7 @@
 id: W6
 title: Project Planner wiring
 type: wiring
-status: not-started
+status: done
 phase: projects
 order: 20
 depends_on: [G6]
@@ -11,7 +11,7 @@ wires: M6
 
 # W6 - Project Planner wiring
 
-> Type: wiring · Status: not-started · Phase: projects
+> Type: wiring · Status: done · Phase: projects
 
 ## Objective
 
@@ -49,3 +49,6 @@ Selecting a project shows a grid skeleton while phases and items load in paralle
 
 - Starts only after its gate is `done`.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
+- Implemented `src/lib/projects.ts` (the desktop projects SQL with `?` placeholders: `getProjects` ordered `position ASC`; `getPhasesForProject`; `getWorkItemsForProject` loading the project's phases to resolve `phase` from `phase_id` and translating `is_separator === 1` to a boolean; the `getProjectProgress` `COUNT(*)`/`COUNT(CASE WHEN status = 'done' ...)` grouped by project over `is_separator = 0`; a `createProject` that counts rows for `position`; a whitelisted `updateProject` that advances `updated_at` and throws on unknown keys; a child-first batched `deleteProject` (work items, then phases, then the project, matching this repo's belt-and-suspenders deletes rather than relying on `ON DELETE CASCADE` being enforced); a `createPhase` that counts the project's phases for `position` and an `updatePhase` with no `updated_at`; `createWorkItem` inserting all 14 columns and resolving the returned phase from the project's phases; a whitelisted `updateWorkItem` converting `isSeparator` to `0|1` and always stamping `updated_at`; and the batched `reorderWorkItems` (scoped by `project_id`, unlike the desktop SQL, to match the mock's guard)/`reorderProjects` reorders) and the real `src/repos/turso/projects.ts` wrapper replacing the M0 stub. `src/store/projects.ts` (optimistic reorders with rollback, parallel `selectProject`, `movePhase` rewriting positions, `addSeparator`) is unchanged.
+- `npm run typecheck`, `npm run check`, `npm run build`, and `npm run build:prod` pass. Live-Turso checklist items remain pending credentials.
+- Reviewed by hadi-reviewer: verdict no Blockers, no Majors. Two Minors applied: `deleteProject` now batches child-first deletes (cascade-safe when FKs are enforced) instead of relying on `ON DELETE CASCADE`; `reorderWorkItems` is scoped by `project_id` to match the mock's guard. The `raw ?? null` NOT NULL hardening Minor and the nits were left as documented desktop-parity items, consistent with the existing links/notes wiring.
