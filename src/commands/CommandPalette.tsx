@@ -17,8 +17,8 @@ export function CommandPalette(): ReactNode {
   const query = useUi((state) => state.paletteQuery);
   const selected = useUi((state) => state.paletteIndex);
   const setQuery = useUi((state) => state.setPaletteQuery);
-  const configComplete = useSession((state) => state.configComplete);
-  const matches = filterAvailableCommands(query, configComplete);
+  const repoMode = useSession((state) => state.repoMode);
+  const matches = filterAvailableCommands(query, repoMode);
   const results = matches.slice(0, PALETTE_PAGE_SIZE);
   const hidden = Math.max(0, matches.length - results.length);
 

@@ -16,7 +16,7 @@ export function TagInput(props: TagInputProps): ReactNode {
       {props.tags.length === 0 ? null : (
         <text wrapMode="word">
           {props.tags.map((tag) => (
-            <span key={tag} fg={color(tokens.accentAlt)}>{`[ ${tag} ] `}</span>
+            <span key={tag} fg={color(tokens.accentAlt)}>{`[${tag}] `}</span>
           ))}
         </text>
       )}
@@ -46,7 +46,7 @@ export function TagInput(props: TagInputProps): ReactNode {
               key={name}
               fg={color(index === props.suggestionIndex ? tokens.fg : tokens.fgSubtle)}
             >
-              {index === props.suggestionIndex ? `[ ${name} ] ` : `${name} `}
+              {index === props.suggestionIndex ? `[${name}] ` : `${name} `}
             </span>
           ))}
         </text>

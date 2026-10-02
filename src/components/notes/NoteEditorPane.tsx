@@ -82,6 +82,7 @@ export function NoteEditorPane(props: NoteEditorPaneProps): ReactNode {
             pinned={props.note.pinned}
             privacyMode={props.privacyMode}
             width={props.width}
+            onSelectMode={props.onSelectMode}
           />
           {props.loading ? (
             <Skeleton lines={4} widths={[26, 34, 30, 22]} />

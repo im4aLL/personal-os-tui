@@ -13,7 +13,7 @@ const MARKER = 2;
 const DATE_WIDTH = 26;
 
 function tagLabel(tags: string[]): string {
-  return tags.map((tag) => `[ ${tag} ]`).join(" ");
+  return tags.map((tag) => `[${tag}]`).join(" ");
 }
 
 // One work-log row: title (+ right-aligned date range when wide), then either

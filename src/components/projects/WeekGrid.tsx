@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { WorkItemStatus, WorkItemWithPhase } from "../../repos/types";
 import { mixWithBase } from "../../theme/degrade";
 import { useTheme } from "../../theme/ThemeProvider";
+import { BAR_EMPTY_GLYPH, BAR_FILL_GLYPH } from "../../utils/bar";
 import { rowMarker } from "../../utils/marker";
 import { rowClickHandler, wheelDelta } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
@@ -41,7 +42,7 @@ function GridRow(props: GridRowProps): ReactNode {
   const { item } = props;
   const selected = props.selected;
   const phaseColor = item.phase?.color ?? tokens.phaseFallback;
-  const fill = item.status === "done" ? "=" : "#";
+  const fill = item.status === "done" ? BAR_EMPTY_GLYPH : BAR_FILL_GLYPH;
   const barColor = mixWithBase(phaseColor, tokens.bg, STATUS_RATIO[item.status]);
   const taskRoom = Math.max(1, props.taskWidth - 2);
 

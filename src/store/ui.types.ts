@@ -12,7 +12,11 @@ export interface UiState {
   paletteIndex: number;
   /** Highlighted row in the theme picker modal (Ctrl+T). */
   themePickerIndex: number;
+  /** True after the user dismisses the first-run Setup (e.g. mock demo). */
   setupDismissed: boolean;
+  /** Explicit request to show Setup again from the palette (edit mode), even
+   * once onboarding is complete. Cleared by dismissSetup. */
+  setupOpen: boolean;
   /** Id of the control that owns the keyboard, or null for form-level keys.
    * Text inputs set this while focused so the global key handler in App can
    * defer to them instead of hijacking typing (PLAN: global defers via

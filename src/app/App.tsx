@@ -63,6 +63,7 @@ function Shell(props: ShellProps): ReactNode {
   const modal = useUi((state) => state.modal);
   const sidebarCollapsed = useUi((state) => state.sidebarCollapsed);
   const setupDismissed = useUi((state) => state.setupDismissed);
+  const setupOpen = useUi((state) => state.setupOpen);
   const configComplete = useSession((state) => state.configComplete);
   const { width } = useTerminalDimensions();
   const renderer = useRenderer();
@@ -83,8 +84,9 @@ function Shell(props: ShellProps): ReactNode {
       navigate: (next: Screen) => {
         // H2: navigating away (Alt+1..6 or palette) dismisses Setup in mock
         // mode, so the shell stays browsable behind it. Prod never dismisses
-        // here because isMockEnabled() is false there.
-        if (canBrowseMock()) {
+        // here because isMockEnabled() is false there. An explicit edit-mode
+        // Setup is always dismissible, complete config or not.
+        if (canBrowseMock() || useUi.getState().setupOpen) {
           useUi.getState().dismissSetup();
         }
         useUi.getState().setScreen(next);
@@ -145,20 +147,19 @@ function Shell(props: ShellProps): ReactNode {
         useUi.getState().closeModal();
       },
       openMockPanel: () => {
-        // Gated: the dev panel is unreachable in production builds, where the
-        // mock commands are also hidden from the palette and help.
-        if (isMockEnabled()) {
+        // Gated on the build flag and the runtime mode: the panel is
+        // unreachable in production builds and in turso mode, where its
+        // scenario/latency controls have nothing to act on.
+        const session = useSession.getState();
+        if (isMockEnabled() && session.repoMode === "mock") {
           useUi.getState().openModal("mock-panel");
         }
       },
       showSetup: () => {
-        // Gated: once the config is complete App renders Setup on nothing,
-        // so running the palette entry there must stay a no-op. The palette
-        // also hides the entry when complete (filterAvailableCommands), so
-        // this guard is belt and braces for direct ctx callers.
-        if (!useSession.getState().configComplete) {
-          useUi.getState().showSetupScreen();
-        }
+        // Setup is always reachable: first run onboards, and once onboarding
+        // is complete the same screen opens in edit mode for credentials and
+        // profile. The palette entry is likewise never hidden.
+        useUi.getState().showSetupScreen();
       },
       setScenario: (scenario) => {
         useSession.getState().setScenario(scenario);
@@ -205,10 +206,7 @@ function Shell(props: ShellProps): ReactNode {
         state.closeModal();
         return;
       }
-      const results = filterAvailableCommands(
-        state.paletteQuery,
-        useSession.getState().configComplete,
-      );
+      const results = filterAvailableCommands(state.paletteQuery, useSession.getState().repoMode);
       if (key.name === "return") {
         const target = results[state.paletteIndex];
         state.closeModal();
@@ -329,7 +327,7 @@ function Shell(props: ShellProps): ReactNode {
     // copy handler above; with no selection it falls through to here, so a
     // focused control is never quit from.
     const session = useSession.getState();
-    const setupVisible = !session.configComplete && !state.setupDismissed;
+    const setupVisible = state.setupOpen || (!session.configComplete && !state.setupDismissed);
     const focusedOrSetup = state.focusedField !== null || setupVisible;
     if (focusedOrSetup && key.ctrl && !key.meta && key.name.toLowerCase() === "c") {
       return;
@@ -349,10 +347,10 @@ function Shell(props: ShellProps): ReactNode {
   const sidebarHidden = width < 60 ? !narrowOpen : sidebarCollapsed;
   const sidebarRail = !sidebarHidden && (sidebarCollapsed || width < 80);
   // Setup shows until the config is complete (credentials + onboarding) and
-  // the user continues with mock data in mock mode. Fresh and `pos reset`
-  // runs open on Setup, then `d` or Alt+1..6 reaches the six screens; the
-  // palette entry "Open setup" returns here. Never gated on repoMode alone.
-  const showSetup = !configComplete && !setupDismissed;
+  // the user continues with mock data in mock mode, or whenever the palette
+  // explicitly reopens it to edit credentials and profile. Fresh and `pos
+  // reset` runs open on Setup, then `d` or Alt+1..6 reaches the six screens.
+  const showSetup = setupOpen || (!configComplete && !setupDismissed);
 
   return (
     <Layout
@@ -362,7 +360,12 @@ function Shell(props: ShellProps): ReactNode {
       onNavigate={ctx.navigate}
     >
       {showSetup ? (
-        <SetupScreen setup={props.setup} settings={props.settings} quit={props.quit} />
+        <SetupScreen
+          setup={props.setup}
+          settings={props.settings}
+          quit={props.quit}
+          editing={setupOpen && configComplete}
+        />
       ) : (
         <ScreenContent key={screen} screen={screen} />
       )}

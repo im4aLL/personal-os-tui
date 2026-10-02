@@ -34,4 +34,6 @@ export interface NoteEditorPaneProps {
   /** Fires after any body edit; the screen reads the live text from `bodyRef`. */
   onBodyChange: () => void;
   onRetry: () => void;
+  /** Select the editor mode via the toolbar labels. */
+  onSelectMode: (mode: NoteEditorMode) => void;
 }

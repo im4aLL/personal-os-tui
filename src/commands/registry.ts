@@ -2,6 +2,7 @@
 // this registry, so the three cannot drift. Every command with a global
 // binding declares machine-readable `keys`; the handler matches them with
 // `findCommandForKey` and help renders them with `formatKey`.
+import type { RepoMode } from "../repos/resolve.types";
 import type {
   Command,
   HelpLine,
@@ -137,6 +138,7 @@ const mockPanelCommand: Command = {
     { name: "d", ctrl: true },
   ],
   devOnly: true,
+  mockOnly: true,
   run: (ctx) => ctx.openMockPanel(),
 };
 
@@ -159,8 +161,9 @@ const quitCommand: Command = {
   run: (ctx) => ctx.quit(),
 };
 
-// Palette-only entry that re-opens Setup after it was dismissed with mock
-// data (H2). No keys so it never hijacks typing; reachable via palette.
+// Palette-only entry that opens Setup. First run it onboards; once onboarding
+// is complete the same screen opens in edit mode so credentials and the
+// profile can be changed. No keys so it never hijacks typing.
 const setupCommand: Command = {
   id: "global.setup",
   title: "Open setup",
@@ -383,21 +386,25 @@ export function matchesQuery(command: Command, query: string): boolean {
   return true;
 }
 
-/** True when the command can run given the session state. The setup entry
- * is a silent no-op once the config is complete (App renders Setup only on
- * !configComplete), so the palette hides it there instead of presenting a
- * dead entry. Build visibility still goes through isCommandVisible. */
-export function isCommandAvailable(command: Command, configComplete: boolean): boolean {
-  if (command.id === "global.setup" && configComplete) {
+/** Runtime availability: build visibility plus the mock-mode gate. Mock
+ * scenario/reset commands (group "mock") and mock-only commands such as the
+ * dev panel only apply while the session runs on mock data. */
+function isCommandAvailable(command: Command, repoMode: RepoMode): boolean {
+  if (!isCommandVisible(command)) {
     return false;
   }
-  return isCommandVisible(command);
+  if (command.group === "mock" || command.mockOnly === true) {
+    return repoMode === "mock";
+  }
+  return true;
 }
 
-/** Palette filter: build visibility plus session availability. */
-export function filterAvailableCommands(query: string, configComplete: boolean): Command[] {
+/** Palette filter: runtime availability and the fuzzy query. Other commands are
+ * not gated on session state: Setup stays reachable after onboarding so an
+ * existing config and profile can be edited. */
+export function filterAvailableCommands(query: string, repoMode: RepoMode): Command[] {
   return commands.filter(
-    (command) => isCommandAvailable(command, configComplete) && matchesQuery(command, query),
+    (command) => isCommandAvailable(command, repoMode) && matchesQuery(command, query),
   );
 }
 
@@ -516,25 +523,30 @@ export function screenHint(screen: string): string {
  * overlay renders this with a native scrollbox. Global command rows apply the
  * two documented exceptions: the mock panel lists its universally reachable
  * fallback binding, and the palette lists Ctrl+P because `/` is preempted by
- * Notes/Todo list search. */
-export function helpSections(): HelpSection[] {
+ * Notes/Todo list search. The runtime repo mode hides mock-only rows in turso
+ * mode, matching the palette. */
+export function helpSections(repoMode: RepoMode): HelpSection[] {
   const commandRows = (source: Command[]): HelpLine[] =>
-    source.filter(isCommandVisible).flatMap((command) => {
-      if (command.id === "global.mock-panel") {
-        const fallback = command.keys[1] ?? command.keys[0];
-        return fallback === undefined
-          ? []
-          : [{ key: `${formatKey(fallback)} (fallback)`, title: command.title }];
-      }
-      if (command.id === "global.palette") {
-        const universal = command.keys.find((binding) => binding.ctrl === true);
-        return universal === undefined ? [] : [{ key: formatKey(universal), title: command.title }];
-      }
-      return command.keys.map((binding) => ({
-        key: formatKey(binding),
-        title: command.title,
-      }));
-    });
+    source
+      .filter((command) => isCommandAvailable(command, repoMode))
+      .flatMap((command) => {
+        if (command.id === "global.mock-panel") {
+          const fallback = command.keys[1] ?? command.keys[0];
+          return fallback === undefined
+            ? []
+            : [{ key: `${formatKey(fallback)} (fallback)`, title: command.title }];
+        }
+        if (command.id === "global.palette") {
+          const universal = command.keys.find((binding) => binding.ctrl === true);
+          return universal === undefined
+            ? []
+            : [{ key: formatKey(universal), title: command.title }];
+        }
+        return command.keys.map((binding) => ({
+          key: formatKey(binding),
+          title: command.title,
+        }));
+      });
 
   return [
     { label: "Navigate", lines: commandRows(NAV_COMMANDS) },

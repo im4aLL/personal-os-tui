@@ -7,8 +7,8 @@ import type { LinkTagPill } from "./tag-pills.types";
 export function fitTagPills(tags: string[], width: number): LinkTagPill[] {
   const room = Math.max(8, width);
   const candidates: LinkTagPill[] = [
-    { id: "all", label: "[ all ]", tag: null },
-    ...tags.map((name) => ({ id: `tag:${name}`, label: `[ ${name} ]`, tag: name })),
+    { id: "all", label: "[all]", tag: null },
+    ...tags.map((name) => ({ id: `tag:${name}`, label: `[${name}]`, tag: name })),
   ];
 
   const kept: LinkTagPill[] = [];

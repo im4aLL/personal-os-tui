@@ -10,4 +10,6 @@ export interface NoteToolbarProps {
   privacyMode: boolean;
   /** Content width available for the toolbar, in columns. */
   width: number;
+  /** Click on the Edit/Preview labels; keyboard `p` toggles instead. */
+  onSelectMode?: (mode: NoteEditorMode) => void;
 }

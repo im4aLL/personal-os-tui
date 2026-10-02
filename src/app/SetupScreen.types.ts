@@ -4,6 +4,10 @@ export interface SetupScreenProps {
   setup: SetupRepo;
   settings: SettingsRepo;
   quit: () => void;
+  /** Edit an existing config instead of first-run onboarding: prefill the
+   * current credentials, go to the profile step even when a profile already
+   * exists, and cancel back to the app on Esc. */
+  editing?: boolean;
 }
 
 export type SetupStep = "connect" | "connecting" | "failure" | "profile";

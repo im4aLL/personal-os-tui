@@ -10,6 +10,12 @@ export function setTursoConfig(config: TursoCredentials): void {
   currentConfig = { url: config.url, token: config.token };
 }
 
+/** Copy of the active credentials, or null before Setup has configured any.
+ * Used to prefill the edit-mode Setup form. */
+export function getTursoConfig(): TursoCredentials | null {
+  return currentConfig === null ? null : { url: currentConfig.url, token: currentConfig.token };
+}
+
 export function clearTursoConfig(): void {
   currentConfig = null;
 }

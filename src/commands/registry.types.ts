@@ -64,6 +64,9 @@ export interface Command {
   keys: KeyBinding[];
   /** True for dev-only commands, hidden when the mock build flag is off. */
   devOnly?: boolean;
+  /** True for commands that only apply while the session runs on mock data,
+   * e.g. the mock state panel; the palette hides them in turso mode. */
+  mockOnly?: boolean;
   run: (ctx: CommandContext) => void;
 }
 

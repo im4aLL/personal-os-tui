@@ -1,11 +1,13 @@
 import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { isPrimaryClick } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
-import type { NoteToolbarProps } from "./NoteToolbar.types";
+import type { NoteEditorMode, NoteToolbarProps } from "./NoteToolbar.types";
 
 // Editor toolbar: Edit/Preview state, the save indicator, and the action hints.
-// Purely presentational; the screen owns the keys.
+// The Edit/Preview labels are clickable (primary button) in addition to the
+// screen's `p` key; the screen owns the actual mode switch.
 //
 // Degradation: the full row is shown when it fits. Otherwise the action hints
 // (already listed in the screen's status line) drop first so the save state,
@@ -34,28 +36,36 @@ export function NoteToolbar(props: NoteToolbarProps): ReactNode {
   const actions = `${props.pinned ? "b unpin" : "b pin"}  v privacy  x export  d delete`;
   const room = Math.max(8, props.width);
 
-  const modeSpans = (
-    <>
-      <span
-        fg={color(editing ? tokens.accent : tokens.fgMuted)}
-        attributes={editing ? TextAttributes.BOLD : undefined}
-      >
-        {"[ Edit ]"}
-      </span>
-      <span fg={color(tokens.fgSubtle)}>{" | "}</span>
-      <span
-        fg={color(!editing ? tokens.accent : tokens.fgMuted)}
-        attributes={!editing ? TextAttributes.BOLD : undefined}
-      >
-        {"[ Preview ]"}
-      </span>
-    </>
-  );
-
   const row = (children: ReactNode): ReactNode => (
     <box flexDirection="row" height={1} flexShrink={0}>
-      <text wrapMode="none">{children}</text>
+      {children}
     </box>
+  );
+
+  /** One clickable mode label; the active mode is bold and accent-colored. */
+  const modeSegment = (label: string, active: boolean, value: NoteEditorMode): ReactNode => (
+    <text
+      wrapMode="none"
+      fg={color(active ? tokens.accent : tokens.fgMuted)}
+      attributes={active ? TextAttributes.BOLD : undefined}
+      onMouseDown={(event) => {
+        if (isPrimaryClick(event)) {
+          props.onSelectMode?.(value);
+        }
+      }}
+    >
+      {label}
+    </text>
+  );
+
+  const modeSpans = (
+    <>
+      {modeSegment("[ Edit ]", editing, "edit")}
+      <text wrapMode="none" fg={color(tokens.fgSubtle)}>
+        {" | "}
+      </text>
+      {modeSegment("[ Preview ]", !editing, "preview")}
+    </>
   );
 
   const plain = `${modeText}   ${saveText === "" ? "" : `${saveText}   `}${actions}`;
@@ -64,11 +74,15 @@ export function NoteToolbar(props: NoteToolbarProps): ReactNode {
       <>
         {modeSpans}
         {saveText === "" ? (
-          <span fg={color(tokens.fgSubtle)}>{"   "}</span>
+          <text wrapMode="none" fg={color(tokens.fgSubtle)}>
+            {"   "}
+          </text>
         ) : (
-          <span fg={color(saveColor)}>{`   ${saveText}   `}</span>
+          <text wrapMode="none" fg={color(saveColor)}>{`   ${saveText}   `}</text>
         )}
-        <span fg={color(tokens.fgSubtle)}>{actions}</span>
+        <text wrapMode="none" fg={color(tokens.fgSubtle)}>
+          {actions}
+        </text>
       </>,
     );
   }
@@ -78,14 +92,19 @@ export function NoteToolbar(props: NoteToolbarProps): ReactNode {
     return row(
       <>
         {modeSpans}
-        {saveText === "" ? null : <span fg={color(saveColor)}>{`  ${saveText}`}</span>}
+        {saveText === "" ? null : (
+          <text wrapMode="none" fg={color(saveColor)}>{`  ${saveText}`}</text>
+        )}
       </>,
     );
   }
 
   return row(
-    <span fg={color(props.saveStatus === "error" ? tokens.danger : tokens.fgSubtle)}>
+    <text
+      wrapMode="none"
+      fg={color(props.saveStatus === "error" ? tokens.danger : tokens.fgSubtle)}
+    >
       {truncate(minimal, room)}
-    </span>,
+    </text>,
   );
 }

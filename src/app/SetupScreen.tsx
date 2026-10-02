@@ -6,7 +6,13 @@ import { Button } from "../components/ui/Button";
 import { Field } from "../components/ui/Field";
 import { TextField } from "../components/ui/TextField";
 import { saveConfig } from "../lib/config";
-import { classifyTursoError, clearTursoConfig, normalizeUrl, setTursoConfig } from "../lib/turso";
+import {
+  classifyTursoError,
+  clearTursoConfig,
+  getTursoConfig,
+  normalizeUrl,
+  setTursoConfig,
+} from "../lib/turso";
 import { validateDbUrl, validateProfileEmail, validateProfileName } from "../lib/validate";
 import type { ApplySchemaResult } from "../repos/types";
 import { useSession } from "../store/session";
@@ -84,10 +90,13 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   const { width } = useTerminalDimensions();
   const repoMode = useSession((state) => state.repoMode);
   const focusedField = useUi((state) => state.focusedField);
+  const editing = props.editing === true;
 
   const [step, setStep] = useState<SetupStep>("connect");
-  const [url, setUrl] = useState("");
-  const [token, setToken] = useState("");
+  // Edit mode prefills the active credentials so changing only the profile
+  // needs no retyping; first run starts blank.
+  const [url, setUrl] = useState(() => (editing ? (getTursoConfig()?.url ?? "") : ""));
+  const [token, setToken] = useState(() => (editing ? (getTursoConfig()?.token ?? "") : ""));
   const [urlError, setUrlError] = useState<string | null>(null);
   const [stages, setStages] = useState<ConnectStage[]>(initialStages);
   const [failureError, setFailureError] = useState("");
@@ -98,6 +107,32 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [failureFocus, setFailureFocus] = useState<string>(FOCUS_URL);
   const runRef = useRef(0);
+  // Edit mode snapshots the live credentials so a cancelled edit (Esc, a failed
+  // test, or navigating away) restores them instead of leaving the app pointed
+  // at unverified ones. `finished` marks a completed edit so the unmount
+  // cleanup does not undo the freshly saved config.
+  const originalConfigRef = useRef(editing ? getTursoConfig() : null);
+  const finishedRef = useRef(false);
+  const savingRef = useRef(false);
+
+  function restoreOriginalConfig(): void {
+    const original = originalConfigRef.current;
+    if (original !== null) {
+      setTursoConfig(original);
+    } else {
+      clearTursoConfig();
+    }
+  }
+
+  /** Drop the temporary transport config after a failed or abandoned attempt:
+   * restore the pre-edit credentials when editing, or clear it on first run. */
+  function resetTransportConfig(): void {
+    if (editing) {
+      restoreOriginalConfig();
+    } else {
+      clearTursoConfig();
+    }
+  }
 
   // Entry focus: Connect (see the focus-model note above). The cleanup
   // invalidates any in-flight connect/save so a late mock resolve cannot
@@ -107,6 +142,19 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
     useUi.getState().setFocusedField(FOCUS_CONNECT);
     return () => {
       runRef.current += 1;
+      // Abandoning Setup (cancel, navigation, or quit) must not leave
+      // unverified credentials live: restore the pre-edit snapshot when there
+      // was one, otherwise clear the temporary config. This covers first run
+      // too. `finished` skips it after a successful save. Refs only, so the
+      // mount-scoped effect stays dep-free.
+      if (!finishedRef.current) {
+        const original = originalConfigRef.current;
+        if (original !== null) {
+          setTursoConfig(original);
+        } else {
+          clearTursoConfig();
+        }
+      }
       useUi.getState().setFocusedField(null);
     };
   }, []);
@@ -121,23 +169,43 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   const canSubmit = url.trim() !== "" && token.trim() !== "";
 
   async function finishToApp(profileName: string): Promise<void> {
+    const run = runRef.current;
     // Persist credentials only for a real Turso connection. Mock mode is a
     // dev-only preview and must not write fake credentials to disk.
     if (repoMode === "turso") {
       const normalizedUrl = normalizeUrl(url.trim());
       await saveConfig({ url: normalizedUrl, token });
+      // A cancel/unmount during the await must win: do not re-point the live
+      // config at credentials the user may already have abandoned.
+      if (runRef.current !== run) {
+        return;
+      }
       setTursoConfig({ url: normalizedUrl, token });
+    }
+    if (runRef.current !== run) {
+      return;
     }
     const session = useSession.getState();
     session.setConfigComplete(true);
     session.setProfileName(profileName);
+    // Mark the edit finished before dismissing so the unmount cleanup keeps
+    // the just-saved credentials rather than restoring the pre-edit snapshot.
+    finishedRef.current = true;
     const ui = useUi.getState();
     ui.dismissSetup();
-    ui.setScreen("dashboard");
+    // Editing returns to the screen the user came from; first run lands on the
+    // dashboard.
+    if (!editing) {
+      ui.setScreen("dashboard");
+    }
   }
 
   function fail(message: string, kind?: "credentials" | "network" | "other"): void {
     runRef.current += 1;
+    // A failed attempt must leave the live config as it was: restore the
+    // pre-edit credentials (or clear on first run) even on the non-throwing
+    // `ok: false` path.
+    resetTransportConfig();
     setFailureError(message);
     setStep("failure");
     setFailureFocus(kind === "credentials" ? FOCUS_TOKEN : FOCUS_URL);
@@ -183,6 +251,18 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
         { label: "applying schema", state: "done", detail: schemaDetail(schema) },
         { label: "loading profile", state: "done" },
       ]);
+      // Edit mode always lands on the profile step prefilled with the current
+      // values instead of auto-finishing, so the name/email can be changed.
+      if (editing) {
+        setName(profile?.name ?? useSession.getState().profileName);
+        setEmail(profile?.email ?? "");
+        setNameError(null);
+        setEmailError(null);
+        setProfileError(null);
+        setStep("profile");
+        useUi.getState().setFocusedField(FOCUS_NAME);
+        return;
+      }
       if (profile !== null) {
         await finishToApp(profile.name);
         return;
@@ -198,16 +278,17 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       if (!alive()) {
         return;
       }
-      clearTursoConfig();
       const classified = classifyTursoError(error);
+      // fail() restores the pre-edit snapshot / clears the first-run config.
       fail(classified.message, classified.kind);
     }
   }
 
   function backToConnect(focusField: string = failureFocus): void {
-    // Values are kept; the failure panel and Esc both land here.
+    // Values are kept; the failure panel and Esc both land here. The temporary
+    // transport config is dropped so a failed attempt is never left live.
     runRef.current += 1;
-    clearTursoConfig();
+    resetTransportConfig();
     setUrlError(null);
     setStep("connect");
     useUi.getState().setFocusedField(focusField);
@@ -231,6 +312,11 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   }
 
   async function submitProfile(): Promise<void> {
+    // Enter key-repeat could fire twice; the first submit owns the flow. The
+    // profile write plus finishToApp are the commit point.
+    if (savingRef.current) {
+      return;
+    }
     const nextNameError = validateProfileName(name);
     const nextEmailError = validateProfileEmail(email);
     setNameError(nextNameError);
@@ -244,12 +330,24 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       return;
     }
     setProfileError(null);
+    savingRef.current = true;
+    const run = runRef.current;
     try {
       const profile = { name: name.trim(), email: email.trim() };
       await props.settings.saveProfile(profile);
+      // A cancel/unmount during the save must win over this late completion;
+      // otherwise finishToApp would persist abandoned credentials.
+      if (runRef.current !== run) {
+        return;
+      }
       await finishToApp(profile.name);
     } catch (error) {
+      if (runRef.current !== run) {
+        return;
+      }
       setProfileError(error instanceof Error ? error.message : String(error));
+    } finally {
+      savingRef.current = false;
     }
   }
 
@@ -257,6 +355,9 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
     // Dev-only affordance (M0 `d` behavior, now step-aware): skip the form
     // and browse the app on mock data. The footer hint carrying this string
     // sits behind the same inline mock guard, so production drops both.
+    if (editing) {
+      return;
+    }
     useUi.getState().dismissSetup();
   }
 
@@ -326,7 +427,14 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
     // Step 1 (connect).
     if (key.name === "escape") {
       key.preventDefault();
-      props.quit();
+      if (editing) {
+        // Cancel the edit and return to the app instead of quitting. Drop any
+        // tested credentials now; the unmount cleanup also guards this.
+        resetTransportConfig();
+        useUi.getState().dismissSetup();
+      } else {
+        props.quit();
+      }
       return;
     }
     if (key.name === "tab") {
@@ -376,6 +484,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       // instead of being swallowed.
       if (key.name.toLowerCase() === "d") {
         if (
+          !editing &&
           (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) &&
           repoMode === "mock"
         ) {
@@ -424,6 +533,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
   // input while focused, so an unconditional hint would advertise a shortcut
   // that types a literal "d" instead.
   const demoHint =
+    !editing &&
     (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) &&
     repoMode === "mock" &&
     (focusedField === null || focusedField === FOCUS_CONNECT) ? (
@@ -441,7 +551,9 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
       <box flexDirection="column" width={formWidth} gap={1}>
         {step === "connect" ? (
           <>
-            <text fg={color(tokens.fg)}>{"Welcome to Personal OS"}</text>
+            <text fg={color(tokens.fg)}>
+              {editing ? "Connection and profile" : "Welcome to Personal OS"}
+            </text>
             {mockBadge}
             <Field label="Database URL" error={urlError}>
               <TextField
@@ -470,10 +582,12 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
               primary={true}
               focused={focusedField === FOCUS_CONNECT}
               disabled={!canSubmit}
-              label="Connect"
+              label={editing ? "Continue" : "Connect"}
             />
             <text fg={color(tokens.fgSubtle)}>
-              {"enter  connect      tab  next field      esc  quit"}
+              {editing
+                ? "enter  continue      tab  next field      esc  cancel"
+                : "enter  connect      tab  next field      esc  quit"}
             </text>
             {focusedField === FOCUS_TOKEN ? (
               <text fg={color(tokens.fgSubtle)}>{"ctrl+u  clear token"}</text>
@@ -555,10 +669,12 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
               primary={true}
               focused={focusedField === FOCUS_START}
               disabled={false}
-              label="Get started"
+              label={editing ? "Save" : "Get started"}
             />
             <text fg={color(tokens.fgSubtle)}>
-              {"enter  get started      tab  next field      esc  back"}
+              {editing
+                ? "enter  save      tab  next field      esc  back"
+                : "enter  get started      tab  next field      esc  back"}
             </text>
           </>
         ) : null}

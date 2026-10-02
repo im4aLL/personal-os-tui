@@ -417,17 +417,24 @@ export function NotesScreen(): ReactNode {
     scheduleSave();
   }
 
-  function toggleMode(): void {
-    if (mode === "edit") {
+  /** Switch the editor to `next`, capturing the live body text before leaving
+   * edit mode so the preview reflects the latest keystrokes. Selecting the
+   * already-active mode is a no-op. */
+  function selectMode(next: NoteEditorMode): void {
+    if (next === mode) {
+      return;
+    }
+    if (next === "preview") {
       const text = bodyRef.current?.plainText ?? content;
       setContent(text);
       latestRef.current.content = text;
-      setFocusedField(null);
-      setMode("preview");
-      return;
     }
     setFocusedField(null);
-    setMode("edit");
+    setMode(next);
+  }
+
+  function toggleMode(): void {
+    selectMode(mode === "edit" ? "preview" : "edit");
   }
 
   function togglePin(): void {
@@ -863,6 +870,7 @@ export function NotesScreen(): ReactNode {
         setSuggestionIndex(0);
       }}
       onBodyChange={handleBodyChange}
+      onSelectMode={selectMode}
       onRetry={() => {
         void reloadNote();
       }}

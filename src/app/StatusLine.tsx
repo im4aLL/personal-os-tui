@@ -36,6 +36,7 @@ export function StatusLine(): ReactNode {
   const fromEnv = useSession((state) => state.fromEnv);
   const focusedField = useUi((state) => state.focusedField);
   const setupDismissed = useUi((state) => state.setupDismissed);
+  const setupOpen = useUi((state) => state.setupOpen);
   const screen = useUi((state) => state.screen);
   const dashboardLatencyMs = useDashboard((state) => state.latencyMs);
   const dashboardLoading = useDashboard((state) => state.loading);
@@ -65,7 +66,7 @@ export function StatusLine(): ReactNode {
   // Setup owns the viewport until it is complete or dismissed, and its own
   // body prints the Setup keymap, so the global browsing hints would be
   // wrong there. The mock/latency readout stays.
-  const setupVisible = !configComplete && !setupDismissed;
+  const setupVisible = setupOpen || (!configComplete && !setupDismissed);
   const hintSegments = setupVisible || focusedField !== null ? [] : HINT_SEGMENTS;
   // The right-hand readout wins: fit it first (dropping its own trailing
   // segments when extremely narrow), then fill the remainder with hints.

@@ -12,7 +12,7 @@ const MARKER = 2;
 const DATE_WIDTH = 12;
 
 function tagLabel(tags: string[]): string {
-  return tags.map((tag) => `[ ${tag} ]`).join(" ");
+  return tags.map((tag) => `[${tag}]`).join(" ");
 }
 
 // One list row: title (+ date when wide), the URL label, and tags. Rows are a

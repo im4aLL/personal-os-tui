@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useRef } from "react";
 import { Modal } from "../components/ui/Modal";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
+import type { RepoMode } from "../repos/resolve.types";
+import { useSession } from "../store/session";
 import { useTheme } from "../theme/ThemeProvider";
 import { truncate } from "../utils/text";
 import { helpSections, isMockEnabled } from "./registry";
@@ -15,9 +17,9 @@ type HelpRow =
 
 /** Flatten sections into rows so one scrollbox scrolls the whole overlay
  * (headers and gaps included) instead of scrolling each section separately. */
-function flattenHelp(): HelpRow[] {
+function flattenHelp(repoMode: RepoMode): HelpRow[] {
   const rows: HelpRow[] = [];
-  helpSections().forEach((section, sectionIndex) => {
+  helpSections(repoMode).forEach((section, sectionIndex) => {
     if (sectionIndex > 0) {
       rows.push({ kind: "gap", id: `gap-${section.label}` });
     }
@@ -40,6 +42,7 @@ function flattenHelp(): HelpRow[] {
 export function HelpScreen(): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
+  const repoMode = useSession((state) => state.repoMode);
   const { width, height } = useTerminalDimensions();
   const scrollRef = useRef<ScrollBoxRenderable>(null);
 
@@ -77,7 +80,7 @@ export function HelpScreen(): ReactNode {
     return false;
   });
 
-  const rows = flattenHelp();
+  const rows = flattenHelp(repoMode);
   // Fill most of the terminal while leaving a small frame margin; cap the width
   // so the panel never touches the edges on wide terminals.
   const modalWidth = Math.max(44, Math.min(96, width - 6));
@@ -121,7 +124,7 @@ export function HelpScreen(): ReactNode {
         <text fg={color(tokens.fgSubtle)}>
           {"/ searches the current list on Notes and Todo; elsewhere it opens the palette."}
         </text>
-        {isMockEnabled() ? (
+        {isMockEnabled() && repoMode === "mock" ? (
           <text fg={color(tokens.fgSubtle)}>
             {"ctrl+shift+d may arrive as ctrl+d on some terminals - both work."}
           </text>

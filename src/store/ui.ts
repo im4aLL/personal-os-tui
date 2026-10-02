@@ -40,6 +40,7 @@ export const useUi = create<UiState>((set) => {
     paletteIndex: 0,
     themePickerIndex: 0,
     setupDismissed: false,
+    setupOpen: false,
     focusedField: null,
     setScreen: (screen: Screen) => {
       set({ screen, modal: "none" });
@@ -75,10 +76,10 @@ export const useUi = create<UiState>((set) => {
     dismissSetup: () => {
       // Releasing focus: a dismissed Setup must never keep the global
       // handler deferred (e.g. Alt+1..6 away from a focused setup field).
-      set({ setupDismissed: true, modal: "none", focusedField: null });
+      set({ setupDismissed: true, setupOpen: false, modal: "none", focusedField: null });
     },
     showSetupScreen: () => {
-      set({ setupDismissed: false, modal: "none", focusedField: null });
+      set({ setupOpen: true, setupDismissed: false, modal: "none", focusedField: null });
     },
   };
 });

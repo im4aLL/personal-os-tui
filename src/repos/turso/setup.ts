@@ -7,7 +7,6 @@
 import { applyRemoteSchema } from "../../lib/schema";
 import {
   classifyTursoError,
-  clearTursoConfig,
   normalizeUrl,
   setTursoConfig,
   tursoExecute,
@@ -22,7 +21,9 @@ export const tursoSetupRepo: SetupRepo = {
       await tursoSelect("SELECT 1");
       return { ok: true };
     } catch (error) {
-      clearTursoConfig();
+      // Do not clear the transport config here: the Setup caller owns it and
+      // restores (edit mode) or clears (first run) it on failure. Clearing here
+      // could wipe a snapshot a concurrent cancel already restored.
       const { message, kind } = classifyTursoError(error);
       return { ok: false, error: message, kind };
     }
