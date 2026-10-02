@@ -1,4 +1,4 @@
-import type { KeyEvent } from "@opentui/core";
+import { type KeyEvent, TextAttributes } from "@opentui/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -47,22 +47,48 @@ function truncate(text: string, room: number): string {
   return `${text.slice(0, room - 3)}...`;
 }
 
-/** Three-column loading placeholder: a header bar plus two card bars per
- * column, matching the desktop's Kanban skeleton. */
-function TodoSkeleton(): ReactNode {
+/** Three-column loading placeholder: a bordered column per status with a
+ * header bar plus card bars, matching the wide board's framed columns. */
+function TodoSkeleton(props: { wide: boolean; columnInner: number; rows: number }): ReactNode {
   const { theme, color } = useTheme();
-  const { width } = useTerminalDimensions();
-  const cap = Math.max(12, width - 24);
-  const columnWidth = Math.max(6, Math.floor((cap - 2) / 3));
+  const barWidth = Math.max(4, props.columnInner);
+  const count = Math.max(1, Math.min(props.rows, 6));
+  const rows = Array.from({ length: count }, (_, index) => index);
+  const column = (key: number): ReactNode => (
+    <box
+      key={key}
+      flexDirection="column"
+      flexGrow={1}
+      flexBasis={0}
+      minHeight={0}
+      border
+      borderStyle="single"
+      borderColor={color(theme.tokens.borderMuted)}
+      paddingLeft={1}
+      paddingRight={1}
+      gap={1}
+    >
+      {rows.map((row) => (
+        <text key={row} fg={color(theme.tokens.bgHover)} wrapMode="none">
+          {"█".repeat(Math.max(4, barWidth - (row % 3) * 6))}
+        </text>
+      ))}
+    </box>
+  );
+  if (!props.wide) {
+    return (
+      <box flexDirection="column" flexGrow={1} gap={1} paddingLeft={1} paddingRight={1}>
+        {rows.map((row) => (
+          <text key={row} fg={color(theme.tokens.bgHover)} wrapMode="none">
+            {"█".repeat(Math.max(4, barWidth - (row % 3) * 6))}
+          </text>
+        ))}
+      </box>
+    );
+  }
   return (
     <box flexDirection="row" flexGrow={1} gap={1}>
-      {[0, 1, 2].map((column) => (
-        <box key={column} flexDirection="column" flexGrow={1} flexBasis={0} gap={1}>
-          <text fg={color(theme.tokens.bgHover)}>{"█".repeat(Math.max(6, columnWidth - 2))}</text>
-          <text fg={color(theme.tokens.bgHover)}>{"█".repeat(columnWidth)}</text>
-          <text fg={color(theme.tokens.bgHover)}>{"█".repeat(Math.max(6, columnWidth - 4))}</text>
-        </box>
-      ))}
+      {[0, 1, 2].map(column)}
     </box>
   );
 }
@@ -100,13 +126,29 @@ export function TodoScreen(): ReactNode {
 
   const wide = width >= 100;
   const compact = width < 70;
-  const cap = Math.max(12, width - 24);
-  const wideColumnWidth = Math.max(10, Math.floor((cap - 2) / 3));
-  const columnWidth = wide ? wideColumnWidth : cap;
-  const bodyHeight = Math.max(3, height - 10);
+  const sidebarCollapsed = useUi((state) => state.sidebarCollapsed);
+  const sideWidth = width < 60 ? 0 : sidebarCollapsed || width < 80 ? 2 : 22;
+  const contentWidth = Math.max(24, width - sideWidth - 2);
+  const banner = actionError ?? loadError;
+  // Even grid: three bordered columns separated by one-cell gaps. `columnWidth`
+  // is the inner text width a row can use, after the border and padding.
+  const wideColumnWidth = Math.max(
+    10,
+    Math.floor((contentWidth - (COLUMNS.length - 1)) / COLUMNS.length),
+  );
+  const wideColumnInner = Math.max(8, wideColumnWidth - 4);
+  const narrowColumnInner = Math.max(8, contentWidth - 2);
+  const columnWidth = wide ? wideColumnInner : narrowColumnInner;
+  // Rows spent outside the board: the app header and status line, the bordered
+  // search box, the footer hint, the spacer under the search box, and the
+  // optional error banner.
+  const bannerRows = banner !== null ? 1 : 0;
+  const bodyRows = Math.max(3, height - 2 - 3 - 1 - 1 - bannerRows);
   // Each todo renders as title + meta + gap (up to 3 terminal rows), so the
-  // window size is an item count derived from the available row budget.
-  const visibleCount = Math.max(1, Math.floor(bodyHeight / 3));
+  // window size is an item count derived from the available row budget. The
+  // wide board also spends two rows on the column borders; the stacked layout
+  // spends one on its status tab row.
+  const visibleCount = Math.max(1, Math.floor((bodyRows - (wide ? 2 : 1)) / 3));
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -486,7 +528,6 @@ export function TodoScreen(): ReactNode {
 
   const archivedMax = Math.max(0, archivedTodos.length - 1);
   const archivedSelected = archivedTodos[Math.min(archivedIndex, archivedMax)] ?? null;
-  const banner = actionError ?? loadError;
 
   function handleKey(key: KeyEvent): boolean {
     const name = key.name;
@@ -732,16 +773,25 @@ export function TodoScreen(): ReactNode {
 
   return (
     <box flexDirection="column" flexGrow={1} backgroundColor={color(tokens.bg)}>
-      <box flexDirection="row" flexShrink={0} gap={1} paddingTop={1} paddingBottom={1}>
-        <text fg={color(tokens.fgMuted)}>{"Search"}</text>
+      <box
+        flexShrink={0}
+        border
+        borderStyle="single"
+        borderColor={color(searchActive ? tokens.borderFocus : tokens.borderMuted)}
+        title=" Search "
+        titleColor={color(searchActive ? tokens.accent : tokens.fgMuted)}
+        paddingLeft={1}
+        paddingRight={1}
+        height={3}
+      >
         <input
           focused={searchActive}
           value={search}
           placeholder="title or description"
           onInput={(value) => setSearch(value)}
           flexGrow={1}
-          backgroundColor={color(tokens.bgPanel)}
-          focusedBackgroundColor={color(tokens.bgPanel)}
+          backgroundColor={color(tokens.bg)}
+          focusedBackgroundColor={color(tokens.bg)}
           textColor={color(tokens.fg)}
           focusedTextColor={color(tokens.fg)}
           placeholderColor={color(tokens.fgDisabled)}
@@ -759,12 +809,14 @@ export function TodoScreen(): ReactNode {
         </box>
       ) : null}
 
+      <box height={1} flexShrink={0} />
+
       {loading ? (
-        <TodoSkeleton />
+        <TodoSkeleton wide={wide} columnInner={columnWidth} rows={visibleCount} />
       ) : filtered.length === 0 ? (
         <EmptyState title="No todos yet." hint="n to add your first todo" />
       ) : wide ? (
-        <box flexDirection="row" flexGrow={1} gap={1}>
+        <box flexDirection="row" flexGrow={1} minHeight={0} gap={1}>
           {COLUMNS.map((status, index) => (
             <KanbanColumn
               key={status}
@@ -774,40 +826,47 @@ export function TodoScreen(): ReactNode {
               count={byStatus[status].length}
               selectedId={index === focusedColumn ? selectedId : null}
               compact={compact}
-              columnWidth={wideColumnWidth}
-              flex={true}
+              columnWidth={wideColumnInner}
+              focused={index === focusedColumn}
+              variant="box"
             />
           ))}
         </box>
       ) : (
-        <box flexDirection="column" flexGrow={1}>
-          <box flexDirection="row" height={1} flexShrink={0} gap={1}>
+        <box flexDirection="column" flexGrow={1} minHeight={0} paddingLeft={1} paddingRight={1}>
+          <box flexDirection="row" height={1} flexShrink={0} gap={2}>
             {COLUMNS.map((status, index) => {
               const active = index === focusedColumn;
               const label = `${COLUMN_LABELS[status]} ${byStatus[status].length}`;
               return (
                 <text key={status} wrapMode="none">
-                  <span fg={color(active ? tokens.accent : tokens.fgMuted)}>
+                  <span
+                    fg={color(active ? tokens.accent : tokens.fgMuted)}
+                    attributes={active ? TextAttributes.BOLD : undefined}
+                  >
                     {active ? `[ ${label} ]` : label}
                   </span>
                 </text>
               );
             })}
           </box>
-          <KanbanColumn
-            status={focusedStatus}
-            label={COLUMN_LABELS[focusedStatus]}
-            items={windowSlice(
-              byStatus[focusedStatus],
-              selectedIndexIn(focusedStatus),
-              visibleCount,
-            )}
-            count={byStatus[focusedStatus].length}
-            selectedId={selectedId}
-            compact={compact}
-            columnWidth={columnWidth}
-            flex={false}
-          />
+          <box flexGrow={1} minHeight={0} paddingTop={1}>
+            <KanbanColumn
+              status={focusedStatus}
+              label={COLUMN_LABELS[focusedStatus]}
+              items={windowSlice(
+                byStatus[focusedStatus],
+                selectedIndexIn(focusedStatus),
+                visibleCount,
+              )}
+              count={byStatus[focusedStatus].length}
+              selectedId={selectedId}
+              compact={compact}
+              columnWidth={narrowColumnInner}
+              focused={true}
+              variant="plain"
+            />
+          </box>
         </box>
       )}
 

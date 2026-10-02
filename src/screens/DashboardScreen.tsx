@@ -33,11 +33,27 @@ import type { ActivityItem, ActivityKind, DashboardFocus, StatCard } from "./Das
 
 const WIDE_MIN = 100;
 const HEADER_ROWS = 2;
-const STAT_CARD_HEIGHT = 2;
+// A stat card is a bordered box: top border, one value row, bottom border.
+const STAT_CARD_ROWS = 3;
+// Panel chrome is the rows a panel spends on framing rather than content: a
+// full box costs a top and bottom border, a stacked top-rule panel costs one.
+const BOX_PANEL_CHROME_ROWS = 2;
+const RULE_PANEL_CHROME_ROWS = 1;
+// A panel needs its chrome plus one content row before it is worth drawing.
+const BOX_PANEL_MIN_ROWS = BOX_PANEL_CHROME_ROWS + 1;
+const RULE_PANEL_MIN_ROWS = RULE_PANEL_CHROME_ROWS + 1;
 const FOOTER_ROWS = 1;
 const PROJECT_ROWS = 2;
 const FOCUS_CAP = 6;
 const ACTIVITY_CAP = 7;
+// Fixed-width trailing columns keep list rows aligned into stable columns
+// instead of drifting with each title's length.
+const PRIORITY_COL = 6;
+const DUE_COL = 7;
+const KIND_COL = 8;
+const TIME_COL = 9;
+const DETAIL_COL = 14;
+const DONE_COL = 5;
 const HINT = "Tab panel  j/k move  1-4 card  Enter open  n add  r refresh";
 const FOCUS_TARGETS: DashboardFocus[] = ["stats", "focus", "projects", "in-progress", "activity"];
 
@@ -48,12 +64,23 @@ function clampIndex(index: number, length: number): number {
   return Math.max(0, Math.min(index, length - 1));
 }
 
-/** Split `total` rows across panels by weight, guaranteeing each panel a title
- * row (budget 1) whenever the total can cover it. Predictable: the largest
- * panel absorbs the rounding remainder and donates rows to any panel below the
- * floor. The result never sums above `total`; any panel the total cannot cover
- * gets a 0 budget and is skipped by the caller. */
-function allocateRows(total: number, weights: number[]): number[] {
+/** Left-pad with spaces to a minimum width; longer text is left untouched. */
+function padStart(text: string, width: number): string {
+  return text.length >= width ? text : text.padStart(width);
+}
+
+/** Right-pad with spaces to a minimum width; longer text is left untouched. */
+function padEnd(text: string, width: number): string {
+  return text.length >= width ? text : text.padEnd(width);
+}
+
+/** Split `total` rows across panels by weight, guaranteeing each panel at least
+ * `min` rows (the minimum a panel needs to draw its chrome plus a content row)
+ * whenever the total can cover it. Predictable: the largest panel absorbs the
+ * rounding remainder and donates rows to any panel below the floor. The result
+ * never sums above `total`; any panel the total cannot cover gets a 0 budget
+ * and is skipped by the caller. */
+function allocateRows(total: number, weights: number[], min: number): number[] {
   if (total <= 0) {
     return weights.map(() => 0);
   }
@@ -67,9 +94,9 @@ function allocateRows(total: number, weights: number[]): number[] {
   }
   rows[largest] += total - rows.reduce((acc, row) => acc + row, 0);
   for (let i = 0; i < rows.length; i++) {
-    while (rows[i] < 1) {
+    while (rows[i] < min) {
       const donor = rows.indexOf(Math.max(...rows));
-      if (rows[donor] <= 1) {
+      if (rows[donor] <= min) {
         break;
       }
       rows[donor] -= 1;
@@ -89,23 +116,33 @@ function screenForKind(kind: ActivityKind): Screen {
   return "work-log";
 }
 
-/** A fixed-height titled panel. The caller renders exactly
- * `height - 1` content rows so a panel can never overflow its budget. */
+/** A fixed-height panel. When `variant` is `box` the title is embedded in a
+ * full border (the wide 2x2 grid). When it is `rule`, only the top rule is
+ * drawn (the stacked narrow layout), which saves a row per panel. The caller
+ * renders exactly `height - chrome` content rows so a panel can never overflow
+ * its budget, and the chrome carries the focus state. */
 function Panel(props: {
   title: string;
   focused: boolean;
   height: number;
+  variant: "box" | "rule";
   children: ReactNode;
 }): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   return (
-    <box flexDirection="column" height={props.height} flexShrink={0}>
-      <box height={1} flexShrink={0}>
-        <text fg={color(props.focused ? tokens.accent : tokens.fgMuted)} wrapMode="none">
-          {props.title}
-        </text>
-      </box>
+    <box
+      flexDirection="column"
+      height={props.height}
+      flexShrink={0}
+      border={props.variant === "box" ? true : ["top"]}
+      borderStyle="single"
+      borderColor={color(props.focused ? tokens.borderFocus : tokens.borderMuted)}
+      title={` ${props.title} `}
+      titleColor={color(props.focused ? tokens.accent : tokens.fgMuted)}
+      paddingLeft={1}
+      paddingRight={1}
+    >
       {props.children}
     </box>
   );
@@ -306,7 +343,7 @@ export function DashboardScreen(): ReactNode {
       error: cardError,
     },
     {
-      label: "Logged this week",
+      label: "This Week",
       target: "work-log",
       value: cardValue(loggedThisWeek),
       loading: cardLoading,
@@ -319,23 +356,38 @@ export function DashboardScreen(): ReactNode {
   const sideWidth = width < 60 ? 0 : sidebarCollapsed || width < 80 ? 2 : 22;
   const contentWidth = Math.max(24, width - sideWidth - 2);
   const wide = width >= WIDE_MIN;
-  const statRows = wide ? STAT_CARD_HEIGHT : STAT_CARD_HEIGHT * 2;
+  const statRows = wide ? STAT_CARD_ROWS : STAT_CARD_ROWS * 2 + 1;
   // The content area is the terminal minus the app header row and the status
-  // line. Derive from the real height so nothing is pushed below the viewport
-  // on a short terminal; the footer is only kept when a body row survives it.
-  const viewportRows = Math.max(0, height - 2);
+  // line, plus the dev-only mock error banner when it is shown (it occupies a
+  // full row above the screen). Derive from the real height so nothing is
+  // pushed below the viewport on a short terminal; the footer is only kept when
+  // a body row survives it.
+  const mockBannerRows =
+    (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) && scenario === "error"
+      ? 1
+      : 0;
+  const viewportRows = Math.max(0, height - 2 - mockBannerRows);
   // One extra header row while the batch error is shown, so the error line
   // never pushes panel content past the viewport.
   const headerRows = dashboardError !== null ? HEADER_ROWS + 1 : HEADER_ROWS;
   const fixedRows = headerRows + statRows;
   const showFooter = viewportRows - fixedRows >= FOOTER_ROWS + 1;
   const bodyRows = Math.max(0, viewportRows - fixedRows - (showFooter ? FOOTER_ROWS : 0));
-  const columnWidth = wide ? Math.max(20, Math.floor((contentWidth - 1) / 2)) : contentWidth;
-  const cardWidth = Math.max(
-    4,
-    wide ? Math.floor((contentWidth - 3) / 4) - 2 : Math.floor((contentWidth - 1) / 2) - 2,
-  );
-  const barWidth = Math.max(4, columnWidth - 8);
+  const columnWidth = wide ? Math.max(24, Math.floor((contentWidth - 1) / 2)) : contentWidth;
+  // A full-box panel loses a border and a padding cell on each side; a stacked
+  // top-rule panel loses only the padding. Rows budget one cell less than that
+  // so an exact-width row can never push a renderable to wrap.
+  const panelVariant: "box" | "rule" = wide ? "box" : "rule";
+  const panelChromeRows = panelVariant === "box" ? BOX_PANEL_CHROME_ROWS : RULE_PANEL_CHROME_ROWS;
+  const panelMinRows = panelVariant === "box" ? BOX_PANEL_MIN_ROWS : RULE_PANEL_MIN_ROWS;
+  const panelInnerWidth = Math.max(8, columnWidth - (panelVariant === "box" ? 4 : 2));
+  const rowWidth = Math.max(8, panelInnerWidth - 1);
+  const cardWidth = wide
+    ? Math.max(8, Math.floor((contentWidth - 3) / 4))
+    : Math.max(8, Math.floor((contentWidth - 1) / 2));
+  // Leave two cells of slack: an embedded border title needs a border cell on
+  // each side, and an exact-width title is dropped by the renderer.
+  const cardInnerWidth = Math.max(4, cardWidth - 6);
 
   let topRows = 0;
   let bottomRows = 0;
@@ -344,13 +396,37 @@ export function DashboardScreen(): ReactNode {
   let inProgressPanelRows = 0;
   let activityPanelRows = 0;
   if (wide) {
-    // Shrink toward 0 on a short terminal; a 0-height panel is skipped below.
-    topRows = Math.min(bodyRows, Math.max(0, Math.floor(bodyRows / 2)));
-    bottomRows = Math.max(0, bodyRows - topRows);
+    // Size both panel rows to what they actually hold so a tall terminal shows
+    // content-sized cards with the leftover as background, instead of stretching
+    // the list panels into large empty frames. The panels still shrink to share
+    // a short terminal, and any overflow scrolls through `windowSlice`.
+    const placeholder = dashboardError !== null && !hasSnapshot;
+    const contentRows = (count: number, cap: number): number =>
+      dashboardLoading ? cap : placeholder ? 1 : Math.max(1, Math.min(count, cap));
+    const topContent = Math.max(
+      contentRows(focusItems.length, FOCUS_CAP),
+      contentRows(inProgressItems.length, FOCUS_CAP),
+    );
+    const projectContent = placeholder
+      ? 1
+      : projects.length === 0
+        ? 1
+        : projects.length * PROJECT_ROWS;
+    const bottomContent = Math.max(projectContent, contentRows(activity.length, ACTIVITY_CAP));
+    const desiredTop = topContent + panelChromeRows;
+    const desiredBottom = bottomContent + panelChromeRows;
+    if (bodyRows < panelMinRows * 2) {
+      topRows = Math.min(bodyRows, Math.max(0, Math.floor(bodyRows / 2)));
+      bottomRows = Math.max(0, bodyRows - topRows);
+    } else {
+      topRows = Math.max(panelMinRows, Math.min(desiredTop, bodyRows - panelMinRows));
+      bottomRows = Math.max(panelMinRows, Math.min(desiredBottom, bodyRows - topRows));
+    }
   } else {
     [focusPanelRows, projectPanelRows, inProgressPanelRows, activityPanelRows] = allocateRows(
       bodyRows,
       [2, 3, 2, 3],
+      panelMinRows,
     );
   }
 
@@ -375,13 +451,13 @@ export function DashboardScreen(): ReactNode {
       return null;
     }
     if (dashboardLoading) {
-      return <SkeletonRows rows={rows} width={columnWidth} />;
+      return <SkeletonRows rows={rows} width={panelInnerWidth} />;
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={columnWidth} />;
+      return <MutedLine text="Could not load" width={panelInnerWidth} />;
     }
     if (focusItems.length === 0) {
-      return <MutedLine text="Nothing due, you are all caught up" width={columnWidth} />;
+      return <MutedLine text="Nothing due, you are all caught up" width={panelInnerWidth} />;
     }
     return <>{windowSlice(focusItems, focusSel, rows).map((todo) => renderFocusRow(todo))}</>;
   }
@@ -389,23 +465,27 @@ export function DashboardScreen(): ReactNode {
   function renderFocusRow(todo: Todo): ReactNode {
     const overdue = todo.dueDate !== null && todo.dueDate < today;
     const label = overdue ? "Overdue" : "Today";
-    const priorityText = todo.priority !== null ? ` ${todo.priority}` : "";
-    const titleRoom = Math.max(4, columnWidth - 2 - priorityText.length - label.length - 2);
+    const priorityText = todo.priority ?? "";
     const priorityColor =
       todo.priority === "high"
         ? tokens.priorityHigh
         : todo.priority === "medium"
           ? tokens.priorityMedium
           : tokens.priorityLow;
+    const titleRoom = Math.max(4, rowWidth - 2 - 1 - PRIORITY_COL - 1 - DUE_COL);
     const selected = todo.id === selectedFocusId;
     return (
       <box key={todo.id} height={1} flexShrink={0}>
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : tokens.fg)}>
-            {`${selected ? "> " : "  "}${truncate(todo.title, titleRoom)}`}
+            {`${selected ? "> " : "  "}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
           </span>
-          {todo.priority !== null ? <span fg={color(priorityColor)}>{priorityText}</span> : null}
-          <span fg={color(overdue ? tokens.danger : tokens.fgMuted)}>{` ${label}`}</span>
+          <span fg={color(todo.priority !== null ? priorityColor : tokens.fgSubtle)}>
+            {padStart(priorityText, PRIORITY_COL)}
+          </span>
+          <span fg={color(overdue ? tokens.danger : tokens.fgMuted)}>
+            {` ${padStart(label, DUE_COL)}`}
+          </span>
         </text>
       </box>
     );
@@ -419,15 +499,15 @@ export function DashboardScreen(): ReactNode {
       return (
         <SkeletonRows
           rows={Math.max(0, Math.floor(rows / PROJECT_ROWS) * PROJECT_ROWS)}
-          width={columnWidth}
+          width={panelInnerWidth}
         />
       );
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={columnWidth} />;
+      return <MutedLine text="Could not load" width={panelInnerWidth} />;
     }
     if (projects.length === 0) {
-      return <MutedLine text="No projects yet" width={columnWidth} />;
+      return <MutedLine text="No projects yet" width={panelInnerWidth} />;
     }
     const visibleCount = Math.max(0, Math.floor(rows / PROJECT_ROWS));
     return (
@@ -442,22 +522,28 @@ export function DashboardScreen(): ReactNode {
   function renderProjectRow(project: Project): ReactNode {
     const completion = getProjectCompletion(project, progress[project.id]);
     const selected = project.id === selectedProjectId;
-    const nameRoom = Math.max(6, Math.floor(columnWidth * 0.5));
-    const detailText = completion.detail;
+    const nameRoom = Math.max(6, rowWidth - 2 - DONE_COL - DETAIL_COL);
     const rowFg = completion.isDone ? tokens.fgSubtle : tokens.fg;
+    // The bar is indented two cells to sit under the project name; the trailing
+    // percentage occupies a fixed 5-cell field so every bar ends flush right.
+    const barWidth = Math.max(4, rowWidth - 2 - 5);
     return (
       <box key={project.id} height={PROJECT_ROWS} flexShrink={0} flexDirection="column">
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : rowFg)}>
-            {`${selected ? "> " : "  "}${truncate(project.name, nameRoom)}`}
+            {`${selected ? "> " : "  "}${padEnd(truncate(project.name, nameRoom), nameRoom)}`}
           </span>
-          {completion.isDone ? <span fg={color(tokens.success)}>{" Done"}</span> : null}
+          <span fg={color(tokens.success)}>{completion.isDone ? "Done " : "     "}</span>
           <span fg={color(completion.isDone ? tokens.fgSubtle : tokens.fgMuted)}>
-            {` ${truncate(detailText, Math.max(4, columnWidth - nameRoom - 8))}`}
+            {padStart(completion.detail, DETAIL_COL)}
           </span>
         </text>
         <box paddingLeft={2} flexShrink={0}>
-          <ProgressBar ratio={completion.pct / 100} width={barWidth} />
+          <ProgressBar
+            ratio={completion.pct / 100}
+            width={barWidth}
+            label={padStart(`${completion.pct}%`, 4)}
+          />
         </box>
       </box>
     );
@@ -468,23 +554,34 @@ export function DashboardScreen(): ReactNode {
       return null;
     }
     if (dashboardLoading) {
-      return <SkeletonRows rows={rows} width={columnWidth} />;
+      return <SkeletonRows rows={rows} width={panelInnerWidth} />;
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={columnWidth} />;
+      return <MutedLine text="Could not load" width={panelInnerWidth} />;
     }
     if (inProgressItems.length === 0) {
-      return <MutedLine text="Nothing in progress right now" width={columnWidth} />;
+      return <MutedLine text="Nothing in progress right now" width={panelInnerWidth} />;
     }
     return (
       <>
         {windowSlice(inProgressItems, inProgressSel, rows).map((todo) => {
           const selected = todo.id === selectedInProgressId;
+          const priorityText = todo.priority ?? "";
+          const priorityColor =
+            todo.priority === "high"
+              ? tokens.priorityHigh
+              : todo.priority === "medium"
+                ? tokens.priorityMedium
+                : tokens.priorityLow;
+          const titleRoom = Math.max(4, rowWidth - 2 - 1 - PRIORITY_COL);
           return (
             <box key={todo.id} height={1} flexShrink={0}>
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
-                  {`${selected ? "> " : "  "}${truncate(todo.title, Math.max(4, columnWidth - 2))}`}
+                  {`${selected ? "> " : "  "}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
+                </span>
+                <span fg={color(todo.priority !== null ? priorityColor : tokens.fgSubtle)}>
+                  {padStart(priorityText, PRIORITY_COL)}
                 </span>
               </text>
             </box>
@@ -499,30 +596,28 @@ export function DashboardScreen(): ReactNode {
       return null;
     }
     if (dashboardLoading) {
-      return <SkeletonRows rows={rows} width={columnWidth} />;
+      return <SkeletonRows rows={rows} width={panelInnerWidth} />;
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={columnWidth} />;
+      return <MutedLine text="Could not load" width={panelInnerWidth} />;
     }
     if (activity.length === 0) {
-      return <MutedLine text="No activity yet" width={columnWidth} />;
+      return <MutedLine text="No activity yet" width={panelInnerWidth} />;
     }
+    const titleRoom = Math.max(4, rowWidth - 2 - 1 - KIND_COL - 1 - TIME_COL);
     return (
       <>
         {windowSlice(activity, activitySel, rows).map((item) => {
           const selected = item.key === selectedActivityKey;
-          const tail = `  ${item.meta}  ${relativeTime(item.date, now)}`;
-          const tailRoom = Math.min(tail.length, Math.max(8, Math.floor(columnWidth * 0.45)));
-          const titleRoom = Math.max(4, columnWidth - 2 - tailRoom);
+          const time = relativeTime(item.date, now);
           return (
             <box key={item.key} height={1} flexShrink={0}>
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
-                  {`${selected ? "> " : "  "}${truncate(item.title, titleRoom)}`}
+                  {`${selected ? "> " : "  "}${padEnd(truncate(item.title, titleRoom), titleRoom)} `}
                 </span>
-                <span fg={color(tokens.fgSubtle)}>
-                  {truncate(tail, Math.max(4, columnWidth - 2 - titleRoom))}
-                </span>
+                <span fg={color(tokens.fgSubtle)}>{padStart(item.meta, KIND_COL)}</span>
+                <span fg={color(tokens.fgMuted)}>{` ${padStart(time, TIME_COL)}`}</span>
               </text>
             </box>
           );
@@ -537,13 +632,19 @@ export function DashboardScreen(): ReactNode {
     panelHeight: number,
     content: ReactNode,
   ): ReactNode {
-    // A 0-height panel cannot show even its title, so skip it entirely rather
-    // than emitting a fixed-height child past the viewport.
-    if (panelHeight <= 0) {
+    // A panel below the minimum cannot show its chrome and a content row, so
+    // skip it entirely rather than emitting a clipped fixed-height child.
+    if (panelHeight < panelMinRows) {
       return null;
     }
     return (
-      <Panel key={target} title={title} focused={focusTarget === target} height={panelHeight}>
+      <Panel
+        key={target}
+        title={truncate(title, Math.max(4, columnWidth - 4))}
+        focused={focusTarget === target}
+        height={panelHeight}
+        variant={panelVariant}
+      >
         {content}
       </Panel>
     );
@@ -570,17 +671,18 @@ export function DashboardScreen(): ReactNode {
         key={card.label}
         flexGrow={1}
         flexBasis={0}
-        height={STAT_CARD_HEIGHT}
+        height={STAT_CARD_ROWS}
         flexDirection="column"
-        backgroundColor={color(active ? tokens.bgRaised : tokens.bgPanel)}
+        border
+        borderStyle="single"
+        borderColor={color(active ? tokens.borderFocus : tokens.borderMuted)}
+        title={` ${truncate(card.label, cardInnerWidth)} `}
+        titleColor={color(active ? tokens.accent : tokens.fgMuted)}
         paddingLeft={1}
         paddingRight={1}
       >
         <text fg={color(valueColor)} wrapMode="none">
           {valueText}
-        </text>
-        <text fg={color(active ? tokens.accent : tokens.fgMuted)} wrapMode="none">
-          {truncate(card.label, cardWidth)}
         </text>
       </box>
     );
@@ -589,17 +691,17 @@ export function DashboardScreen(): ReactNode {
   function renderStats(): ReactNode {
     if (wide) {
       return (
-        <box flexDirection="row" height={STAT_CARD_HEIGHT} flexShrink={0} gap={1}>
+        <box flexDirection="row" height={STAT_CARD_ROWS} flexShrink={0} gap={1}>
           {statCards.map((card, index) => renderStatCard(card, index))}
         </box>
       );
     }
     return (
-      <box flexDirection="column" flexShrink={0}>
-        <box flexDirection="row" height={STAT_CARD_HEIGHT} gap={1}>
+      <box flexDirection="column" flexShrink={0} rowGap={1}>
+        <box flexDirection="row" height={STAT_CARD_ROWS} gap={1}>
           {statCards.slice(0, 2).map((card, index) => renderStatCard(card, index))}
         </box>
-        <box flexDirection="row" height={STAT_CARD_HEIGHT} gap={1}>
+        <box flexDirection="row" height={STAT_CARD_ROWS} gap={1}>
           {statCards.slice(2).map((card, index) => renderStatCard(card, index + 2))}
         </box>
       </box>
@@ -826,34 +928,54 @@ export function DashboardScreen(): ReactNode {
       {wide ? (
         <box flexDirection="row" flexGrow={1} minHeight={0} gap={1}>
           <box flexDirection="column" flexGrow={1} flexBasis={0} minHeight={0}>
-            {renderPanel("Today & Overdue", "focus", topRows, focusRows(topRows - 1))}
-            {renderPanel("Active Projects", "projects", bottomRows, projectRows(bottomRows - 1))}
+            {renderPanel("Today & Overdue", "focus", topRows, focusRows(topRows - panelChromeRows))}
+            {renderPanel(
+              "Active Projects",
+              "projects",
+              bottomRows,
+              projectRows(bottomRows - panelChromeRows),
+            )}
           </box>
           <box flexDirection="column" flexGrow={1} flexBasis={0} minHeight={0}>
-            {renderPanel("In Progress", "in-progress", topRows, inProgressRows(topRows - 1))}
-            {renderPanel("Recent Activity", "activity", bottomRows, activityRows(bottomRows - 1))}
+            {renderPanel(
+              "In Progress",
+              "in-progress",
+              topRows,
+              inProgressRows(topRows - panelChromeRows),
+            )}
+            {renderPanel(
+              "Recent Activity",
+              "activity",
+              bottomRows,
+              activityRows(bottomRows - panelChromeRows),
+            )}
           </box>
         </box>
       ) : (
         <box flexDirection="column" flexGrow={1} minHeight={0}>
-          {renderPanel("Today & Overdue", "focus", focusPanelRows, focusRows(focusPanelRows - 1))}
+          {renderPanel(
+            "Today & Overdue",
+            "focus",
+            focusPanelRows,
+            focusRows(focusPanelRows - panelChromeRows),
+          )}
           {renderPanel(
             "Active Projects",
             "projects",
             projectPanelRows,
-            projectRows(projectPanelRows - 1),
+            projectRows(projectPanelRows - panelChromeRows),
           )}
           {renderPanel(
             "In Progress",
             "in-progress",
             inProgressPanelRows,
-            inProgressRows(inProgressPanelRows - 1),
+            inProgressRows(inProgressPanelRows - panelChromeRows),
           )}
           {renderPanel(
             "Recent Activity",
             "activity",
             activityPanelRows,
-            activityRows(activityPanelRows - 1),
+            activityRows(activityPanelRows - panelChromeRows),
           )}
         </box>
       )}

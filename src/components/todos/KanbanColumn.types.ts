@@ -9,7 +9,10 @@ export interface KanbanColumnProps {
   count: number;
   selectedId: string | null;
   compact: boolean;
+  /** Inner text width available to each row, in columns. */
   columnWidth: number;
-  /** True in the wide layout: the column grows to fill its share of the row. */
-  flex: boolean;
+  /** True when this column is the focused one (border/title emphasis). */
+  focused: boolean;
+  /** `box` draws a bordered column (wide grid); `plain` draws rows only. */
+  variant: "box" | "plain";
 }
