@@ -35,6 +35,7 @@ import type { AppBootstrap, ScreenContentProps, ShellProps } from "./App.types";
 import { Layout } from "./Layout";
 import { MockStatePanel } from "./MockStatePanel";
 import { SetupScreen } from "./SetupScreen";
+import { SplashScreen } from "./SplashScreen";
 
 function ScreenContent(props: ScreenContentProps): ReactNode {
   switch (props.screen) {
@@ -73,6 +74,8 @@ function Shell(props: ShellProps): ReactNode {
   // the pending-write flush runs, and `ctx.quit` becomes idempotent.
   const [stopping, setStopping] = useState(false);
   const stoppingRef = useRef(false);
+  // Launch splash: up on every start and held until the user presses a key.
+  const [splashVisible, setSplashVisible] = useState(true);
 
   useEffect(() => {
     if (width >= 60) {
@@ -208,6 +211,14 @@ function Shell(props: ShellProps): ReactNode {
     );
     if (quitAlways.some((binding) => matchesKey(key, binding))) {
       ctx.quit();
+      return;
+    }
+
+    // The splash owns the first key after the always-on quit and waits for it,
+    // so nothing behind it navigates or opens a dialog from that keypress.
+    if (splashVisible) {
+      key.stopPropagation();
+      setSplashVisible(false);
       return;
     }
 
@@ -457,6 +468,7 @@ function Shell(props: ShellProps): ReactNode {
       (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) ? (
         <MockStatePanel />
       ) : null}
+      {splashVisible ? <SplashScreen /> : null}
     </Layout>
   );
 }
