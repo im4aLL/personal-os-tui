@@ -17,14 +17,18 @@ export interface SessionState {
   scenario: MockScenario;
   scenarios: MockScenario[];
   latencyMs: number;
+  /** True when the mock guard should throw on every call (dev panel toggle). */
+  errorInjection: boolean;
   mockUi: MockUiState | null;
   resetMockData: (() => void) | null;
   cycleTheme: () => void;
+  selectTheme: (themeId: string) => void;
   setProfileName: (name: string) => void;
   setConfigComplete: (complete: boolean) => void;
   setConnectionOk: (ok: boolean | null) => void;
   setScenario: (scenario: MockScenario) => void;
   setLatencyMs: (ms: number) => void;
+  setErrorInjection: (enabled: boolean) => void;
 }
 
 /** Bootstrap values passed to `initSession`. */

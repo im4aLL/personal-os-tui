@@ -7,7 +7,13 @@ import { randomUUID } from "node:crypto";
 import { createFixtures } from "../../mock/fixtures";
 import type { Fixtures } from "../../mock/fixtures.types";
 import type { CreateNoteInput, Note, NoteRepo, UpdateNoteInput } from "../types";
-import { applyListScenario, isEmptyScenario, mockCall } from "./guard";
+import {
+  applyListScenario,
+  assertNotLargeClone,
+  isEmptyScenario,
+  mockCall,
+  mockMutationError,
+} from "./guard";
 
 let rows: Note[] = cloneNotes(createFixtures().notes);
 // Result of the most recent `list()` call, so ids synthesized by the `large`
@@ -99,7 +105,7 @@ export const mockNoteRepo: NoteRepo = {
     return mockCall(() => {
       const note = rows.find((row) => row.id === id);
       if (note === undefined) {
-        throw new Error(`mock note not found: ${id}`);
+        throw mockMutationError("note", id);
       }
       Object.assign(note, { ...input, id: note.id, updatedAt: stamp() });
     });
@@ -107,6 +113,7 @@ export const mockNoteRepo: NoteRepo = {
 
   remove(id: string): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("note", id);
       rows = rows.filter((row) => row.id !== id);
     });
   },
@@ -115,7 +122,7 @@ export const mockNoteRepo: NoteRepo = {
     return mockCall(() => {
       const note = rows.find((row) => row.id === id);
       if (note === undefined) {
-        throw new Error(`mock note not found: ${id}`);
+        throw mockMutationError("note", id);
       }
       note.pinned = pinned;
       note.updatedAt = stamp();
@@ -138,7 +145,7 @@ export const mockNoteRepo: NoteRepo = {
     return mockCall(() => {
       const note = rows.find((row) => row.id === id);
       if (note === undefined) {
-        throw new Error(`mock note not found: ${id}`);
+        throw mockMutationError("note", id);
       }
       // Replace in place; mirrors the desktop `setTagsForNote`, which does not
       // bump `updated_at`.

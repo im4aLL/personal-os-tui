@@ -1,5 +1,8 @@
+import type { MouseEvent } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { wheelDelta } from "../../utils/mouse";
+import { EmptyState } from "../ui/EmptyState";
 import type { KanbanColumnProps } from "./KanbanColumn.types";
 import { TodoRow } from "./TodoRow";
 
@@ -23,11 +26,10 @@ export function KanbanColumn(props: KanbanColumnProps): ReactNode {
   const dividerColor = color(tokens.borderMuted);
   const rows: ReactNode[] = [];
   if (props.items.length === 0) {
-    rows.push(
-      <text key="empty" fg={color(tokens.fgSubtle)} wrapMode="none">
-        {"No todos"}
-      </text>,
-    );
+    // Centered `EmptyState` matches the board and every other list. The column
+    // still has a fixed share of the board, so the empty block simply centers
+    // inside that share instead of spending extra rows.
+    rows.push(<EmptyState key="empty" title="No todos yet" hint="n to add your first todo" />);
   } else {
     props.items.forEach((todo, index) => {
       if (index > 0) {
@@ -44,14 +46,23 @@ export function KanbanColumn(props: KanbanColumnProps): ReactNode {
           selected={todo.id === props.selectedId}
           compact={props.compact}
           width={props.columnWidth}
+          onSelect={() => props.onSelectTodo?.(todo)}
+          onActivate={() => props.onActivateTodo?.(todo)}
         />,
       );
     });
   }
 
+  const wheel = (event: MouseEvent): void => {
+    const delta = wheelDelta(event);
+    if (delta !== 0) {
+      props.onWheel?.(delta);
+    }
+  };
+
   if (props.variant === "plain") {
     return (
-      <box flexDirection="column" flexGrow={1} minHeight={0}>
+      <box flexDirection="column" flexGrow={1} minHeight={0} onMouseScroll={wheel}>
         {rows}
       </box>
     );
@@ -71,6 +82,7 @@ export function KanbanColumn(props: KanbanColumnProps): ReactNode {
       titleColor={color(props.focused ? tokens.accent : headerColor)}
       paddingLeft={1}
       paddingRight={1}
+      onMouseScroll={wheel}
     >
       {rows}
     </box>

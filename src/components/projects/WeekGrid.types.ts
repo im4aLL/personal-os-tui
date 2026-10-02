@@ -23,4 +23,9 @@ export interface WeekGridProps {
   windowStart: number;
   /** Number of visible week columns. */
   visibleWeeks: number;
+  /** Mouse: select/activate a work item row without a keyboard. */
+  onSelectItem?: (id: string) => void;
+  onActivateItem?: (id: string) => void;
+  /** Mouse wheel over the grid/list: -1 up, +1 down. */
+  onWheel?: (delta: number) => void;
 }

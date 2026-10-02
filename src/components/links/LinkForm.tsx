@@ -58,7 +58,7 @@ export function LinkForm(props: LinkFormProps): ReactNode {
 
         <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
         <text fg={color(tokens.fgSubtle)}>
-          {"Tab next field  Enter save  Ctrl+Enter save from tags  Esc cancel"}
+          {"tab next field  enter save  ctrl+enter save from tags  esc cancel"}
         </text>
       </box>
     </Modal>

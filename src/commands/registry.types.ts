@@ -26,7 +26,9 @@ export interface KeyPress {
 export interface CommandContext {
   navigate: (screen: Screen) => void;
   cycleTheme: () => void;
+  openThemePicker: () => void;
   toggleSidebar: () => void;
+  refresh: () => void;
   openPalette: () => void;
   openHelp: () => void;
   closeModal: () => void;
@@ -37,14 +39,42 @@ export interface CommandContext {
   quit: () => void;
 }
 
+/** A row that is handled by a screen's own keyboard scope but documented
+ * centrally so the help screen and the screen footer share one source. Screen
+ * scopes stay imperative (they need live screen state); these rows describe
+ * them, and the footers below are rendered from the same data. */
+export interface ScreenKeyRow {
+  /** Display form of the binding(s), e.g. "j/k" or "ctrl+s". */
+  keys: string;
+  /** Short action label, e.g. "move selection". */
+  title: string;
+}
+
+export interface ScreenKeyGroup {
+  screen: string;
+  title: string;
+  rows: ScreenKeyRow[];
+}
+
 export interface Command {
   id: string;
   title: string;
-  hint: string;
   group: CommandGroup;
   /** Empty for palette-only commands with no global binding. */
   keys: KeyBinding[];
   /** True for dev-only commands, hidden when the mock build flag is off. */
   devOnly?: boolean;
   run: (ctx: CommandContext) => void;
+}
+
+/** One key/action row in the generated help overlay. */
+export interface HelpLine {
+  key: string;
+  title: string;
+}
+
+/** A labelled group of help rows (Navigate, Global, or one per screen). */
+export interface HelpSection {
+  label: string;
+  lines: HelpLine[];
 }

@@ -2,6 +2,7 @@ import type { KeyEvent, TextareaRenderable } from "@opentui/core";
 import { useRenderer, useSelectionHandler, useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { screenHint } from "../commands/registry";
 import { NoteEditorPane } from "../components/notes/NoteEditorPane";
 import type { NoteEditorField } from "../components/notes/NoteEditorPane.types";
 import { NoteListPane } from "../components/notes/NoteListPane";
@@ -16,8 +17,9 @@ import { useSession } from "../store/session";
 import { useTodos } from "../store/todos";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
-import { messageOf } from "../utils/error";
+import { messageOf, operationError, retryableError } from "../utils/error";
 import { ACTIVE_GLYPH } from "../utils/marker";
+import { isReadOnlyRow } from "../utils/mouse";
 import { noteDisplayTitle } from "../utils/notes";
 import { truncate } from "../utils/text";
 import { windowSlice } from "../utils/window";
@@ -32,8 +34,7 @@ const SAVED_MS = 2000;
 // that fixed geometry, not from a user setting.
 const LIST_ROW_ROWS = 3;
 
-const HINT =
-  "n new  p preview  b pin  v privacy  x export  d delete  / search  Enter open  Ctrl+S save  Ctrl+Enter todo";
+const HINT = screenHint("notes");
 
 const EXPORT_OPTIONS = [
   { kind: "txt" as const, label: "Plain text (.txt)", detail: "markdown stripped" },
@@ -200,7 +201,7 @@ export function NotesScreen(): ReactNode {
       // Keep the typed content; the status stays `error` until the next edit or
       // a successful Ctrl+S retry, and the notice explains the immediate reason.
       setSaveStatus("error");
-      setNotice({ text: messageOf(error), kind: "danger" });
+      setNotice({ text: operationError("Could not save note", error), kind: "danger" });
     }
   }, [refreshAllTags]);
 
@@ -433,6 +434,11 @@ export function NotesScreen(): ReactNode {
     if (selectedId === null) {
       return;
     }
+    // `large` clones are read-only, so pinning one can only fail; no-op to
+    // match the other screens instead of surfacing a pointless error.
+    if (isReadOnlyRow(selectedId)) {
+      return;
+    }
     void useNotes.getState().togglePin(selectedId);
   }
 
@@ -453,6 +459,21 @@ export function NotesScreen(): ReactNode {
     setNarrowPane((pane) => (pane === "list" ? "editor" : "list"));
   }
 
+  /** Mouse double-click / Enter on a row: select it and focus the editor body.
+   * `large` clones stay in preview so the edit surface never opens on a row
+   * whose autosave can only fail. */
+  function activateNote(id: string): void {
+    useNotes.getState().selectNote(id);
+    setNarrowPane("editor");
+    if (isReadOnlyRow(id)) {
+      setMode("preview");
+      setFocusedField(null);
+      return;
+    }
+    setMode("edit");
+    setFocusedField("body");
+  }
+
   async function createNote(): Promise<void> {
     await flush();
     try {
@@ -462,7 +483,7 @@ export function NotesScreen(): ReactNode {
       setNarrowPane("editor");
       useNotes.getState().selectNote(created.id);
     } catch (error) {
-      setNotice({ text: messageOf(error), kind: "danger" });
+      setNotice({ text: operationError("Could not create note", error), kind: "danger" });
     }
   }
 
@@ -713,9 +734,7 @@ export function NotesScreen(): ReactNode {
     }
     if (name === "return") {
       if (selectedId !== null) {
-        setMode("edit");
-        setNarrowPane("editor");
-        setFocusedField("body");
+        activateNote(selectedId);
       }
       return true;
     }
@@ -751,8 +770,14 @@ export function NotesScreen(): ReactNode {
       requestDelete();
       return true;
     }
-    if (plain("r") && editorError !== null) {
-      void reloadNote();
+    if (plain("r") && (loadError !== null || editorError !== null)) {
+      // `r` is the shared retry key: a list-load failure reloads the list, an
+      // editor-load failure reloads the selected note.
+      if (loadError !== null) {
+        void loadNotes();
+      } else {
+        void reloadNote();
+      }
       return true;
     }
     if (name === "escape") {
@@ -782,7 +807,10 @@ export function NotesScreen(): ReactNode {
   const selectedIndex = filtered.findIndex((note) => note.id === selectedId);
   const visibleNotes = windowSlice(filtered, selectedIndex, visibleCount);
   const banner =
-    notice ?? (loadError !== null ? { text: loadError, kind: "danger" as const } : null);
+    notice ??
+    (loadError !== null
+      ? { text: retryableError("Notes could not load", loadError), kind: "danger" as const }
+      : null);
   const statusText = banner !== null ? banner.text : HINT;
   const statusColor =
     banner === null ? tokens.fgSubtle : banner.kind === "success" ? tokens.success : tokens.danger;
@@ -799,6 +827,14 @@ export function NotesScreen(): ReactNode {
       privacyMode={privacyMode}
       width={listOuter}
       onSearchChange={setSearch}
+      onSelectNote={(id) => {
+        useNotes.getState().selectNote(id);
+      }}
+      onActivateNote={activateNote}
+      onWheel={(delta) => {
+        setNarrowPane("list");
+        moveSelection(delta);
+      }}
     />
   );
 
@@ -883,7 +919,7 @@ export function NotesScreen(): ReactNode {
                 {`${index === exportIndex ? ACTIVE_GLYPH : " "} ${option.label}  ${option.detail}`}
               </text>
             ))}
-            <text fg={color(tokens.fgSubtle)}>{"Enter export  Esc cancel"}</text>
+            <text fg={color(tokens.fgSubtle)}>{"enter export  esc cancel"}</text>
           </box>
         </Modal>
       ) : null}

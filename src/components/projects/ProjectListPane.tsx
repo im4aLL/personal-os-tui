@@ -1,28 +1,15 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { wheelDelta } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
 import { windowSlice } from "../../utils/window";
+import { EmptyState } from "../ui/EmptyState";
+import { Skeleton } from "../ui/Skeleton";
 import { ProjectListItem } from "./ProjectListItem";
 import type { ProjectListPaneProps } from "./ProjectListPane.types";
 
 /** A pane's frame: two border cells plus one padding cell on each side. */
 const FRAME = 4;
-
-// Loading placeholder: three dim bars, one per expected project row.
-function SkeletonBars(props: { width: number }): ReactNode {
-  const { theme, color } = useTheme();
-  const tokens = theme.tokens;
-  const widths = [16, 12, 14];
-  return (
-    <box flexDirection="column" flexShrink={0}>
-      {widths.map((len) => (
-        <text key={len} fg={color(tokens.bgHover)} wrapMode="none">
-          {"█".repeat(Math.max(4, Math.min(len, props.width)))}
-        </text>
-      ))}
-    </box>
-  );
-}
 
 // The left pane: a bordered panel titled with the project count, holding the
 // windowed project rows (dashed rules between them), a loading skeleton, or the
@@ -52,6 +39,8 @@ export function ProjectListPane(props: ProjectListPaneProps): ReactNode {
           focused={props.focused}
           width={innerWidth}
           stat={props.progress[project.id]}
+          onSelect={() => props.onSelectProject?.(project.id)}
+          onActivate={() => props.onActivateProject?.(project.id)}
         />,
       );
     });
@@ -70,14 +59,17 @@ export function ProjectListPane(props: ProjectListPaneProps): ReactNode {
       titleColor={color(props.focused ? tokens.accent : tokens.fgMuted)}
       paddingLeft={1}
       paddingRight={1}
+      onMouseScroll={(event) => {
+        const delta = wheelDelta(event);
+        if (delta !== 0) {
+          props.onWheel?.(delta);
+        }
+      }}
     >
       {props.loading ? (
-        <SkeletonBars width={innerWidth} />
+        <Skeleton lines={3} widths={[16, 12, 14]} />
       ) : props.projects.length === 0 ? (
-        <box flexDirection="column" paddingTop={1}>
-          <text fg={color(tokens.fgMuted)}>{"No projects yet"}</text>
-          <text fg={color(tokens.fgSubtle)}>{"Press n to add"}</text>
-        </box>
+        <EmptyState title="No projects yet" hint="n to add your first project" />
       ) : (
         rows
       )}

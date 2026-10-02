@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { SCREEN_ORDER, SCREEN_SHORT_LABELS, SCREEN_TITLES } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { menuRowMarker } from "../utils/marker";
+import { isPrimaryClick } from "../utils/mouse";
 import type { SidebarProps } from "./Sidebar.types";
 
 /** Full sidebar column width; the brand cell in Layout tracks this value. */
@@ -33,7 +34,15 @@ export function Sidebar(props: SidebarProps): ReactNode {
         {SCREEN_ORDER.map((item) => {
           const active = item === props.screen;
           return (
-            <box key={item} backgroundColor={active ? color(tokens.sidebarActiveBg) : undefined}>
+            <box
+              key={item}
+              backgroundColor={active ? color(tokens.sidebarActiveBg) : undefined}
+              onMouseDown={(event) => {
+                if (isPrimaryClick(event)) {
+                  props.onSelect?.(item);
+                }
+              }}
+            >
               <text fg={color(active ? tokens.sidebarActiveFg : tokens.fgMuted)}>
                 {SCREEN_SHORT_LABELS[item]}
               </text>
@@ -62,6 +71,11 @@ export function Sidebar(props: SidebarProps): ReactNode {
               backgroundColor={active ? color(tokens.sidebarActiveBg) : undefined}
               paddingLeft={1}
               paddingRight={1}
+              onMouseDown={(event) => {
+                if (isPrimaryClick(event)) {
+                  props.onSelect?.(item);
+                }
+              }}
             >
               <text fg={color(active ? tokens.sidebarActiveFg : tokens.fgMuted)}>
                 {`${menuRowMarker(active)}${fitLabel(SCREEN_TITLES[item])}`}

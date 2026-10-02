@@ -1,4 +1,4 @@
-import { useKeyboard, useTerminalDimensions } from "@opentui/react";
+import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { CommandPalette } from "../commands/CommandPalette";
@@ -9,6 +9,7 @@ import {
   findCommandForKey,
   isMockEnabled,
   matchesKey,
+  PALETTE_PAGE_SIZE,
 } from "../commands/registry";
 import type { CommandContext } from "../commands/registry.types";
 import { resolveKeyScope } from "../hooks/useKeyboardScope";
@@ -18,10 +19,17 @@ import { NotesScreen } from "../screens/NotesScreen";
 import { ProjectsScreen } from "../screens/ProjectsScreen";
 import { TodoScreen } from "../screens/TodoScreen";
 import { WorkLogScreen } from "../screens/WorkLogScreen";
+import { useDashboard } from "../store/dashboard";
+import { useLinks } from "../store/links";
+import { useNotes } from "../store/notes";
+import { useProjectsStore } from "../store/projects";
 import { useSession } from "../store/session";
+import { useTodos } from "../store/todos";
 import { useUi } from "../store/ui";
 import type { Screen } from "../store/ui.types";
-import { ThemeProvider } from "../theme/ThemeProvider";
+import { useWorkLogs } from "../store/workLogs";
+import { listThemes } from "../theme/registry";
+import { ThemePicker, ThemeProvider } from "../theme/ThemeProvider";
 import type { AppBootstrap, ScreenContentProps, ShellProps } from "./App.types";
 import { Layout } from "./Layout";
 import { MockStatePanel } from "./MockStatePanel";
@@ -57,6 +65,7 @@ function Shell(props: ShellProps): ReactNode {
   const setupDismissed = useUi((state) => state.setupDismissed);
   const configComplete = useSession((state) => state.configComplete);
   const { width } = useTerminalDimensions();
+  const renderer = useRenderer();
   const [narrowOpen, setNarrowOpen] = useState(false);
 
   useEffect(() => {
@@ -83,11 +92,45 @@ function Shell(props: ShellProps): ReactNode {
       cycleTheme: () => {
         useSession.getState().cycleTheme();
       },
+      openThemePicker: () => {
+        const themes = listThemes();
+        const activeIndex = themes.findIndex((entry) => entry.id === useSession.getState().themeId);
+        useUi.getState().setThemePickerIndex(activeIndex === -1 ? 0 : activeIndex);
+        useUi.getState().openModal("theme-picker");
+      },
       toggleSidebar: () => {
         if (width < 60) {
           setNarrowOpen((open) => !open);
         } else {
           useUi.getState().toggleSidebar();
+        }
+      },
+      refresh: () => {
+        switch (useUi.getState().screen) {
+          case "dashboard": {
+            void useDashboard.getState().loadDashboard();
+            break;
+          }
+          case "todo": {
+            void useTodos.getState().refreshTodos();
+            break;
+          }
+          case "links": {
+            void useLinks.getState().refreshLinks();
+            break;
+          }
+          case "projects": {
+            void useProjectsStore.getState().refreshProjects();
+            break;
+          }
+          case "work-log": {
+            void useWorkLogs.getState().refreshWorkLogs();
+            break;
+          }
+          case "notes": {
+            void useNotes.getState().refreshNotes();
+            break;
+          }
         }
       },
       openPalette: () => {
@@ -129,17 +172,32 @@ function Shell(props: ShellProps): ReactNode {
 
   useKeyboard((key) => {
     const state = useUi.getState();
-    // Ctrl+Q quits from anywhere, even modals and text fields. Ctrl+C quits
-    // only from normal browsing (handled via the registry below): while the
-    // palette input is focused Ctrl+C must not quit, so copy can land there
-    // later without hijacking. (Bare `q` only quits while browsing; it must
-    // keep typing in inputs.)
+    // Ctrl+Q quits from anywhere, even modals and text fields. (Bare `q` only
+    // quits while browsing; it must keep typing in inputs.)
     const quitAlways = commandKeys("global.quit").filter(
       (binding) => binding.ctrl === true && binding.name.toLowerCase() === "q",
     );
     if (quitAlways.some((binding) => matchesKey(key, binding))) {
       ctx.quit();
       return;
+    }
+
+    // Ctrl+C copies the current terminal text selection when there is one, in
+    // any context (browsing, a modal, Setup, a focused field). With nothing
+    // selected it does not stop propagation: while browsing it falls through to
+    // the registry's Ctrl+C quit binding, a modal branch below returns without
+    // quitting, and a focused field is protected by the deferral further down.
+    // A renderer without the OSC52 helper also falls through, so browsing still
+    // quits there.
+    if (key.ctrl && !key.meta && key.name.toLowerCase() === "c") {
+      if (typeof renderer.copyToClipboardOSC52 === "function") {
+        const selection = renderer.getSelection()?.getSelectedText() ?? "";
+        if (selection !== "") {
+          renderer.copyToClipboardOSC52(selection);
+          key.stopPropagation();
+          return;
+        }
+      }
     }
 
     if (state.modal === "command-palette") {
@@ -160,7 +218,7 @@ function Shell(props: ShellProps): ReactNode {
         return;
       }
       if (key.name === "down" || (key.ctrl && key.name === "n")) {
-        const count = Math.min(10, results.length);
+        const count = Math.min(PALETTE_PAGE_SIZE, results.length);
         // max(0, ...): with no matches count - 1 is -1, which must not leak
         // into paletteIndex (Enter on -1 just closes; nothing highlights).
         state.setPaletteIndex(Math.max(0, Math.min(count - 1, state.paletteIndex + 1)));
@@ -176,6 +234,45 @@ function Shell(props: ShellProps): ReactNode {
     if (state.modal === "help") {
       if (key.name === "escape") {
         state.closeModal();
+        return;
+      }
+      // The help overlay's scrollbox owns j/k, arrows, PageUp/Down, Home/End
+      // and the mouse wheel through its keyboard scope; swallow every other
+      // key so global browsing bindings stay off while help is open.
+      if (resolveKeyScope(key)) {
+        key.stopPropagation();
+      }
+      return;
+    }
+
+    if (state.modal === "theme-picker") {
+      const themes = listThemes();
+      const count = themes.length;
+      if (key.name === "escape") {
+        state.closeModal();
+        return;
+      }
+      if (key.name === "down" || (!key.ctrl && !key.meta && key.name === "j")) {
+        state.setThemePickerIndex((state.themePickerIndex + 1) % count);
+        return;
+      }
+      if (key.name === "up" || (!key.ctrl && !key.meta && key.name === "k")) {
+        state.setThemePickerIndex((state.themePickerIndex - 1 + count) % count);
+        return;
+      }
+      const digit =
+        key.name.length === 1 && key.name >= "1" && key.name <= "9" ? Number(key.name) - 1 : -1;
+      if (!key.ctrl && !key.meta && digit !== -1 && digit < count) {
+        state.setThemePickerIndex(digit);
+        return;
+      }
+      if (key.name === "return") {
+        const target = themes[state.themePickerIndex];
+        if (target !== undefined) {
+          useSession.getState().selectTheme(target.id);
+        }
+        state.closeModal();
+        return;
       }
       return;
     }
@@ -186,12 +283,17 @@ function Shell(props: ShellProps): ReactNode {
         return;
       }
       const session = useSession.getState();
-      const digit = ["1", "2", "3", "4", "5"].indexOf(key.name);
+      const digit =
+        key.name.length === 1 && key.name >= "1" && key.name <= "9" ? Number(key.name) - 1 : -1;
       if (!key.ctrl && !key.meta && digit !== -1) {
         const scenario = session.scenarios[digit];
         if (scenario !== undefined) {
           session.setScenario(scenario);
         }
+        return;
+      }
+      if (!key.ctrl && !key.meta && key.name === "e") {
+        session.setErrorInjection(!session.errorInjection);
         return;
       }
       if (!key.ctrl && !key.meta && key.name === "r") {
@@ -223,15 +325,16 @@ function Shell(props: ShellProps): ReactNode {
     // focus. Modified keys cannot be typed, so they still resolve: Alt+1..6
     // navigates away and dismisses Setup in mock mode (M0: `d` or Alt+1..6
     // reaches the six screens), and Ctrl+P opens the palette on top. Ctrl+Q
-    // stays reachable above.
+    // stays reachable above. Ctrl+C with a text selection was consumed by the
+    // copy handler above; with no selection it falls through to here, so a
+    // focused control is never quit from.
     const session = useSession.getState();
     const setupVisible = !session.configComplete && !state.setupDismissed;
-    if (
-      (state.focusedField !== null || setupVisible) &&
-      !key.ctrl &&
-      !key.meta &&
-      key.option !== true
-    ) {
+    const focusedOrSetup = state.focusedField !== null || setupVisible;
+    if (focusedOrSetup && key.ctrl && !key.meta && key.name.toLowerCase() === "c") {
+      return;
+    }
+    if (focusedOrSetup && !key.ctrl && !key.meta && key.option !== true) {
       return;
     }
 
@@ -252,7 +355,12 @@ function Shell(props: ShellProps): ReactNode {
   const showSetup = !configComplete && !setupDismissed;
 
   return (
-    <Layout screen={screen} sidebarHidden={sidebarHidden} sidebarRail={sidebarRail}>
+    <Layout
+      screen={screen}
+      sidebarHidden={sidebarHidden}
+      sidebarRail={sidebarRail}
+      onNavigate={ctx.navigate}
+    >
       {showSetup ? (
         <SetupScreen setup={props.setup} settings={props.settings} quit={props.quit} />
       ) : (
@@ -260,6 +368,7 @@ function Shell(props: ShellProps): ReactNode {
       )}
       {modal === "command-palette" ? <CommandPalette /> : null}
       {modal === "help" ? <HelpScreen /> : null}
+      {modal === "theme-picker" ? <ThemePicker /> : null}
       {modal === "mock-panel" &&
       (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) ? (
         <MockStatePanel />

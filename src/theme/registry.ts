@@ -45,15 +45,15 @@ function makeTheme(id: string, label: string, dark: boolean, palette: ThemePalet
 }
 
 const themes: Record<string, Theme> = {
-  latte: makeTheme("latte", "Latte", false, latte),
-  frappe: makeTheme("frappe", "Frappe", true, frappe),
-  macchiato: makeTheme("macchiato", "Macchiato", true, macchiato),
-  mocha: makeTheme("mocha", "Mocha", true, mocha),
+  latte: makeTheme("latte", "Catppuccin Latte", false, latte),
+  frappe: makeTheme("frappe", "Catppuccin Frappe", true, frappe),
+  macchiato: makeTheme("macchiato", "Catppuccin Macchiato", true, macchiato),
+  mocha: makeTheme("mocha", "Catppuccin Mocha", true, mocha),
 };
 
 export const defaultThemeId = "mocha";
 
-/** Cycle order for the `t` key: Latte, Frappe, Macchiato, Mocha. */
+/** Cycle order for the `t` key: Catppuccin Latte, Frappe, Macchiato, Mocha. */
 export const themeOrder: string[] = ["latte", "frappe", "macchiato", "mocha"];
 
 export function listThemes(): Theme[] {

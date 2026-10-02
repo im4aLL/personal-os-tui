@@ -5,7 +5,7 @@ import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 
-const HINT_SEGMENTS = ["Ctrl+P commands", "? help", "t theme", "q quit"];
+const HINT_SEGMENTS = ["ctrl+p commands", "? help", "t/ctrl+t theme", "q quit"];
 const HINT_GAP = "  ";
 const MIN_GAP = 2;
 

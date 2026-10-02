@@ -31,6 +31,40 @@ npm run dev         # node --experimental-ffi --import tsx src/cli.tsx
 npm run dev:mock    # same, with POS_MOCK=1
 ```
 
+## Keymap
+
+Global keys (also listed by `?`):
+
+| Key | Action |
+| --- | --- |
+| `alt+1` .. `alt+6` | Jump to Dashboard, Todo, Save Links, Project Planner, Work Log, Notes |
+| `/` or `ctrl+p` | Command palette (`/` searches the current list first on Todo and Notes) |
+| `?` | Help and keymap |
+| `t` | Cycle theme |
+| `ctrl+t` | Theme picker |
+| `ctrl+r` | Refresh the current screen |
+| `ctrl+\` | Toggle the sidebar |
+| `ctrl+shift+d` (or `ctrl+d`) | Mock state panel (development builds only) |
+| `q` | Quit while browsing |
+| `ctrl+q` | Quit from anywhere, including forms and dialogs |
+| `ctrl+c` | Copy the current text selection; with nothing selected, quit while browsing (plain `c` copies a selected link) |
+| `esc` | Close the open dialog, or leave a focused editor |
+
+Per-screen keys (the status line shows the active set):
+
+| Screen | Keys |
+| --- | --- |
+| Dashboard | `tab` panel, `j/k` move, `1-4` card, `enter` open, `n` add, `r` refresh |
+| Todo | `n` new, `enter` edit, `m` cycle status, `H/L` move column, `K/J` reorder, `/` search, `d` delete, `a` archived, `A` archive done, `X` clear done |
+| Save Links | `enter` open, `e` edit title, `c` copy, `d` delete, `n` save, `/` search, `tab` tags, `esc` clear |
+| Project Planner | `1/2` list or grid, `tab` zone, `j/k` select, `enter` open or edit, `n` new, `e` edit, `d` delete, `p` phases, `K/J` reorder, `s` separator, `o` jira, `c` comment, `[` `]` window |
+| Work Log | `j/k` select, `enter` edit, `n` add, `d` delete, `/` search, `f` date, `1-3` preset, `c` clear |
+| Notes | `n` new, `p` preview, `b` pin, `v` privacy, `x` export, `d` delete, `/` search, `enter` open, `ctrl+s` save, `ctrl+enter` todo |
+
+Mouse is additive, never required: click a sidebar item to navigate, click a row to select it, double-click a row to open or edit it, scroll a list with the wheel, and click a tag pill to apply it. Run with `POS_NO_MOUSE=1` for keyboard-only reachability.
+
+In development builds, `ctrl+shift+d` opens the mock state panel: switch scenario (`1-6`, including `slow` at 3 s and `large`), adjust latency (`-`/`+`), toggle error injection (`e`), and reset fixtures (`r`) without a restart.
+
 ## Scripts
 
 | Script | Purpose |
@@ -74,4 +108,4 @@ Deliberately omitted: `zod` (hand-written validators), `date-fns`, `react-markdo
 
 ## Status
 
-The M0 shell is implemented: `pos` gates the Node version, re-execs itself with `--experimental-ffi`, and runs the bundled entry into a six-screen shell (Dashboard, Todo, Save Links, Project Planner, Work Log, Notes) with sidebar navigation, four theme variants, a command palette, a keymap help dialog, and a Setup screen until the config is complete. The M1 Setup flow (connect, connecting, failure, and profile steps) is implemented on mock data and awaits G1 approval. Without credentials it runs on in-memory mock data behind a MOCK DATA badge; `POS_MOCK_LATENCY` and `POS_MOCK_SCENARIO` shape loading and error states in dev builds, and the mock chunk is dropped from `build:prod`. Turso repos are stubbed and land per milestone in `PLAN.md`.
+All six feature screens (Dashboard, Todo, Save Links, Project Planner, Work Log, Notes) are implemented and wired to Turso through the repository seam, with Setup wired first. The M8 cross-cutting polish is complete: the command palette lists each command with its bound keys, `?` renders global and per-screen keys generated from one registry, `ctrl+t` opens a theme picker that persists to `config.json`, `ctrl+r` refreshes the current screen, the dev-only mock panel toggles scenario, latency, error injection, and fixtures, mouse is an additive layer (disabled with `POS_NO_MOUSE=1`), and every screen's empty, loading, and error states share one voice. The M8 milestone awaits G8 approval. Without credentials the app runs on in-memory mock data behind a MOCK DATA badge; `POS_MOCK_LATENCY` and `POS_MOCK_SCENARIO` (including `slow` and `large`) shape loading and error states in dev builds, and the mock chunk is dropped from `build:prod`.

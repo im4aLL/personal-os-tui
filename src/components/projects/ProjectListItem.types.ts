@@ -11,4 +11,7 @@ export interface ProjectListItemProps {
   width: number;
   /** Non-separator item progress, shown as a percentage when present. */
   stat?: ProjectProgressStat;
+  /** Mouse: primary click selects this row; a double-click activates it. */
+  onSelect?: () => void;
+  onActivate?: () => void;
 }

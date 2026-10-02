@@ -62,11 +62,12 @@ function printHelp(): void {
   if (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) {
     lines.push(
       "  POS_MOCK_LATENCY=ms      Mock delay per call (default 150-400)",
-      "  POS_MOCK_SCENARIO=name   default|empty|loading|error|large",
+      "  POS_MOCK_SCENARIO=name   default|empty|loading|slow|error|large",
     );
   }
   lines.push(
     "  POS_CONFIG_DIR=dir       Override the config directory",
+    "  POS_NO_MOUSE=1           Disable mouse; keyboard-only",
     "  POS_TURSO_URL / POS_TURSO_TOKEN",
     "                           Credential overrides (never persisted)",
   );
@@ -193,6 +194,8 @@ async function runApp(args: string[]): Promise<number> {
       exitOnCtrlC: false,
       exitSignals: [],
       backgroundColor: theme.tokens.bg,
+      // Mouse is additive; POS_NO_MOUSE=1 keeps full keyboard reachability.
+      useMouse: process.env.POS_NO_MOUSE !== "1",
     });
     const root = createRoot(renderer);
     root.render(

@@ -1,6 +1,7 @@
 import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { isPrimaryClick } from "../../utils/mouse";
 import type { TagFilterBarProps } from "./TagFilterBar.types";
 
 // Tag filter pills with an `all` pill first. Keyboard-driven: the screen owns
@@ -17,7 +18,15 @@ export function TagFilterBar(props: TagFilterBarProps): ReactNode {
         const focused = props.focused && index === props.focusedIndex;
         const applied = pill.tag === props.appliedTag;
         return (
-          <text key={pill.id} wrapMode="none">
+          <text
+            key={pill.id}
+            wrapMode="none"
+            onMouseDown={(event) => {
+              if (isPrimaryClick(event)) {
+                props.onSelect?.(index);
+              }
+            }}
+          >
             {index === 0 ? null : <span fg={color(tokens.fgSubtle)}> </span>}
             <span
               fg={color(focused ? tokens.accent : applied ? tokens.accentAlt : tokens.fgMuted)}

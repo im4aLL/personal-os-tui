@@ -21,7 +21,7 @@ export function NoteToolbar(props: NoteToolbarProps): ReactNode {
       : props.saveStatus === "saved"
         ? "Saved"
         : props.saveStatus === "error"
-          ? "Save failed  Ctrl+S to retry"
+          ? "Save failed  ctrl+s to retry"
           : "";
   const saveColor =
     props.saveStatus === "saved"

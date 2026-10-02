@@ -23,6 +23,7 @@ export function Modal(props: ModalProps): ReactNode {
         title={props.title}
         titleColor={color(tokens.fg)}
         width={props.width ?? 60}
+        height={props.height}
         paddingLeft={2}
         paddingRight={2}
         paddingTop={1}

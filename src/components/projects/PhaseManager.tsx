@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { ACTIVE_MARKER, rowMarker } from "../../utils/marker";
 import { truncate } from "../../utils/text";
+import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
 import { TextField } from "../ui/TextField";
 import type { PhaseManagerProps } from "./PhaseManager.types";
@@ -36,7 +37,7 @@ export function PhaseManager(props: PhaseManagerProps): ReactNode {
     <Modal title="Phases" width={modalWidth}>
       <box flexDirection="column" gap={0}>
         {props.phases.length === 0 && props.mode === "list" ? (
-          <text fg={color(tokens.fgMuted)}>{"No phases yet - press n to add one"}</text>
+          <EmptyState title="No phases yet" hint="n to add your first phase" />
         ) : (
           props.phases.map((phase, index) => {
             const count = props.workItems.filter(
@@ -101,7 +102,7 @@ export function PhaseManager(props: PhaseManagerProps): ReactNode {
         ) : null}
 
         <text fg={color(tokens.fgSubtle)}>
-          {"j/k select  K/J move  r rename  c recolor  d delete  n add  Esc close"}
+          {"j/k select  K/J move  r rename  c recolor  d delete  n add  esc close"}
         </text>
       </box>
     </Modal>

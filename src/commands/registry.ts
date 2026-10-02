@@ -2,9 +2,20 @@
 // this registry, so the three cannot drift. Every command with a global
 // binding declares machine-readable `keys`; the handler matches them with
 // `findCommandForKey` and help renders them with `formatKey`.
-import type { Command, KeyBinding, KeyPress } from "./registry.types";
+import type {
+  Command,
+  HelpLine,
+  HelpSection,
+  KeyBinding,
+  KeyPress,
+  ScreenKeyGroup,
+} from "./registry.types";
 
 const MOCK_ENABLED: boolean = typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED;
+
+/** Rows the palette shows at once. Shared with App's nav clamp so the render
+ * slice and the keyboard cap cannot drift. */
+export const PALETTE_PAGE_SIZE = 10;
 
 /** Build flag for dev-only UI (mock panel, mock commands). Runtime gate
  * only; mock code exclusion from production relies on the dynamic import
@@ -17,7 +28,6 @@ export const NAV_COMMANDS: Command[] = [
   {
     id: "nav.dashboard",
     title: "Go to Dashboard",
-    hint: "Alt+1",
     group: "nav",
     keys: [{ name: "1", meta: true }],
     run: (ctx) => ctx.navigate("dashboard"),
@@ -25,7 +35,6 @@ export const NAV_COMMANDS: Command[] = [
   {
     id: "nav.todo",
     title: "Go to Todo",
-    hint: "Alt+2",
     group: "nav",
     keys: [{ name: "2", meta: true }],
     run: (ctx) => ctx.navigate("todo"),
@@ -33,7 +42,6 @@ export const NAV_COMMANDS: Command[] = [
   {
     id: "nav.links",
     title: "Go to Save Links",
-    hint: "Alt+3",
     group: "nav",
     keys: [{ name: "3", meta: true }],
     run: (ctx) => ctx.navigate("links"),
@@ -41,7 +49,6 @@ export const NAV_COMMANDS: Command[] = [
   {
     id: "nav.projects",
     title: "Go to Project Planner",
-    hint: "Alt+4",
     group: "nav",
     keys: [{ name: "4", meta: true }],
     run: (ctx) => ctx.navigate("projects"),
@@ -49,7 +56,6 @@ export const NAV_COMMANDS: Command[] = [
   {
     id: "nav.work-log",
     title: "Go to Work Log",
-    hint: "Alt+5",
     group: "nav",
     keys: [{ name: "5", meta: true }],
     run: (ctx) => ctx.navigate("work-log"),
@@ -57,7 +63,6 @@ export const NAV_COMMANDS: Command[] = [
   {
     id: "nav.notes",
     title: "Go to Notes",
-    hint: "Alt+6",
     group: "nav",
     keys: [{ name: "6", meta: true }],
     run: (ctx) => ctx.navigate("notes"),
@@ -71,7 +76,6 @@ export const NAV_COMMANDS: Command[] = [
 const paletteCommand: Command = {
   id: "global.palette",
   title: "Open command palette",
-  hint: "Ctrl+P",
   group: "global",
   keys: [{ name: "/" }, { name: "p", ctrl: true }],
   run: (ctx) => ctx.openPalette(),
@@ -80,7 +84,6 @@ const paletteCommand: Command = {
 const helpCommand: Command = {
   id: "global.help",
   title: "Show help and keymap",
-  hint: "?",
   group: "global",
   keys: [{ name: "?" }],
   run: (ctx) => ctx.openHelp(),
@@ -89,16 +92,30 @@ const helpCommand: Command = {
 const themeCommand: Command = {
   id: "global.theme",
   title: "Cycle theme",
-  hint: "t",
   group: "global",
   keys: [{ name: "t" }],
   run: (ctx) => ctx.cycleTheme(),
 };
 
+const themePickerCommand: Command = {
+  id: "global.theme-picker",
+  title: "Choose theme",
+  group: "global",
+  keys: [{ name: "t", ctrl: true }],
+  run: (ctx) => ctx.openThemePicker(),
+};
+
+const refreshCommand: Command = {
+  id: "global.refresh",
+  title: "Refresh current screen",
+  group: "global",
+  keys: [{ name: "r", ctrl: true }],
+  run: (ctx) => ctx.refresh(),
+};
+
 const sidebarCommand: Command = {
   id: "global.sidebar",
   title: "Toggle sidebar",
-  hint: "Ctrl+\\",
   group: "global",
   keys: [{ name: "\\", ctrl: true }],
   run: (ctx) => ctx.toggleSidebar(),
@@ -114,7 +131,6 @@ const sidebarCommand: Command = {
 const mockPanelCommand: Command = {
   id: "global.mock-panel",
   title: "Open mock state panel",
-  hint: "Ctrl+Shift+D",
   group: "global",
   keys: [
     { name: "d", ctrl: true, shift: true },
@@ -127,7 +143,6 @@ const mockPanelCommand: Command = {
 const dismissCommand: Command = {
   id: "global.dismiss",
   title: "Close dialog",
-  hint: "Esc",
   group: "global",
   keys: [{ name: "escape" }],
   run: (ctx) => ctx.closeModal(),
@@ -136,8 +151,10 @@ const dismissCommand: Command = {
 const quitCommand: Command = {
   id: "global.quit",
   title: "Quit",
-  hint: "q or Ctrl+Q",
   group: "global",
+  // Ctrl+C reaches this command while browsing when there is no terminal text
+  // selection (App copies a selection before the registry). A renderer without
+  // the OSC52 helper always falls through, so browsing still quits there.
   keys: [{ name: "q" }, { name: "q", ctrl: true }, { name: "c", ctrl: true }],
   run: (ctx) => ctx.quit(),
 };
@@ -147,7 +164,6 @@ const quitCommand: Command = {
 const setupCommand: Command = {
   id: "global.setup",
   title: "Open setup",
-  hint: "",
   group: "global",
   keys: [],
   run: (ctx) => ctx.showSetup(),
@@ -159,6 +175,8 @@ const globalBaseCommands: Command[] = [
   paletteCommand,
   helpCommand,
   themeCommand,
+  themePickerCommand,
+  refreshCommand,
   sidebarCommand,
   dismissCommand,
   quitCommand,
@@ -173,6 +191,8 @@ const MOCK_GLOBAL_COMMANDS: Command[] = [
   paletteCommand,
   helpCommand,
   themeCommand,
+  themePickerCommand,
+  refreshCommand,
   sidebarCommand,
   mockPanelCommand,
   dismissCommand,
@@ -199,7 +219,6 @@ const MOCK_COMMANDS_DATA: Command[] = [
   {
     id: "mock.scenario-default",
     title: "Mock scenario: default",
-    hint: "",
     group: "mock",
     keys: [],
     devOnly: true,
@@ -208,7 +227,6 @@ const MOCK_COMMANDS_DATA: Command[] = [
   {
     id: "mock.scenario-empty",
     title: "Mock scenario: empty",
-    hint: "",
     group: "mock",
     keys: [],
     devOnly: true,
@@ -217,16 +235,22 @@ const MOCK_COMMANDS_DATA: Command[] = [
   {
     id: "mock.scenario-loading",
     title: "Mock scenario: loading",
-    hint: "",
     group: "mock",
     keys: [],
     devOnly: true,
     run: (ctx) => ctx.setScenario("loading"),
   },
   {
+    id: "mock.scenario-slow",
+    title: "Mock scenario: slow",
+    group: "mock",
+    keys: [],
+    devOnly: true,
+    run: (ctx) => ctx.setScenario("slow"),
+  },
+  {
     id: "mock.scenario-error",
     title: "Mock scenario: error",
-    hint: "",
     group: "mock",
     keys: [],
     devOnly: true,
@@ -235,7 +259,6 @@ const MOCK_COMMANDS_DATA: Command[] = [
   {
     id: "mock.scenario-large",
     title: "Mock scenario: large",
-    hint: "",
     group: "mock",
     keys: [],
     devOnly: true,
@@ -244,7 +267,6 @@ const MOCK_COMMANDS_DATA: Command[] = [
   {
     id: "mock.reset",
     title: "Reset mock data",
-    hint: "",
     group: "mock",
     keys: [],
     devOnly: true,
@@ -310,32 +332,36 @@ export function commandKeys(id: string): KeyBinding[] {
 }
 
 const KEY_LABELS: Record<string, string> = {
-  escape: "Esc",
-  return: "Enter",
-  up: "Up",
-  down: "Down",
-  left: "Left",
-  right: "Right",
-  space: "Space",
-  tab: "Tab",
+  escape: "esc",
+  return: "enter",
+  up: "up",
+  down: "down",
+  left: "left",
+  right: "right",
+  space: "space",
+  tab: "tab",
+  pageup: "pageup",
+  pagedown: "pagedown",
+  home: "home",
+  end: "end",
 };
 
-/** Display form of one binding, e.g. Ctrl+Shift+D. */
+/** Display form of one binding, e.g. ctrl+shift+d. Modifiers and named keys are
+ * lowercase; a single-letter binding keeps its exact binding case (`t` stays
+ * `t`, `J` stays `J`). */
 export function formatKey(binding: KeyBinding): string {
   const parts: string[] = [];
   if (binding.ctrl === true) {
-    parts.push("Ctrl");
+    parts.push("ctrl");
   }
   if (binding.meta === true) {
-    parts.push("Alt");
+    parts.push("alt");
   }
   if (binding.shift === true) {
-    parts.push("Shift");
+    parts.push("shift");
   }
   const lower = binding.name.toLowerCase();
-  parts.push(
-    KEY_LABELS[lower] ?? (binding.name.length === 1 ? binding.name.toUpperCase() : binding.name),
-  );
+  parts.push(KEY_LABELS[lower] ?? binding.name);
   return parts.join("+");
 }
 
@@ -373,4 +399,149 @@ export function filterAvailableCommands(query: string, configComplete: boolean):
   return commands.filter(
     (command) => isCommandAvailable(command, configComplete) && matchesQuery(command, query),
   );
+}
+
+// Per-screen keys. Screens own their scopes imperatively (they need live
+// selection/editor state), so this is documentation, not dispatch. The screen
+// footers render their primary browsing keys from the same rows via
+// `screenHint`, so help and the footer agree for those. Two footer-only
+// exceptions are intentional: Projects splits its own per-zone `HINTS` (e.g.
+// `v` list/grid toggle), and Todo appends a contextual `w work log` only when
+// a completed todo is selected. Neither has a row here, so help omits them by
+// design.
+export const SCREEN_KEYMAPS: ScreenKeyGroup[] = [
+  {
+    screen: "dashboard",
+    title: "Dashboard",
+    rows: [
+      { keys: "tab", title: "panel" },
+      { keys: "j/k", title: "move" },
+      { keys: "1-4", title: "card" },
+      { keys: "enter", title: "open" },
+      { keys: "n", title: "add" },
+      { keys: "r", title: "refresh" },
+    ],
+  },
+  {
+    screen: "todo",
+    title: "Todo",
+    rows: [
+      { keys: "n", title: "new" },
+      { keys: "enter", title: "edit" },
+      { keys: "m", title: "cycle status" },
+      { keys: "H/L", title: "move column" },
+      { keys: "K/J", title: "reorder" },
+      { keys: "/", title: "search" },
+      { keys: "d", title: "delete" },
+      { keys: "a", title: "archived" },
+      { keys: "A", title: "archive done" },
+      { keys: "X", title: "clear done" },
+    ],
+  },
+  {
+    screen: "links",
+    title: "Save Links",
+    rows: [
+      { keys: "enter", title: "open" },
+      { keys: "e", title: "edit title" },
+      { keys: "c", title: "copy" },
+      { keys: "d", title: "delete" },
+      { keys: "n", title: "save" },
+      { keys: "/", title: "search" },
+      { keys: "tab", title: "tags" },
+      { keys: "esc", title: "clear" },
+    ],
+  },
+  {
+    screen: "projects",
+    title: "Project Planner",
+    rows: [
+      { keys: "1/2", title: "list / grid" },
+      { keys: "tab", title: "zone" },
+      { keys: "j/k", title: "select" },
+      { keys: "enter", title: "open / edit" },
+      { keys: "n", title: "new" },
+      { keys: "e", title: "edit" },
+      { keys: "d", title: "delete" },
+      { keys: "p", title: "phases" },
+      { keys: "K/J", title: "reorder" },
+      { keys: "s", title: "separator" },
+      { keys: "o", title: "jira" },
+      { keys: "c", title: "comment" },
+      { keys: "[ ]", title: "window" },
+    ],
+  },
+  {
+    screen: "work-log",
+    title: "Work Log",
+    rows: [
+      { keys: "j/k", title: "select" },
+      { keys: "enter", title: "edit" },
+      { keys: "n", title: "add" },
+      { keys: "d", title: "delete" },
+      { keys: "/", title: "search" },
+      { keys: "f", title: "date" },
+      { keys: "1-3", title: "preset" },
+      { keys: "c", title: "clear" },
+    ],
+  },
+  {
+    screen: "notes",
+    title: "Notes",
+    rows: [
+      { keys: "n", title: "new" },
+      { keys: "p", title: "preview" },
+      { keys: "b", title: "pin" },
+      { keys: "v", title: "privacy" },
+      { keys: "x", title: "export" },
+      { keys: "d", title: "delete" },
+      { keys: "/", title: "search" },
+      { keys: "enter", title: "open" },
+      { keys: "ctrl+s", title: "save" },
+      { keys: "ctrl+enter", title: "todo" },
+    ],
+  },
+];
+
+/** Footer hint for a screen's primary browsing keys, from `SCREEN_KEYMAPS`. */
+export function screenHint(screen: string): string {
+  const group = SCREEN_KEYMAPS.find((entry) => entry.screen === screen);
+  if (group === undefined) {
+    return "";
+  }
+  return group.rows.map((row) => `${row.keys} ${row.title}`).join("  ");
+}
+
+/** Flat help model: Navigate, Global, then one section per screen. The help
+ * overlay renders this with a native scrollbox. Global command rows apply the
+ * two documented exceptions: the mock panel lists its universally reachable
+ * fallback binding, and the palette lists Ctrl+P because `/` is preempted by
+ * Notes/Todo list search. */
+export function helpSections(): HelpSection[] {
+  const commandRows = (source: Command[]): HelpLine[] =>
+    source.filter(isCommandVisible).flatMap((command) => {
+      if (command.id === "global.mock-panel") {
+        const fallback = command.keys[1] ?? command.keys[0];
+        return fallback === undefined
+          ? []
+          : [{ key: `${formatKey(fallback)} (fallback)`, title: command.title }];
+      }
+      if (command.id === "global.palette") {
+        const universal = command.keys.find((binding) => binding.ctrl === true);
+        return universal === undefined ? [] : [{ key: formatKey(universal), title: command.title }];
+      }
+      return command.keys.map((binding) => ({
+        key: formatKey(binding),
+        title: command.title,
+      }));
+    });
+
+  return [
+    { label: "Navigate", lines: commandRows(NAV_COMMANDS) },
+    { label: "Global", lines: commandRows(GLOBAL_COMMANDS) },
+    ...SCREEN_KEYMAPS.map((group) => ({
+      label: group.title,
+      lines: group.rows.map((row) => ({ key: row.keys, title: row.title })),
+    })),
+  ];
 }

@@ -1,1 +1,1 @@
-export type MockScenario = "default" | "empty" | "loading" | "error" | "large";
+export type MockScenario = "default" | "empty" | "loading" | "error" | "large" | "slow";

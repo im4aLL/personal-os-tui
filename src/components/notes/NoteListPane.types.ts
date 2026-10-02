@@ -16,4 +16,9 @@ export interface NoteListPaneProps {
   /** Outer panel width in columns; rows use `width - 4` inside the frame. */
   width: number;
   onSearchChange: (value: string) => void;
+  /** Mouse: select/activate a note row without a keyboard. */
+  onSelectNote?: (id: string) => void;
+  onActivateNote?: (id: string) => void;
+  /** Mouse wheel delta (-1 up, +1 down) over the list. */
+  onWheel?: (delta: number) => void;
 }

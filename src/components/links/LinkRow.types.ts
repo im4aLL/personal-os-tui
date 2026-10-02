@@ -14,4 +14,7 @@ export interface LinkRowProps {
   editing: boolean;
   editValue: string;
   onEditChange: (value: string) => void;
+  /** Mouse: primary click selects this row; a double-click activates it. */
+  onSelect?: () => void;
+  onActivate?: () => void;
 }

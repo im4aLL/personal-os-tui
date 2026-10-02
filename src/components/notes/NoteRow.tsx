@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { relativeTime } from "../../utils/date";
 import { rowMarker } from "../../utils/marker";
+import { rowClickHandler } from "../../utils/mouse";
 import { noteDisplayTitle } from "../../utils/notes";
 import { truncate } from "../../utils/text";
 import type { NoteRowProps } from "./NoteRow.types";
@@ -28,6 +29,7 @@ export function NoteRow(props: NoteRowProps): ReactNode {
       flexDirection="column"
       flexShrink={0}
       backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+      onMouseDown={rowClickHandler(note.id, props.onSelect, props.onActivate)}
     >
       <text wrapMode="none">
         <span fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{marker}</span>

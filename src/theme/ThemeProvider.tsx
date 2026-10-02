@@ -5,9 +5,12 @@ import { CliRenderEvents } from "@opentui/core";
 import { useAppContext } from "@opentui/react";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { Modal } from "../components/ui/Modal";
+import { useSession } from "../store/session";
+import { useUi } from "../store/ui";
 import { resolveColor } from "./degrade";
 import type { ColorCaps } from "./degrade.types";
-import { getTheme } from "./registry";
+import { getTheme, listThemes } from "./registry";
 import type { ThemeContextValue, ThemeProviderProps } from "./ThemeProvider.types";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -57,4 +60,37 @@ export function useTheme(): ThemeContextValue {
     throw new Error("useTheme must be used inside <ThemeProvider>");
   }
   return value;
+}
+
+/** Theme picker modal (Ctrl+T). The global key handler in App owns movement
+ * and selection, so this renders the list and the active highlight only; the
+ * session setter applies the theme and persists it to config.ui.theme. */
+export function ThemePicker(): ReactNode {
+  const { theme, color } = useTheme();
+  const tokens = theme.tokens;
+  const themes = listThemes();
+  const index = useUi((state) => state.themePickerIndex);
+  const activeId = useSession((state) => state.themeId);
+
+  return (
+    <Modal title="Theme" width={40}>
+      <text fg={color(tokens.fgMuted)}>{"enter apply  j/k move  esc close"}</text>
+      <box flexDirection="column" paddingTop={1}>
+        {themes.map((entry, entryIndex) => {
+          const focused = entryIndex === index;
+          const active = entry.id === activeId;
+          const marker = focused ? "> " : "  ";
+          const suffix = active ? "  (active)" : "";
+          return (
+            <text
+              key={entry.id}
+              fg={color(focused ? tokens.accent : active ? tokens.accentAlt : tokens.fg)}
+            >
+              {`${marker}${entry.label}${suffix}`}
+            </text>
+          );
+        })}
+      </box>
+    </Modal>
+  );
 }

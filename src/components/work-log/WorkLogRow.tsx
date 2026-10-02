@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { formatWorkLogRange } from "../../utils/date";
 import { rowMarker } from "../../utils/marker";
+import { rowClickHandler } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
 import type { WorkLogRowProps } from "./WorkLogRow.types";
 
@@ -46,6 +47,7 @@ export function WorkLogRow(props: WorkLogRowProps): ReactNode {
       flexDirection="column"
       flexShrink={0}
       backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+      onMouseDown={rowClickHandler(log.id, props.onSelect, props.onActivate)}
     >
       {/* Title line. */}
       <box flexDirection="row" height={1}>

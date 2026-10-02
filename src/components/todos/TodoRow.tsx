@@ -4,6 +4,7 @@ import type { Todo } from "../../repos/types";
 import { useTheme } from "../../theme/ThemeProvider";
 import { formatDueLabel, isOverdue } from "../../utils/date";
 import { rowMarker } from "../../utils/marker";
+import { rowClickHandler } from "../../utils/mouse";
 import type { TodoRowProps } from "./TodoRow.types";
 
 /** ASCII truncation; `...` when there is room, else a hard slice. */
@@ -70,6 +71,7 @@ export function TodoRow(props: TodoRowProps): ReactNode {
       width={props.width}
       flexShrink={0}
       backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+      onMouseDown={rowClickHandler(todo.id, props.onSelect, props.onActivate)}
     >
       <text wrapMode="none">
         <span fg={color(markerColor)}>{marker}</span>

@@ -38,6 +38,7 @@ export const useUi = create<UiState>((set) => {
     notesPrivacyMode: false,
     paletteQuery: "",
     paletteIndex: 0,
+    themePickerIndex: 0,
     setupDismissed: false,
     focusedField: null,
     setScreen: (screen: Screen) => {
@@ -64,6 +65,9 @@ export const useUi = create<UiState>((set) => {
     },
     setPaletteIndex: (paletteIndex: number) => {
       set({ paletteIndex });
+    },
+    setThemePickerIndex: (themePickerIndex: number) => {
+      set({ themePickerIndex });
     },
     setFocusedField: (focusedField: string | null) => {
       set({ focusedField });

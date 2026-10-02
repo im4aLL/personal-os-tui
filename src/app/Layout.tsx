@@ -12,13 +12,18 @@ import { StatusLine } from "./StatusLine";
  * error scenario in a production build either.) */
 function MockErrorBanner(): ReactNode {
   const scenario = useSession((state) => state.scenario);
+  const errorInjection = useSession((state) => state.errorInjection);
   const { theme, color } = useTheme();
   if (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) {
-    if (scenario === "error") {
+    if (scenario === "error" || errorInjection) {
       const tokens = theme.tokens;
       return (
         <box backgroundColor={color(tokens.danger)} paddingLeft={1} height={1} flexShrink={0}>
-          <text fg={color(tokens.bg)}>{"mock error injection (POS_MOCK_SCENARIO=error)"}</text>
+          <text fg={color(tokens.bg)}>
+            {errorInjection
+              ? "mock error injection on (ctrl+shift+d to turn off)"
+              : "mock error injection (POS_MOCK_SCENARIO=error)"}
+          </text>
         </box>
       );
     }
@@ -50,7 +55,9 @@ export function Layout(props: LayoutProps): ReactNode {
       </box>
       <MockErrorBanner />
       <box flexDirection="row" flexGrow={1}>
-        {props.sidebarHidden ? null : <Sidebar screen={props.screen} rail={props.sidebarRail} />}
+        {props.sidebarHidden ? null : (
+          <Sidebar screen={props.screen} rail={props.sidebarRail} onSelect={props.onNavigate} />
+        )}
         <box flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1}>
           {props.children}
         </box>

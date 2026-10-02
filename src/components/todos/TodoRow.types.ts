@@ -8,4 +8,7 @@ export interface TodoRowProps {
   compact?: boolean;
   /** Content width available for this row, in columns. */
   width: number;
+  /** Mouse: primary click selects this row; a double-click activates it. */
+  onSelect?: () => void;
+  onActivate?: () => void;
 }

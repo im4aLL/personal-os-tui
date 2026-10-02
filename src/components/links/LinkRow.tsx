@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { linkDateLabel, linkDisplayUrl } from "../../utils/links";
 import { rowMarker } from "../../utils/marker";
+import { rowClickHandler } from "../../utils/mouse";
 import { truncate, truncateMiddle } from "../../utils/text";
 import type { LinkRowProps } from "./LinkRow.types";
 
@@ -34,6 +35,7 @@ export function LinkRow(props: LinkRowProps): ReactNode {
       flexDirection="column"
       flexShrink={0}
       backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+      onMouseDown={rowClickHandler(link.id, props.onSelect, props.onActivate)}
     >
       {/* Title line. The editing input occupies the same flex box as the
           truncated title, and the date stays a fixed column, so entering edit

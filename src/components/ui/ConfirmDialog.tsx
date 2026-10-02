@@ -16,7 +16,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): ReactNode {
         <text fg={color(props.destructive === true ? tokens.danger : tokens.accent)}>
           {props.confirmLabel}
         </text>
-        <text fg={color(tokens.fgSubtle)}>{"Enter confirm  Esc cancel"}</text>
+        <text fg={color(tokens.fgSubtle)}>{"enter confirm  esc cancel"}</text>
       </box>
     </Modal>
   );

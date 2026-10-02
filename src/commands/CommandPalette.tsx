@@ -4,9 +4,11 @@ import { Modal } from "../components/ui/Modal";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
-import { filterAvailableCommands } from "./registry";
+import { filterAvailableCommands, formatKey, PALETTE_PAGE_SIZE } from "./registry";
 
-// First-cut palette: fuzzy filter, Enter runs, Esc closes.
+// Command palette: fuzzy filter, Enter runs, Esc closes. Bound keys render from
+// the same registry that dispatches them, so a listing can never advertise a
+// binding the handler does not accept.
 // Selection movement lives in the single global key handler (App) so the
 // input keeps focus for typing while navigation keys stay predictable.
 export function CommandPalette(): ReactNode {
@@ -16,7 +18,9 @@ export function CommandPalette(): ReactNode {
   const selected = useUi((state) => state.paletteIndex);
   const setQuery = useUi((state) => state.setPaletteQuery);
   const configComplete = useSession((state) => state.configComplete);
-  const results = filterAvailableCommands(query, configComplete).slice(0, 10);
+  const matches = filterAvailableCommands(query, configComplete);
+  const results = matches.slice(0, PALETTE_PAGE_SIZE);
+  const hidden = Math.max(0, matches.length - results.length);
 
   return (
     <Modal title="Commands" width={56}>
@@ -41,18 +45,26 @@ export function CommandPalette(): ReactNode {
           <text fg={color(tokens.fgSubtle)}>{"No matching commands."}</text>
         ) : (
           <List
-            items={results.map((command) => ({
-              id: command.id,
-              label: command.title,
-              detail: command.hint === "" ? undefined : command.hint,
-            }))}
+            items={results.map((command) => {
+              const bound = command.keys.map((binding) => formatKey(binding)).join(", ");
+              return {
+                id: command.id,
+                label: command.title,
+                detail: bound === "" ? undefined : bound,
+              };
+            })}
             selected={selected}
           />
         )}
       </box>
       <box paddingTop={1}>
-        <text fg={color(tokens.fgSubtle)}>{"Enter run   Esc close"}</text>
+        <text fg={color(tokens.fgSubtle)}>{"enter run   esc close"}</text>
       </box>
+      {hidden > 0 ? (
+        <box>
+          <text fg={color(tokens.fgMuted)}>{`+${hidden} more - keep typing to narrow`}</text>
+        </box>
+      ) : null}
     </Modal>
   );
 }

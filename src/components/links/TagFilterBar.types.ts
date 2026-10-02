@@ -11,4 +11,6 @@ export interface TagFilterBarProps {
   focused: boolean;
   /** Applied tag, or null for the clear-all pill. */
   appliedTag: string | null;
+  /** Mouse add-on: click a pill to apply or clear it (same as Enter). */
+  onSelect?: (index: number) => void;
 }

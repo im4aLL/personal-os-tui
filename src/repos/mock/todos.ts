@@ -11,7 +11,13 @@ import type {
   TodoStatus,
   UpdateTodoInput,
 } from "../types";
-import { applyListScenario, isEmptyScenario, mockCall } from "./guard";
+import {
+  applyListScenario,
+  assertNotLargeClone,
+  isEmptyScenario,
+  mockCall,
+  mockMutationError,
+} from "./guard";
 
 /** M2 fixtures: `large` renders 150 todos even though the active fixture set
  * is 12, enough to prove column scrolling. */
@@ -35,7 +41,7 @@ function sortedActive(): Todo[] {
 
 // `large` is a read-only scrolling mode: each cloned row's id becomes
 // `<id>-large-<n>`, which maps back to no source row, so mutating a clone
-// (update/remove/reorder) throws "mock todo not found". The fixtures review
+// (update/remove/reorder) throws `mockMutationError`. The fixtures review
 // scrolls `large`; it is not an edit surface.
 export const mockTodoRepo: TodoRepo = {
   list(): Promise<Todo[]> {
@@ -104,7 +110,7 @@ export const mockTodoRepo: TodoRepo = {
     return mockCall(() => {
       const todo = rows.find((row) => row.id === id);
       if (todo === undefined) {
-        throw new Error(`mock todo not found: ${id}`);
+        throw mockMutationError("todo", id);
       }
       Object.assign(todo, { ...input, id: todo.id, updatedAt: stamp() });
     });
@@ -112,12 +118,14 @@ export const mockTodoRepo: TodoRepo = {
 
   remove(id: string): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("todo", id);
       rows = rows.filter((row) => row.id !== id);
     });
   },
 
   removeMany(ids: string[]): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("todo", ids);
       const doomed = new Set(ids);
       rows = rows.filter((row) => !doomed.has(row.id));
     });
@@ -125,6 +133,7 @@ export const mockTodoRepo: TodoRepo = {
 
   archive(ids: string[]): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("todo", ids);
       const targets = new Set(ids);
       for (const row of rows) {
         if (targets.has(row.id)) {
@@ -137,6 +146,7 @@ export const mockTodoRepo: TodoRepo = {
 
   restore(ids: string[]): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("todo", ids);
       const targets = new Set(ids);
       for (const row of rows) {
         if (targets.has(row.id)) {
@@ -149,6 +159,10 @@ export const mockTodoRepo: TodoRepo = {
 
   updatePositions(updates: PositionUpdate[]): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone(
+        "todo",
+        updates.map((item) => item.id),
+      );
       const byId = new Map(updates.map((item) => [item.id, item]));
       for (const row of rows) {
         const update = byId.get(row.id);

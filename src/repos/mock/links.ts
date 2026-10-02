@@ -12,7 +12,13 @@ import type {
   LinksPage,
   UpdateLinkInput,
 } from "../types";
-import { applyListScenario, isEmptyScenario, mockCall } from "./guard";
+import {
+  applyListScenario,
+  assertNotLargeClone,
+  isEmptyScenario,
+  mockCall,
+  mockMutationError,
+} from "./guard";
 
 export const LINKS_PAGE_SIZE = 50;
 
@@ -115,7 +121,7 @@ export const mockLinkRepo: LinkRepo = {
     return mockCall(() => {
       const link = rows.find((row) => row.id === id);
       if (link === undefined) {
-        throw new Error(`mock link not found: ${id}`);
+        throw mockMutationError("link", id);
       }
       if (input.url !== undefined) {
         link.url = input.url;
@@ -134,7 +140,7 @@ export const mockLinkRepo: LinkRepo = {
     return mockCall(() => {
       const link = rows.find((row) => row.id === id);
       if (link === undefined) {
-        throw new Error(`mock link not found: ${id}`);
+        throw mockMutationError("link", id);
       }
       link.tags = [...tags];
       rememberTags(tags);
@@ -143,6 +149,7 @@ export const mockLinkRepo: LinkRepo = {
 
   remove(id: string): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("link", id);
       rows = rows.filter((row) => row.id !== id);
     });
   },

@@ -2,6 +2,7 @@ import type { KeyEvent } from "@opentui/core";
 import { useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { screenHint } from "../commands/registry";
 import { LinkForm } from "../components/links/LinkForm";
 import type { LinkFormField, LinkFormValues } from "../components/links/LinkForm.types";
 import { LinkRow } from "../components/links/LinkRow";
@@ -9,6 +10,7 @@ import { TagFilterBar } from "../components/links/TagFilterBar";
 import { fitTagPills } from "../components/links/tag-pills";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
+import { Skeleton } from "../components/ui/Skeleton";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { openUrl } from "../lib/open-url";
@@ -18,8 +20,9 @@ import { getRepos } from "../store/repos";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
-import { messageOf } from "../utils/error";
+import { messageOf, operationError, retryableError } from "../utils/error";
 import { linkDomain, linkScheme } from "../utils/links";
+import { isReadOnlyRow, wheelDelta } from "../utils/mouse";
 import { truncate } from "../utils/text";
 import { windowSlice } from "../utils/window";
 import type { LinkConfirmState, LinkFormState } from "./LinksScreen.types";
@@ -33,10 +36,10 @@ const ROW_ROWS_WIDE = 3;
 const ROW_ROWS_NARROW = 4;
 const FORM_FIELDS: LinkFormField[] = ["url", "title", "tags"];
 
-const HINT = "Enter open  e edit title  c copy  d delete  n save  / search  Tab tags  Esc clear";
-const PILL_HINT = "Tab/Shift+Tab cycle tags  Enter apply or clear  Esc back to list";
-const SEARCH_HINT = "Type to search  Enter done  Esc clear";
-const EDIT_HINT = "Enter save title  Esc revert";
+const HINT = screenHint("links");
+const PILL_HINT = "tab/shift+tab cycle tags  enter apply or clear  esc back to list";
+const SEARCH_HINT = "Type to search  enter done  esc clear";
+const EDIT_HINT = "enter save title  esc revert";
 
 const EMPTY_FORM: LinkFormState = {
   open: false,
@@ -55,22 +58,6 @@ interface Notice {
 
 function normalizeTag(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-/** Loading placeholder rows that mimic the two-line row geometry. */
-function RowSkeleton(props: { width: number }): ReactNode {
-  const { theme, color } = useTheme();
-  const tokens = theme.tokens;
-  return (
-    <box flexDirection="column" flexShrink={0}>
-      <text fg={color(tokens.bgHover)} wrapMode="none">
-        {"█".repeat(Math.min(42, props.width))}
-      </text>
-      <text fg={color(tokens.bgHover)} wrapMode="none">
-        {"█".repeat(Math.min(26, props.width))}
-      </text>
-    </box>
-  );
 }
 
 export function LinksScreen(): ReactNode {
@@ -283,6 +270,9 @@ export function LinksScreen(): ReactNode {
     copyWithFallback(link, "Could not open link");
   }
 
+  // Plain `c` copies the selected link's URL. The global `Ctrl+C` copies the
+  // terminal text selection instead, so the two shortcuts are distinct and do
+  // not conflict.
   function copySelected(): void {
     const link = selectedLink;
     if (link === null) {
@@ -298,9 +288,14 @@ export function LinksScreen(): ReactNode {
 
   // -- Inline title edit -----------------------------------------------------
 
-  function startEdit(): void {
-    const link = selectedLink;
+  function startEdit(target: Link | null = selectedLink): void {
+    const link = target;
     if (link === null) {
+      return;
+    }
+    // `large` clones are read-only: Enter/activate selects without entering
+    // the inline editor whose save can only fail.
+    if (isReadOnlyRow(link.id)) {
       return;
     }
     setPillFocused(false);
@@ -324,7 +319,7 @@ export function LinksScreen(): ReactNode {
     } catch (writeError) {
       // Revert the optimistic title and report the failure.
       useLinks.getState().patchLinkInList(current.id, { title: link.title });
-      setNotice({ text: messageOf(writeError), kind: "danger" });
+      setNotice({ text: operationError("Could not save title", writeError), kind: "danger" });
     }
   }
 
@@ -446,7 +441,11 @@ export function LinksScreen(): ReactNode {
       setSelectedId(created.id);
       setNotice({ text: "Link saved", kind: "success" });
     } catch (saveError) {
-      setForm((current) => ({ ...current, saving: false, error: messageOf(saveError) }));
+      setForm((current) => ({
+        ...current,
+        saving: false,
+        error: operationError("Could not save link", saveError),
+      }));
     }
   }
 
@@ -693,7 +692,8 @@ export function LinksScreen(): ReactNode {
         ? EDIT_HINT
         : HINT;
   const showError = error !== null && links.length > 0;
-  const footerText = notice?.text ?? (showError ? `${error}  (r to retry)` : hintText);
+  const footerText =
+    notice?.text ?? (showError ? retryableError("Links could not load", error) : hintText);
   const footerColor =
     notice !== null
       ? notice.kind === "success"
@@ -749,6 +749,10 @@ export function LinksScreen(): ReactNode {
         focusedIndex={tagIndex}
         focused={pillFocused}
         appliedTag={tag}
+        onSelect={(index) => {
+          setTagIndex(index);
+          applyPill(index);
+        }}
       />
 
       {/* The link list lives in one titled panel, so the empty, loading, and
@@ -764,22 +768,33 @@ export function LinksScreen(): ReactNode {
         titleColor={color(listFocused ? tokens.accent : tokens.fgMuted)}
         paddingLeft={1}
         paddingRight={1}
+        onMouseScroll={(event) => {
+          const delta = wheelDelta(event);
+          if (delta === 0) {
+            return;
+          }
+          if (delta < 0) {
+            moveUp();
+          } else {
+            void moveDown();
+          }
+        }}
       >
         {loading ? (
-          <>
-            <RowSkeleton width={panelInnerWidth} />
-            <RowSkeleton width={panelInnerWidth} />
-            <RowSkeleton width={panelInnerWidth} />
-          </>
+          <Skeleton lines={5} widths={[42, 26, 38, 22, 30]} />
         ) : links.length === 0 ? (
           error !== null ? (
-            <EmptyState title="Links could not load" hint={`${error}  (r to retry)`} />
+            // Store errors are already stringified via `messageOf`, so this
+            // raw interpolation is intentional; do not wrap it in
+            // `operationError` or the message would be double-prefixed.
+            <EmptyState
+              title="Links could not load"
+              hint={`${error ?? "Unknown error"}  (r to retry)`}
+            />
           ) : (
             <EmptyState
               title={filtered ? "No links match your search" : "No links yet"}
-              hint={
-                filtered ? "Try a different search or tag" : "Save your first link to get started"
-              }
+              hint={filtered ? "Try a different search or tag" : "n to add your first link"}
             />
           )
         ) : (
@@ -795,12 +810,20 @@ export function LinksScreen(): ReactNode {
                 editing={editing !== null && editing.id === link.id}
                 editValue={editing !== null && editing.id === link.id ? editing.value : link.title}
                 onEditChange={(value) => setEditing({ id: link.id, value })}
+                onSelect={() => {
+                  setPillFocused(false);
+                  setSelectedId(link.id);
+                }}
+                onActivate={() => {
+                  setPillFocused(false);
+                  setSelectedId(link.id);
+                  startEdit(link);
+                }}
               />
             ))}
             {loadingMore ? (
               <>
-                <RowSkeleton width={panelInnerWidth} />
-                <RowSkeleton width={panelInnerWidth} />
+                <Skeleton lines={2} widths={[42, 26]} />
                 <text fg={color(tokens.fgSubtle)}>{"loading more"}</text>
               </>
             ) : (

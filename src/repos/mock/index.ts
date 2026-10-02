@@ -6,6 +6,7 @@ import type { MockScenario } from "../../mock/scenario.types";
 import type { MockUiState } from "../index.types";
 import type { ReposBundle } from "../types";
 import { mockDashboardRepo } from "./dashboard";
+import { currentErrorInjection } from "./guard";
 import { mockLinkRepo, resetLinkFixtures } from "./links";
 import { mockNoteRepo, resetNoteFixtures } from "./notes";
 import { mockProjectRepo, resetProjectFixtures } from "./projects";
@@ -37,6 +38,7 @@ export function createMockUiState(): MockUiState {
   return {
     scenario: currentScenario(),
     latencyMs: currentLatencyMs(),
+    errorInjection: currentErrorInjection(),
     scenarios: [...mockScenarios],
     setScenario: (scenario: MockScenario) => {
       process.env.POS_MOCK_SCENARIO = scenario;
@@ -45,6 +47,10 @@ export function createMockUiState(): MockUiState {
     setLatencyMs: (ms: number) => {
       process.env.POS_MOCK_LATENCY = String(resolveLatencyMs(String(ms)));
       return currentLatencyMs();
+    },
+    setErrorInjection: (enabled: boolean) => {
+      process.env.POS_MOCK_ERROR = enabled ? "1" : "0";
+      return currentErrorInjection();
     },
   };
 }

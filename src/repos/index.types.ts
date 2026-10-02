@@ -10,11 +10,14 @@ import type { ReposBundle, SetupRepo } from "./types";
 export interface MockUiState {
   scenario: MockScenario;
   latencyMs: number;
+  errorInjection: boolean;
   scenarios: MockScenario[];
   /** Persist the scenario to the mock env and return the canonical value. */
   setScenario: (scenario: MockScenario) => MockScenario;
   /** Persist the latency to the mock env and return the canonical value. */
   setLatencyMs: (ms: number) => number;
+  /** Toggle error injection and return the canonical value. */
+  setErrorInjection: (enabled: boolean) => boolean;
 }
 
 export interface RepoBundle extends ReposBundle {

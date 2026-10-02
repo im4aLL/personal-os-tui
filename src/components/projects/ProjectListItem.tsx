@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { formatMonthDay } from "../../lib/week-utils";
 import { useTheme } from "../../theme/ThemeProvider";
 import { rowMarker } from "../../utils/marker";
+import { rowClickHandler } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
 import type { ProjectListItemProps } from "./ProjectListItem.types";
 
@@ -29,6 +30,7 @@ export function ProjectListItem(props: ProjectListItemProps): ReactNode {
       flexDirection="column"
       flexShrink={0}
       backgroundColor={selected && focused ? color(tokens.bgAlt) : undefined}
+      onMouseDown={rowClickHandler(project.id, props.onSelect, props.onActivate)}
     >
       <box flexDirection="row" height={1}>
         <text fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{marker}</text>

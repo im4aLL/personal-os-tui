@@ -21,7 +21,7 @@ import type {
   WorkItem,
   WorkItemWithPhase,
 } from "../types";
-import { applyListScenario, mockCall } from "./guard";
+import { applyListScenario, assertNotLargeClone, mockCall, mockMutationError } from "./guard";
 
 /** Work item rows the `large` scenario grows to (PLAN M6: 40 items, 52 weeks). */
 const LARGE_WORK_ITEMS = 40;
@@ -88,7 +88,7 @@ export const mockProjectRepo: ProjectRepo = {
     return mockCall(() => {
       const project = projects.find((row) => row.id === id);
       if (project === undefined) {
-        throw new Error(`mock project not found: ${id}`);
+        throw mockMutationError("project", id);
       }
       Object.assign(project, { ...input, id: project.id, updatedAt: stamp() });
     });
@@ -96,6 +96,7 @@ export const mockProjectRepo: ProjectRepo = {
 
   remove(id: string): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("project", id);
       projects = projects.filter((row) => row.id !== id);
       // Phases and work items cascade with the project, matching the schema's
       // ON DELETE CASCADE.
@@ -106,6 +107,7 @@ export const mockProjectRepo: ProjectRepo = {
 
   reorder(orderedIds: string[]): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("project", orderedIds);
       const byId = new Map(projects.map((project) => [project.id, project]));
       orderedIds.forEach((id, index) => {
         const project = byId.get(id);
@@ -148,7 +150,7 @@ export const mockProjectRepo: ProjectRepo = {
     return mockCall(() => {
       const phase = phases.find((row) => row.id === id);
       if (phase === undefined) {
-        throw new Error(`mock phase not found: ${id}`);
+        throw mockMutationError("phase", id);
       }
       Object.assign(phase, { ...input, id: phase.id, projectId: phase.projectId });
     });
@@ -156,6 +158,7 @@ export const mockProjectRepo: ProjectRepo = {
 
   removePhase(id: string): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("phase", id);
       phases = phases.filter((row) => row.id !== id);
     });
   },
@@ -204,7 +207,7 @@ export const mockProjectRepo: ProjectRepo = {
     return mockCall(() => {
       const item = workItems.find((row) => row.id === id);
       if (item === undefined) {
-        throw new Error(`mock work item not found: ${id}`);
+        throw mockMutationError("work item", id);
       }
       Object.assign(item, { ...input, id: item.id, projectId: item.projectId, updatedAt: stamp() });
     });
@@ -212,12 +215,14 @@ export const mockProjectRepo: ProjectRepo = {
 
   removeWorkItem(id: string): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("work item", id);
       workItems = workItems.filter((row) => row.id !== id);
     });
   },
 
   reorderWorkItems(projectId: string, orderedIds: string[]): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("work item", orderedIds);
       const byId = new Map(workItems.map((item) => [item.id, item]));
       orderedIds.forEach((id, index) => {
         const item = byId.get(id);

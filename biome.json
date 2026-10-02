@@ -12,6 +12,12 @@
       "arrowParentheses": "always"
     }
   },
-  "linter": { "rules": { "preset": "recommended", "style": { "useBlockStatements": "on" } } },
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      "style": { "useBlockStatements": "on" },
+      "a11y": { "noStaticElementInteractions": "off" }
+    }
+  },
   "assist": { "actions": { "source": { "recommended": true } } }
 }

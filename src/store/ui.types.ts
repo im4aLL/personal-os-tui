@@ -1,6 +1,6 @@
 export type Screen = "dashboard" | "todo" | "links" | "projects" | "work-log" | "notes";
 
-export type ModalKind = "none" | "command-palette" | "help" | "mock-panel";
+export type ModalKind = "none" | "command-palette" | "help" | "mock-panel" | "theme-picker";
 
 export interface UiState {
   screen: Screen;
@@ -10,6 +10,8 @@ export interface UiState {
   notesPrivacyMode: boolean;
   paletteQuery: string;
   paletteIndex: number;
+  /** Highlighted row in the theme picker modal (Ctrl+T). */
+  themePickerIndex: number;
   setupDismissed: boolean;
   /** Id of the control that owns the keyboard, or null for form-level keys.
    * Text inputs set this while focused so the global key handler in App can
@@ -24,6 +26,7 @@ export interface UiState {
   setNotesPrivacyMode: (enabled: boolean) => void;
   setPaletteQuery: (query: string) => void;
   setPaletteIndex: (index: number) => void;
+  setThemePickerIndex: (index: number) => void;
   setFocusedField: (field: string | null) => void;
   dismissSetup: () => void;
   showSetupScreen: () => void;

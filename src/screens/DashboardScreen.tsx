@@ -2,8 +2,10 @@ import type { KeyEvent } from "@opentui/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { screenHint } from "../commands/registry";
 import { TodoForm } from "../components/todos/TodoForm";
 import { ProgressBar } from "../components/ui/ProgressBar";
+import { Skeleton } from "../components/ui/Skeleton";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { useTodoForm } from "../hooks/useTodoForm";
 import { getProjectCompletion } from "../lib/project-progress";
@@ -26,7 +28,9 @@ import {
   timeOfDayGreeting,
   todayISO,
 } from "../utils/date";
+import { operationError, RETRY_SUFFIX } from "../utils/error";
 import { rowMarker } from "../utils/marker";
+import { isReadOnlyRow, rowClickHandler, wheelDelta } from "../utils/mouse";
 import { noteDisplayTitle } from "../utils/notes";
 import { truncate } from "../utils/text";
 import { windowSlice } from "../utils/window";
@@ -55,7 +59,7 @@ const KIND_COL = 8;
 const TIME_COL = 9;
 const DETAIL_COL = 14;
 const DONE_COL = 5;
-const HINT = "Tab panel  j/k move  1-4 card  Enter open  n add  r refresh";
+const HINT = screenHint("dashboard");
 const FOCUS_TARGETS: DashboardFocus[] = ["stats", "focus", "projects", "in-progress", "activity"];
 
 function clampIndex(index: number, length: number): number {
@@ -149,26 +153,16 @@ function Panel(props: {
   );
 }
 
-/** Exactly `rows` skeleton bars, sized as a fraction of `width`. */
-function SkeletonRows(props: { rows: number; width: number }): ReactNode {
-  const { theme, color } = useTheme();
-  const fractions = [0.9, 0.6, 0.8, 0.45, 0.7];
-  const count = Math.max(0, props.rows);
-  const rows = Array.from({ length: count }, (_, index) => index);
-  return (
-    <>
-      {rows.map((row) => (
-        <box key={row} height={1} flexShrink={0}>
-          <text fg={color(theme.tokens.bgHover)} wrapMode="none">
-            {"█".repeat(Math.max(4, Math.floor(props.width * fractions[row % fractions.length])))}
-          </text>
-        </box>
-      ))}
-    </>
-  );
+/** Skeleton bar widths as a fraction of the panel width, matching the old
+ * dashboard placeholder proportions so the shared `Skeleton` keeps its shape. */
+const SKELETON_FRACTIONS = [0.9, 0.6, 0.8, 0.45, 0.7];
+
+function skeletonWidths(width: number): number[] {
+  return SKELETON_FRACTIONS.map((fraction) => Math.max(4, Math.floor(width * fraction)));
 }
 
-const RETRY_SUFFIX = "  (r to retry)";
+// `RETRY_MARKER` drops the parens only for sub-~17-cell widths, where even the
+// suffix cannot fit; every wider panel shows the parenthesized `RETRY_SUFFIX`.
 const RETRY_MARKER = "r to retry";
 
 function ErrorLine(props: { message: string; width: number }): ReactNode {
@@ -190,6 +184,10 @@ function ErrorLine(props: { message: string; width: number }): ReactNode {
   );
 }
 
+/** Deliberate compact-card exception: dashboard panels render a single muted
+ * line rather than the centered `EmptyState`, because each card is sized to a
+ * tight row budget and a centered block would fight the row layout. Voice still
+ * matches `EmptyState` (title-only, no trailing period). */
 function MutedLine(props: { text: string; width: number }): ReactNode {
   const { theme, color } = useTheme();
   return (
@@ -452,10 +450,15 @@ export function DashboardScreen(): ReactNode {
       return null;
     }
     if (dashboardLoading) {
-      return <SkeletonRows rows={rows} width={panelInnerWidth} />;
+      return <Skeleton lines={rows} widths={skeletonWidths(panelInnerWidth)} />;
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={panelInnerWidth} />;
+      return (
+        <ErrorLine
+          message={operationError("Dashboard could not load", dashboardError)}
+          width={panelInnerWidth}
+        />
+      );
     }
     if (focusItems.length === 0) {
       return <MutedLine text="Nothing due, you are all caught up" width={panelInnerWidth} />;
@@ -475,12 +478,25 @@ export function DashboardScreen(): ReactNode {
           : tokens.priorityLow;
     const titleRoom = Math.max(4, rowWidth - 2 - 1 - PRIORITY_COL - 1 - DUE_COL);
     const selected = todo.id === selectedFocusId;
+    const index = focusItems.findIndex((entry) => entry.id === todo.id);
     return (
       <box
         key={todo.id}
         height={1}
         flexShrink={0}
         backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+        onMouseDown={rowClickHandler(
+          todo.id,
+          () => {
+            setFocusTarget("focus");
+            setFocusIndex(Math.max(0, index));
+          },
+          () => {
+            setFocusTarget("focus");
+            setFocusIndex(Math.max(0, index));
+            todoForm.openEdit(todo);
+          },
+        )}
       >
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : tokens.fg)}>
@@ -503,14 +519,19 @@ export function DashboardScreen(): ReactNode {
     }
     if (dashboardLoading) {
       return (
-        <SkeletonRows
-          rows={Math.max(0, Math.floor(rows / PROJECT_ROWS) * PROJECT_ROWS)}
-          width={panelInnerWidth}
+        <Skeleton
+          lines={Math.max(0, Math.floor(rows / PROJECT_ROWS) * PROJECT_ROWS)}
+          widths={skeletonWidths(panelInnerWidth)}
         />
       );
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={panelInnerWidth} />;
+      return (
+        <ErrorLine
+          message={operationError("Dashboard could not load", dashboardError)}
+          width={panelInnerWidth}
+        />
+      );
     }
     if (projects.length === 0) {
       return <MutedLine text="No projects yet" width={panelInnerWidth} />;
@@ -533,6 +554,7 @@ export function DashboardScreen(): ReactNode {
     // The bar is indented two cells to sit under the project name; the trailing
     // percentage occupies a fixed 5-cell field so every bar ends flush right.
     const barWidth = Math.max(4, rowWidth - 2 - 5);
+    const index = projects.findIndex((entry) => entry.id === project.id);
     return (
       <box
         key={project.id}
@@ -540,6 +562,19 @@ export function DashboardScreen(): ReactNode {
         flexShrink={0}
         flexDirection="column"
         backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+        onMouseDown={rowClickHandler(
+          project.id,
+          () => {
+            setFocusTarget("projects");
+            setProjectIndex(Math.max(0, index));
+          },
+          () => {
+            setFocusTarget("projects");
+            setProjectIndex(Math.max(0, index));
+            void useProjectsStore.getState().selectProject(project.id);
+            useUi.getState().setScreen("projects");
+          },
+        )}
       >
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : rowFg)}>
@@ -566,10 +601,15 @@ export function DashboardScreen(): ReactNode {
       return null;
     }
     if (dashboardLoading) {
-      return <SkeletonRows rows={rows} width={panelInnerWidth} />;
+      return <Skeleton lines={rows} widths={skeletonWidths(panelInnerWidth)} />;
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={panelInnerWidth} />;
+      return (
+        <ErrorLine
+          message={operationError("Dashboard could not load", dashboardError)}
+          width={panelInnerWidth}
+        />
+      );
     }
     if (inProgressItems.length === 0) {
       return <MutedLine text="Nothing in progress right now" width={panelInnerWidth} />;
@@ -586,12 +626,25 @@ export function DashboardScreen(): ReactNode {
                 ? tokens.priorityMedium
                 : tokens.priorityLow;
           const titleRoom = Math.max(4, rowWidth - 2 - 1 - PRIORITY_COL);
+          const index = inProgressItems.findIndex((entry) => entry.id === todo.id);
           return (
             <box
               key={todo.id}
               height={1}
               flexShrink={0}
               backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+              onMouseDown={rowClickHandler(
+                todo.id,
+                () => {
+                  setFocusTarget("in-progress");
+                  setInProgressIndex(Math.max(0, index));
+                },
+                () => {
+                  setFocusTarget("in-progress");
+                  setInProgressIndex(Math.max(0, index));
+                  todoForm.openEdit(todo);
+                },
+              )}
             >
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
@@ -613,10 +666,15 @@ export function DashboardScreen(): ReactNode {
       return null;
     }
     if (dashboardLoading) {
-      return <SkeletonRows rows={rows} width={panelInnerWidth} />;
+      return <Skeleton lines={rows} widths={skeletonWidths(panelInnerWidth)} />;
     }
     if (dashboardError !== null && !hasSnapshot) {
-      return <MutedLine text="Could not load" width={panelInnerWidth} />;
+      return (
+        <ErrorLine
+          message={operationError("Dashboard could not load", dashboardError)}
+          width={panelInnerWidth}
+        />
+      );
     }
     if (activity.length === 0) {
       return <MutedLine text="No activity yet" width={panelInnerWidth} />;
@@ -627,12 +685,25 @@ export function DashboardScreen(): ReactNode {
         {windowSlice(activity, activitySel, rows).map((item) => {
           const selected = item.key === selectedActivityKey;
           const time = relativeTime(item.date, now);
+          const index = activity.findIndex((entry) => entry.key === item.key);
           return (
             <box
               key={item.key}
               height={1}
               flexShrink={0}
               backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+              onMouseDown={rowClickHandler(
+                item.key,
+                () => {
+                  setFocusTarget("activity");
+                  setActivityIndex(Math.max(0, index));
+                },
+                () => {
+                  setFocusTarget("activity");
+                  setActivityIndex(Math.max(0, index));
+                  useUi.getState().setScreen(screenForKind(item.kind));
+                },
+              )}
             >
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
@@ -676,6 +747,10 @@ export function DashboardScreen(): ReactNode {
 
   function renderStatCard(card: StatCard, index: number): ReactNode {
     const active = focusTarget === "stats" && index === statSel;
+    // Second compact-card exception: a stat is a single value cell, so it uses
+    // the same block glyph `Skeleton` draws (not a multi-line Skeleton bar,
+    // which cannot fit one value row). Empty/loading shape is intentionally
+    // different from the list panels.
     const valueText = card.error
       ? "!"
       : card.loading || card.value === null
@@ -702,6 +777,18 @@ export function DashboardScreen(): ReactNode {
         titleColor={color(active ? tokens.accent : tokens.fgMuted)}
         paddingLeft={1}
         paddingRight={1}
+        onMouseDown={rowClickHandler(
+          `stat-${card.label}`,
+          () => {
+            setFocusTarget("stats");
+            setStatIndex(index);
+          },
+          () => {
+            setFocusTarget("stats");
+            setStatIndex(index);
+            useUi.getState().setScreen(card.target);
+          },
+        )}
       >
         <text fg={color(valueColor)} wrapMode="none">
           {valueText}
@@ -792,14 +879,14 @@ export function DashboardScreen(): ReactNode {
     }
     if (focusTarget === "focus") {
       const todo = focusItems[focusSel];
-      if (todo !== undefined) {
+      if (todo !== undefined && !isReadOnlyRow(todo.id)) {
         todoForm.openEdit(todo);
       }
       return;
     }
     if (focusTarget === "in-progress") {
       const todo = inProgressItems[inProgressSel];
-      if (todo !== undefined) {
+      if (todo !== undefined && !isReadOnlyRow(todo.id)) {
         todoForm.openEdit(todo);
       }
       return;
@@ -916,7 +1003,18 @@ export function DashboardScreen(): ReactNode {
   // -- Render ----------------------------------------------------------------
 
   return (
-    <box flexDirection="column" flexGrow={1} minHeight={0} backgroundColor={color(tokens.bg)}>
+    <box
+      flexDirection="column"
+      flexGrow={1}
+      minHeight={0}
+      backgroundColor={color(tokens.bg)}
+      onMouseScroll={(event) => {
+        const delta = wheelDelta(event);
+        if (delta !== 0) {
+          moveSelection(delta);
+        }
+      }}
+    >
       <box flexDirection="column" height={headerRows} flexShrink={0}>
         <box height={1} flexShrink={0}>
           <text fg={color(tokens.fg)} wrapMode="none">
@@ -937,11 +1035,14 @@ export function DashboardScreen(): ReactNode {
             </text>
           </box>
           <text fg={color(tokens.accent)} wrapMode="none">
-            {"n  Add"}
+            {"n  add"}
           </text>
         </box>
         {dashboardError !== null ? (
-          <ErrorLine message={dashboardError} width={contentWidth} />
+          <ErrorLine
+            message={operationError("Dashboard could not load", dashboardError)}
+            width={contentWidth}
+          />
         ) : null}
       </box>
 

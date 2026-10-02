@@ -473,10 +473,10 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
               label="Connect"
             />
             <text fg={color(tokens.fgSubtle)}>
-              {"Enter  Connect      Tab  next field      Esc  quit"}
+              {"enter  connect      tab  next field      esc  quit"}
             </text>
             {focusedField === FOCUS_TOKEN ? (
-              <text fg={color(tokens.fgSubtle)}>{"Ctrl+U  clear token"}</text>
+              <text fg={color(tokens.fgSubtle)}>{"ctrl+u  clear token"}</text>
             ) : null}
             {demoHint}
           </>
@@ -502,7 +502,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
                 </text>
               );
             })}
-            <text fg={color(tokens.fgSubtle)}>{"Esc  back"}</text>
+            <text fg={color(tokens.fgSubtle)}>{"esc  back"}</text>
           </>
         ) : null}
 
@@ -512,9 +512,9 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
             <text fg={color(tokens.danger)}>{truncate(failureError, formWidth)}</text>
             <text fg={color(tokens.fgMuted)}>{`URL  ${truncate(url.trim(), formWidth - 5)}`}</text>
             <text fg={color(tokens.fgSubtle)}>
-              {"r  Retry      e  Edit credentials      Esc  Back"}
+              {"r  retry      e  edit credentials      esc  back"}
             </text>
-            <text fg={color(tokens.fgSubtle)}>{"Enter  Retry"}</text>
+            <text fg={color(tokens.fgSubtle)}>{"enter  retry"}</text>
           </>
         ) : null}
 
@@ -558,7 +558,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
               label="Get started"
             />
             <text fg={color(tokens.fgSubtle)}>
-              {"Enter  Get started      Tab  next field      Esc  back"}
+              {"enter  get started      tab  next field      esc  back"}
             </text>
           </>
         ) : null}

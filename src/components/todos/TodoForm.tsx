@@ -108,7 +108,7 @@ export function TodoForm(props: TodoFormProps): ReactNode {
 
         <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
         <text fg={color(tokens.fgSubtle)}>
-          {`Tab next field  Enter ${editing ? "save" : "create"}  Ctrl+Enter from description  Esc cancel`}
+          {`tab next field  enter ${editing ? "save" : "create"}  ctrl+enter from description  esc cancel`}
         </text>
       </box>
     </Modal>

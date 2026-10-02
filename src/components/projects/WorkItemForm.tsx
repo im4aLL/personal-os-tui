@@ -127,7 +127,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
 
         <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
         <text fg={color(tokens.fgSubtle)}>
-          {"Tab next field  Enter save  Ctrl+Enter from comment  Esc cancel"}
+          {"tab next field  enter save  ctrl+enter from comment  esc cancel"}
         </text>
       </box>
     </Modal>

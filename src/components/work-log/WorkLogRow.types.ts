@@ -10,4 +10,7 @@ export interface WorkLogRowProps {
   narrow: boolean;
   /** Below 60 columns: the date range moves into the metadata line. */
   veryNarrow: boolean;
+  /** Mouse: primary click selects this row; a double-click activates it. */
+  onSelect?: () => void;
+  onActivate?: () => void;
 }

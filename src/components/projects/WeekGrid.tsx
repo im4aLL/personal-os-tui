@@ -1,10 +1,14 @@
+import type { MouseEvent } from "@opentui/core";
 import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import type { WorkItemStatus, WorkItemWithPhase } from "../../repos/types";
 import { mixWithBase } from "../../theme/degrade";
 import { useTheme } from "../../theme/ThemeProvider";
 import { rowMarker } from "../../utils/marker";
+import { rowClickHandler, wheelDelta } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
+import { EmptyState } from "../ui/EmptyState";
+import { Skeleton } from "../ui/Skeleton";
 import type { WeekGridProps } from "./WeekGrid.types";
 
 // Gantt-row status shades, matching the desktop `STATUS_OPACITY`.
@@ -14,8 +18,6 @@ const STATUS_LABEL: Record<WorkItemStatus, string> = {
   in_progress: "in prog",
   done: "done",
 };
-/** Stable keys for the five loading skeleton rows (never index-based). */
-const SKELETON_ROWS = ["s1", "s2", "s3", "s4", "s5"];
 /** Fixed one-column gap rendered between grid columns. */
 const GAP = " ";
 
@@ -29,6 +31,8 @@ interface GridRowProps {
   windowStart: number;
   visibleWeeks: number;
   weekAreaWidth: number;
+  onSelect?: () => void;
+  onActivate?: () => void;
 }
 
 function GridRow(props: GridRowProps): ReactNode {
@@ -56,6 +60,7 @@ function GridRow(props: GridRowProps): ReactNode {
       height={1}
       flexShrink={0}
       backgroundColor={selected && props.focused ? color(tokens.bgHover) : undefined}
+      onMouseDown={rowClickHandler(item.id, props.onSelect, props.onActivate)}
     >
       <text fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{rowMarker(selected)}</text>
       <text wrapMode="none" fg={color(titleColor)} attributes={attrs}>
@@ -111,6 +116,8 @@ function ListRow(props: {
   selected: boolean;
   focused: boolean;
   width: number;
+  onSelect?: () => void;
+  onActivate?: () => void;
 }): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
@@ -137,6 +144,7 @@ function ListRow(props: {
       height={1}
       flexShrink={0}
       backgroundColor={props.selected && props.focused ? color(tokens.bgHover) : undefined}
+      onMouseDown={rowClickHandler(item.id, props.onSelect, props.onActivate)}
     >
       <text fg={color(props.selected ? tokens.accent : tokens.fgSubtle)}>
         {rowMarker(props.selected)}
@@ -176,32 +184,24 @@ function SeparatorRow(props: { width: number; selected: boolean }): ReactNode {
 // the list-mode table). The screen windows `workItems` vertically and passes
 // the visible week window, so this component is presentational only.
 export function WeekGrid(props: WeekGridProps): ReactNode {
-  const { theme, color } = useTheme();
-  const tokens = theme.tokens;
+  const wheel = (event: MouseEvent): void => {
+    const delta = wheelDelta(event);
+    if (delta !== 0) {
+      props.onWheel?.(delta);
+    }
+  };
 
   if (props.loading) {
-    return (
-      <box flexDirection="column" flexShrink={0}>
-        {SKELETON_ROWS.map((row) => (
-          <text key={row} fg={color(tokens.bgHover)}>
-            {"█".repeat(Math.min(Math.max(8, props.width - 2), 44))}
-          </text>
-        ))}
-      </box>
-    );
+    return <Skeleton lines={5} widths={[44, 38, 42, 34, 40]} />;
   }
 
   if (props.workItems.length === 0) {
-    return (
-      <box flexDirection="column" flexShrink={0} paddingTop={1}>
-        <text fg={color(tokens.fgMuted)}>{"No items yet, press n to add"}</text>
-      </box>
-    );
+    return <EmptyState title="No items yet" hint="n to add your first item" />;
   }
 
   if (props.listMode) {
     return (
-      <box flexDirection="column" flexShrink={0}>
+      <box flexDirection="column" flexShrink={0} onMouseScroll={wheel}>
         <ListHeader width={props.width} />
         {props.workItems.map((item) =>
           item.isSeparator ? (
@@ -217,6 +217,8 @@ export function WeekGrid(props: WeekGridProps): ReactNode {
               selected={item.id === props.selectedId}
               focused={props.focused}
               width={props.width}
+              onSelect={() => props.onSelectItem?.(item.id)}
+              onActivate={() => props.onActivateItem?.(item.id)}
             />
           ),
         )}
@@ -225,7 +227,7 @@ export function WeekGrid(props: WeekGridProps): ReactNode {
   }
 
   return (
-    <box flexDirection="column" flexShrink={0}>
+    <box flexDirection="column" flexShrink={0} onMouseScroll={wheel}>
       {props.workItems.map((item) =>
         item.isSeparator ? (
           <SeparatorRow key={item.id} width={props.width} selected={item.id === props.selectedId} />
@@ -241,6 +243,8 @@ export function WeekGrid(props: WeekGridProps): ReactNode {
             weekAreaWidth={props.weekAreaWidth}
             windowStart={props.windowStart}
             visibleWeeks={props.visibleWeeks}
+            onSelect={() => props.onSelectItem?.(item.id)}
+            onActivate={() => props.onActivateItem?.(item.id)}
           />
         ),
       )}

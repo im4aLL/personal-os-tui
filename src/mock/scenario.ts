@@ -1,10 +1,23 @@
-// Mock scenarios, from POS_MOCK_SCENARIO=default|empty|loading|error|large.
+// Mock scenarios, from POS_MOCK_SCENARIO=default|empty|loading|slow|error|large.
 import type { MockScenario } from "./scenario.types";
 
-export const mockScenarios: MockScenario[] = ["default", "empty", "loading", "error", "large"];
+export const mockScenarios: MockScenario[] = [
+  "default",
+  "empty",
+  "loading",
+  "slow",
+  "error",
+  "large",
+];
 
 export function parseScenario(raw: string | undefined): MockScenario {
-  if (raw === "empty" || raw === "loading" || raw === "error" || raw === "large") {
+  if (
+    raw === "empty" ||
+    raw === "loading" ||
+    raw === "slow" ||
+    raw === "error" ||
+    raw === "large"
+  ) {
     return raw;
   }
   return "default";

@@ -54,7 +54,7 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
         {props.error !== null ? <text fg={color(tokens.danger)}>{props.error}</text> : null}
 
         <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
-        <text fg={color(tokens.fgSubtle)}>{"Tab next field  Enter save  Esc cancel"}</text>
+        <text fg={color(tokens.fgSubtle)}>{"tab next field  enter save  esc cancel"}</text>
       </box>
     </Modal>
   );

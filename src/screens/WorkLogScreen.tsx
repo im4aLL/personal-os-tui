@@ -2,8 +2,10 @@ import type { KeyEvent, TextareaRenderable } from "@opentui/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { screenHint } from "../commands/registry";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
+import { Skeleton } from "../components/ui/Skeleton";
 import { DateRangeBar } from "../components/work-log/DateRangeBar";
 import { WeekGroupHeader } from "../components/work-log/WeekGroupHeader";
 import { WorkLogForm } from "../components/work-log/WorkLogForm";
@@ -24,7 +26,8 @@ import {
   mondayOfWeekISO,
   todayISO,
 } from "../utils/date";
-import { messageOf } from "../utils/error";
+import { messageOf, operationError, retryableError } from "../utils/error";
+import { isReadOnlyRow, wheelDelta } from "../utils/mouse";
 import { truncate } from "../utils/text";
 import type {
   Notice,
@@ -43,9 +46,9 @@ const HEADER_ROWS = 1;
 const ROW_ROWS = 3;
 const FORM_FIELDS: WorkLogFormField[] = ["title", "description", "start", "end", "tags"];
 
-const HINT = "j/k select  Enter edit  n add  d delete  / search  f date  1-3 preset  c clear";
-const SEARCH_HINT = "Type to search  Enter done  Esc clear";
-const DATE_HINT = "Type a date  Tab next field  Esc leave date field";
+const HINT = screenHint("work-log");
+const SEARCH_HINT = "Type to search  enter done  esc clear";
+const DATE_HINT = "Type a date  tab next field  esc leave date field";
 
 const EMPTY_FORM: WorkLogFormState = {
   open: false,
@@ -57,23 +60,6 @@ const EMPTY_FORM: WorkLogFormState = {
   error: null,
   saving: false,
 };
-
-/** Loading placeholder: a header bar plus entry bars, matching the fixed row
- * geometry so the list does not jump when the real rows arrive. */
-function GroupSkeleton(props: { width: number }): ReactNode {
-  const { theme, color } = useTheme();
-  const tokens = theme.tokens;
-  const widths = [24, 46, 38, 30];
-  return (
-    <box flexDirection="column" flexShrink={0}>
-      {widths.map((len) => (
-        <text key={len} fg={color(tokens.bgHover)}>
-          {"█".repeat(Math.max(6, Math.min(len, props.width)))}
-        </text>
-      ))}
-    </box>
-  );
-}
 
 function itemRows(item: WorkLogFlatItem): number {
   return item.kind === "header" ? HEADER_ROWS : ROW_ROWS;
@@ -332,6 +318,11 @@ export function WorkLogScreen(): ReactNode {
   }
 
   function openEdit(log: WorkLog): void {
+    // `large` clones are read-only: Enter/activate selects without opening a
+    // form whose save can only fail.
+    if (isReadOnlyRow(log.id)) {
+      return;
+    }
     setSearchFocused(false);
     setDateFocus("none");
     setForm({
@@ -451,7 +442,11 @@ export function WorkLogScreen(): ReactNode {
       }
     } catch (saveError) {
       // The form stays open with the error inline.
-      setForm((current) => ({ ...current, saving: false, error: messageOf(saveError) }));
+      setForm((current) => ({
+        ...current,
+        saving: false,
+        error: operationError("Could not save entry", saveError),
+      }));
     }
   }
 
@@ -675,7 +670,8 @@ export function WorkLogScreen(): ReactNode {
 
   const hintText = searchFocused ? SEARCH_HINT : dateFocus !== "none" ? DATE_HINT : HINT;
   const showError = error !== null && logs.length > 0;
-  const footerText = notice?.text ?? (showError ? `${error}  (r to retry)` : hintText);
+  const footerText =
+    notice?.text ?? (showError ? retryableError("Entries could not load", error) : hintText);
   const footerColor =
     notice !== null
       ? notice.kind === "success"
@@ -750,22 +746,29 @@ export function WorkLogScreen(): ReactNode {
         titleColor={color(listFocused ? tokens.accent : tokens.fgMuted)}
         paddingLeft={1}
         paddingRight={1}
+        onMouseScroll={(event) => {
+          const delta = wheelDelta(event);
+          if (delta !== 0) {
+            moveSelection(delta);
+          }
+        }}
       >
         {loading ? (
-          <>
-            <GroupSkeleton width={panelInnerWidth} />
-            <GroupSkeleton width={panelInnerWidth} />
-          </>
+          <Skeleton lines={5} widths={[24, 46, 38, 30, 20]} />
         ) : logs.length === 0 ? (
           error !== null ? (
-            <EmptyState title="Entries could not load" hint={`${error}  (r to retry)`} />
+            // Store errors are already stringified via `messageOf`, so this
+            // raw interpolation is intentional; do not wrap it in
+            // `operationError` or the message would be double-prefixed.
+            <EmptyState
+              title="Entries could not load"
+              hint={`${error ?? "Unknown error"}  (r to retry)`}
+            />
           ) : (
             <EmptyState
               title={hasFilters ? "No entries match your filters" : "No entries yet"}
               hint={
-                hasFilters
-                  ? "Try adjusting your search or date range"
-                  : "Start logging what you work on each day"
+                hasFilters ? "Try adjusting your search or date range" : "n to add your first entry"
               }
             />
           )
@@ -786,6 +789,14 @@ export function WorkLogScreen(): ReactNode {
                 width={panelInnerWidth}
                 narrow={narrow}
                 veryNarrow={veryNarrow}
+                onSelect={() => {
+                  setDateFocus("none");
+                  setSelectedId(item.log.id);
+                }}
+                onActivate={() => {
+                  setSelectedId(item.log.id);
+                  openEdit(item.log);
+                }}
               />
             ),
           )

@@ -15,14 +15,15 @@ import { Modal } from "../components/ui/Modal";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { openUrl } from "../lib/open-url";
 import { getCurrentWeek, getWeekHeaders } from "../lib/week-utils";
-import type { CreateWorkItemInput } from "../repos/types";
+import type { CreateWorkItemInput, WorkItemWithPhase } from "../repos/types";
 import { useProjectsStore } from "../store/projects";
 import { getRepos } from "../store/repos";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { isValidISODate, todayISO } from "../utils/date";
-import { messageOf } from "../utils/error";
+import { messageOf, operationError, retryableError } from "../utils/error";
+import { isReadOnlyRow } from "../utils/mouse";
 import { truncate, wrapSegments } from "../utils/text";
 import { windowSlice } from "../utils/window";
 import type {
@@ -101,22 +102,22 @@ const HINTS: Record<ProjectFocusZone, string[]> = {
   list: [
     "1 list",
     "2 grid",
-    "Tab zone",
+    "tab zone",
     "j/k select",
-    "Enter open",
+    "enter open",
     "n new project",
     "e edit",
     "d delete",
     "p phases",
     "K/J reorder",
   ],
-  header: ["1 list", "2 grid", "Tab zone", "e edit project", "p phases", "n new item"],
+  header: ["1 list", "2 grid", "tab zone", "e edit project", "p phases", "n new item"],
   grid: [
     "1 list",
     "2 grid",
-    "Tab zone",
+    "tab zone",
     "j/k select",
-    "Enter edit",
+    "enter edit",
     "n new item",
     "d delete",
     "s separator",
@@ -248,6 +249,8 @@ export function ProjectsScreen(): ReactNode {
   // The grid body reserves a row per footer line; on very short terminals the
   // footer is capped so the body still gets its three-row minimum.
   const hintRoom = Math.max(8, geometry.gridWidth);
+  // Footer uses the terse `r retry` form (no parens) to match the other terse
+  // `HINTS` entries like `e edit` / `d delete`; banners use `(r to retry)`.
   const hintSegments = [...HINTS[focusZone], ...(error !== null ? ["r retry"] : [])];
   const maxHintRows = Math.max(
     1,
@@ -419,6 +422,61 @@ export function ProjectsScreen(): ReactNode {
     setWindowStart((start) => Math.max(0, Math.min(maxStart, start + delta)));
   }
 
+  /** Mouse row actions. Selecting focuses the zone so the keyboard picks up
+   * where the click left off; activating mirrors Enter (open project / edit
+   * item). */
+  function selectProjectRow(id: string): void {
+    setFocusZone("list");
+    if (id !== selectedId) {
+      void useProjectsStore.getState().selectProject(id);
+    }
+  }
+
+  function activateProjectRow(id: string): void {
+    setFocusZone("grid");
+    if (id !== selectedId) {
+      void useProjectsStore.getState().selectProject(id);
+    }
+  }
+
+  function selectWorkItemRow(id: string): void {
+    setFocusZone("grid");
+    setSelectedItemId(id);
+  }
+
+  function activateWorkItemRow(id: string): void {
+    setFocusZone("grid");
+    setSelectedItemId(id);
+    const item = workItems.find((entry) => entry.id === id) ?? null;
+    openEditItem(item);
+  }
+
+  /** Wheel over the list/grid: move the selection in the active zone. */
+  function wheelZone(zone: "list" | "grid", delta: number): void {
+    if (zone === "list") {
+      if (projects.length === 0) {
+        return;
+      }
+      setFocusZone("list");
+      const current =
+        selectedId === null ? -1 : projects.findIndex((project) => project.id === selectedId);
+      const next = Math.min(projects.length - 1, Math.max(0, current + delta));
+      const project = projects[next];
+      if (project.id !== selectedId) {
+        void useProjectsStore.getState().selectProject(project.id);
+      }
+      return;
+    }
+    if (workItems.length === 0) {
+      return;
+    }
+    setFocusZone("grid");
+    const current =
+      selectedItemId === null ? -1 : workItems.findIndex((item) => item.id === selectedItemId);
+    const next = Math.min(workItems.length - 1, Math.max(0, current + delta));
+    setSelectedItemId(workItems[next].id);
+  }
+
   // -- Project mutations -----------------------------------------------------
 
   function openCreateProject(): void {
@@ -434,6 +492,11 @@ export function ProjectsScreen(): ReactNode {
 
   function openEditProject(): void {
     if (selectedProject === null) {
+      return;
+    }
+    // `large` clones are read-only: keep the selection but never open a form
+    // whose save can only fail.
+    if (isReadOnlyRow(selectedProject.id)) {
       return;
     }
     setProjectForm({
@@ -513,7 +576,11 @@ export function ProjectsScreen(): ReactNode {
         setNotice({ text: "Project created", kind: "success" });
       }
     } catch (saveError) {
-      setProjectForm((current) => ({ ...current, saving: false, error: messageOf(saveError) }));
+      setProjectForm((current) => ({
+        ...current,
+        saving: false,
+        error: operationError("Could not save project", saveError),
+      }));
     }
   }
 
@@ -551,21 +618,26 @@ export function ProjectsScreen(): ReactNode {
     });
   }
 
-  function openEditItem(): void {
-    if (selectedWorkItem === null) {
+  function openEditItem(target: WorkItemWithPhase | null = selectedWorkItem): void {
+    if (target === null) {
+      return;
+    }
+    // `large` clones are read-only: keep the selection but never open a form
+    // whose save can only fail.
+    if (isReadOnlyRow(target.id)) {
       return;
     }
     setItemForm({
       open: true,
-      editing: selectedWorkItem,
+      editing: target,
       values: {
-        title: selectedWorkItem.title,
-        person: selectedWorkItem.person ?? "",
-        jiraTicket: selectedWorkItem.jiraTicket ?? "",
-        status: selectedWorkItem.status,
-        phaseId: selectedWorkItem.phaseId ?? "",
-        startWeek: String(selectedWorkItem.startWeek),
-        endWeek: String(selectedWorkItem.endWeek),
+        title: target.title,
+        person: target.person ?? "",
+        jiraTicket: target.jiraTicket ?? "",
+        status: target.status,
+        phaseId: target.phaseId ?? "",
+        startWeek: String(target.startWeek),
+        endWeek: String(target.endWeek),
       },
       field: "title",
       error: null,
@@ -652,7 +724,11 @@ export function ProjectsScreen(): ReactNode {
         setNotice({ text: "Work item added", kind: "success" });
       }
     } catch (saveError) {
-      setItemForm((current) => ({ ...current, saving: false, error: messageOf(saveError) }));
+      setItemForm((current) => ({
+        ...current,
+        saving: false,
+        error: operationError("Could not save item", saveError),
+      }));
     }
   }
 
@@ -1071,7 +1147,10 @@ export function ProjectsScreen(): ReactNode {
   // -- Render ----------------------------------------------------------------
 
   const banner: Notice | null =
-    notice ?? (error !== null ? { text: `${error}  (r to retry)`, kind: "danger" } : null);
+    notice ??
+    (error !== null
+      ? { text: retryableError("Projects could not load", error), kind: "danger" }
+      : null);
 
   return (
     <box flexDirection="column" flexGrow={1} minHeight={0} backgroundColor={color(tokens.bg)}>
@@ -1084,6 +1163,9 @@ export function ProjectsScreen(): ReactNode {
           progress={progress}
           width={geometry.listWidth}
           maxItems={listItemsMax}
+          onSelectProject={selectProjectRow}
+          onActivateProject={activateProjectRow}
+          onWheel={(delta) => wheelZone("list", delta)}
         />
 
         <box flexDirection="column" flexGrow={1} minHeight={0}>
@@ -1143,7 +1225,7 @@ export function ProjectsScreen(): ReactNode {
                 />
               </>
             ) : selectedProject === null ? (
-              <EmptyState title="No project selected" hint="Press n to create one" />
+              <EmptyState title="No project selected" hint="n to add a project" />
             ) : listMode ? (
               <WeekGrid
                 workItems={visibleItems}
@@ -1158,6 +1240,9 @@ export function ProjectsScreen(): ReactNode {
                 weekAreaWidth={geometry.weekAreaWidth}
                 windowStart={windowStart}
                 visibleWeeks={geometry.visibleWeeks}
+                onSelectItem={selectWorkItemRow}
+                onActivateItem={activateWorkItemRow}
+                onWheel={(delta) => wheelZone("grid", delta)}
               />
             ) : (
               <>
@@ -1186,6 +1271,9 @@ export function ProjectsScreen(): ReactNode {
                   weekAreaWidth={geometry.weekAreaWidth}
                   windowStart={windowStart}
                   visibleWeeks={geometry.visibleWeeks}
+                  onSelectItem={selectWorkItemRow}
+                  onActivateItem={activateWorkItemRow}
+                  onWheel={(delta) => wheelZone("grid", delta)}
                 />
               </>
             )}
@@ -1263,7 +1351,7 @@ export function ProjectsScreen(): ReactNode {
         <Modal title={comment.title === "" ? "Comment" : "Comment"} width={64}>
           <box flexDirection="column" gap={1}>
             <text fg={color(tokens.fgMuted)}>{comment.text}</text>
-            <text fg={color(tokens.fgSubtle)}>{"Esc close"}</text>
+            <text fg={color(tokens.fgSubtle)}>{"esc close"}</text>
           </box>
         </Modal>
       ) : null}

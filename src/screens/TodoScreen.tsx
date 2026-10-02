@@ -2,11 +2,13 @@ import { type KeyEvent, TextAttributes } from "@opentui/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { screenHint } from "../commands/registry";
 import { ArchivedTodosDialog } from "../components/todos/ArchivedTodosDialog";
 import { KanbanColumn } from "../components/todos/KanbanColumn";
 import { TodoForm } from "../components/todos/TodoForm";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
+import { Skeleton } from "../components/ui/Skeleton";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { useTodoForm } from "../hooks/useTodoForm";
 import type { Todo, TodoStatus } from "../repos/types";
@@ -16,7 +18,8 @@ import { useTodos } from "../store/todos";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { todayISO } from "../utils/date";
-import { messageOf } from "../utils/error";
+import { operationError, retryableError } from "../utils/error";
+import { isReadOnlyRow } from "../utils/mouse";
 import { windowSlice } from "../utils/window";
 import type { TodoConfirmState } from "./TodoScreen.types";
 
@@ -34,8 +37,7 @@ const NEXT_STATUS: Record<TodoStatus, TodoStatus> = {
   completed: "todo",
 };
 
-const HINT =
-  "n new  Enter edit  m cycle status  H/L move column  K/J reorder  / search  d delete  a archived  A archive done  X clear done";
+const HINT = screenHint("todo");
 
 function truncate(text: string, room: number): string {
   if (text.length <= room) {
@@ -45,52 +47,6 @@ function truncate(text: string, room: number): string {
     return text.slice(0, Math.max(0, room));
   }
   return `${text.slice(0, room - 3)}...`;
-}
-
-/** Three-column loading placeholder: a bordered column per status with a
- * header bar plus card bars, matching the wide board's framed columns. */
-function TodoSkeleton(props: { wide: boolean; columnInner: number; rows: number }): ReactNode {
-  const { theme, color } = useTheme();
-  const barWidth = Math.max(4, props.columnInner);
-  const count = Math.max(1, Math.min(props.rows, 6));
-  const rows = Array.from({ length: count }, (_, index) => index);
-  const column = (key: number): ReactNode => (
-    <box
-      key={key}
-      flexDirection="column"
-      flexGrow={1}
-      flexBasis={0}
-      minHeight={0}
-      border
-      borderStyle="single"
-      borderColor={color(theme.tokens.borderMuted)}
-      paddingLeft={1}
-      paddingRight={1}
-      gap={1}
-    >
-      {rows.map((row) => (
-        <text key={row} fg={color(theme.tokens.bgHover)} wrapMode="none">
-          {"█".repeat(Math.max(4, barWidth - (row % 3) * 6))}
-        </text>
-      ))}
-    </box>
-  );
-  if (!props.wide) {
-    return (
-      <box flexDirection="column" flexGrow={1} gap={1} paddingLeft={1} paddingRight={1}>
-        {rows.map((row) => (
-          <text key={row} fg={color(theme.tokens.bgHover)} wrapMode="none">
-            {"█".repeat(Math.max(4, barWidth - (row % 3) * 6))}
-          </text>
-        ))}
-      </box>
-    );
-  }
-  return (
-    <box flexDirection="row" flexGrow={1} gap={1}>
-      {[0, 1, 2].map(column)}
-    </box>
-  );
 }
 
 export function TodoScreen(): ReactNode {
@@ -129,7 +85,8 @@ export function TodoScreen(): ReactNode {
   const sidebarCollapsed = useUi((state) => state.sidebarCollapsed);
   const sideWidth = width < 60 ? 0 : sidebarCollapsed || width < 80 ? 2 : 22;
   const contentWidth = Math.max(24, width - sideWidth - 2);
-  const banner = actionError ?? loadError;
+  const banner =
+    actionError ?? (loadError !== null ? retryableError("Todos could not load", loadError) : null);
   // Even grid: three bordered columns separated by one-cell gaps. `columnWidth`
   // is the inner text width a row can use, after the border and padding.
   const wideColumnWidth = Math.max(
@@ -138,7 +95,6 @@ export function TodoScreen(): ReactNode {
   );
   const wideColumnInner = Math.max(8, wideColumnWidth - 4);
   const narrowColumnInner = Math.max(8, contentWidth - 2);
-  const columnWidth = wide ? wideColumnInner : narrowColumnInner;
   // Rows spent outside the board: the app header and status line, the bordered
   // search box, the footer hint, the spacer under the search box, and the
   // optional error banner.
@@ -243,7 +199,7 @@ export function TodoScreen(): ReactNode {
         setArchivedTodos(rows);
         setArchivedIndex((index) => Math.min(index, Math.max(0, rows.length - 1)));
       })
-      .catch((error) => setActionError(messageOf(error)))
+      .catch((error) => setActionError(retryableError("Could not load archived todos", error)))
       .finally(() => setArchivedLoading(false));
   }, []);
 
@@ -268,6 +224,25 @@ export function TodoScreen(): ReactNode {
     setFocusedColumn((index) => Math.min(COLUMNS.length - 1, Math.max(0, index + delta)));
   }
 
+  /** Mouse: focus the clicked column and select a specific todo. */
+  function selectTodo(todo: Todo): void {
+    setSearchActive(false);
+    setFocusedColumn(COLUMNS.indexOf(todo.status));
+    setSelectedId(todo.id);
+  }
+
+  /** Mouse wheel: focus the wheeled column and step the selection inside it. */
+  function wheelColumn(status: TodoStatus, delta: number): void {
+    const list = byStatus[status];
+    if (list.length === 0) {
+      return;
+    }
+    setFocusedColumn(COLUMNS.indexOf(status));
+    const current = selectedId === null ? -1 : list.findIndex((todo) => todo.id === selectedId);
+    const next = Math.min(list.length - 1, Math.max(0, current + delta));
+    setSelectedId(list[next].id);
+  }
+
   // -- Form ----------------------------------------------------------------
 
   // Thin wrappers: the shared controller owns the form state; the screen only
@@ -278,6 +253,11 @@ export function TodoScreen(): ReactNode {
   }
 
   function openEdit(todo: Todo): void {
+    // `large` clones are read-only, so Enter/activate selects without opening
+    // an editor that can only fail on save.
+    if (isReadOnlyRow(todo.id)) {
+      return;
+    }
     setSearchActive(false);
     todoForm.openEdit(todo);
   }
@@ -307,7 +287,7 @@ export function TodoScreen(): ReactNode {
           })),
         );
       } catch (error) {
-        setActionError(messageOf(error));
+        setActionError(retryableError("Could not move todo", error));
         void loadTodos();
       }
     })();
@@ -347,7 +327,7 @@ export function TodoScreen(): ReactNode {
           })),
         );
       } catch (error) {
-        setActionError(messageOf(error));
+        setActionError(retryableError("Could not move todo", error));
         void loadTodos();
       }
     })();
@@ -372,7 +352,7 @@ export function TodoScreen(): ReactNode {
       try {
         await getRepos().todos.updatePositions(ids.map((id, position) => ({ id, position })));
       } catch (error) {
-        setActionError(messageOf(error));
+        setActionError(retryableError("Could not reorder todos", error));
         void loadTodos();
       }
     })();
@@ -454,7 +434,14 @@ export function TodoScreen(): ReactNode {
         await getRepos().todos.removeMany(current.ids);
       }
     } catch (error) {
-      setActionError(messageOf(error));
+      setActionError(
+        retryableError(
+          current.kind === "archive-completed"
+            ? "Could not archive completed todos"
+            : "Could not delete todos",
+          error,
+        ),
+      );
       void loadTodos();
       if (current.kind === "delete-archived") {
         loadArchived();
@@ -475,7 +462,9 @@ export function TodoScreen(): ReactNode {
         });
         setNotice("Added to work log");
       } catch (error) {
-        setActionError(messageOf(error));
+        // The todo is unchanged, so `w` repeats the add; surface the key
+        // inline so the error still offers a next step.
+        setActionError(`${operationError("Could not add to work log", error)}  (w to retry)`);
       }
     })();
   }
@@ -489,7 +478,7 @@ export function TodoScreen(): ReactNode {
     try {
       await getRepos().todos.restore([todo.id]);
     } catch (error) {
-      setActionError(messageOf(error));
+      setActionError(retryableError("Could not restore todo", error));
       void loadTodos();
       loadArchived();
     }
@@ -507,7 +496,7 @@ export function TodoScreen(): ReactNode {
     try {
       await getRepos().todos.restore(all.map((todo) => todo.id));
     } catch (error) {
-      setActionError(messageOf(error));
+      setActionError(retryableError("Could not restore todos", error));
       void loadTodos();
       loadArchived();
     }
@@ -804,7 +793,7 @@ export function TodoScreen(): ReactNode {
       {banner !== null ? (
         <box height={1} flexShrink={0}>
           <text fg={color(tokens.danger)} wrapMode="none">
-            {truncate(`${banner}${archivedOpen ? "" : "  (r to retry)"}`, Math.max(8, width - 2))}
+            {truncate(banner, Math.max(8, width - 2))}
           </text>
         </box>
       ) : null}
@@ -812,9 +801,12 @@ export function TodoScreen(): ReactNode {
       <box height={1} flexShrink={0} />
 
       {loading ? (
-        <TodoSkeleton wide={wide} columnInner={columnWidth} rows={visibleCount} />
+        <Skeleton
+          lines={Math.max(3, Math.min(visibleCount, 6))}
+          widths={[26, 34, 30, 22, 28, 20]}
+        />
       ) : filtered.length === 0 ? (
-        <EmptyState title="No todos yet." hint="n to add your first todo" />
+        <EmptyState title="No todos yet" hint="n to add your first todo" />
       ) : wide ? (
         <box flexDirection="row" flexGrow={1} minHeight={0} gap={1}>
           {COLUMNS.map((status, index) => (
@@ -829,6 +821,12 @@ export function TodoScreen(): ReactNode {
               columnWidth={wideColumnInner}
               focused={index === focusedColumn}
               variant="box"
+              onSelectTodo={selectTodo}
+              onActivateTodo={(todo) => {
+                selectTodo(todo);
+                openEdit(todo);
+              }}
+              onWheel={(delta) => wheelColumn(status, delta)}
             />
           ))}
         </box>
@@ -865,6 +863,12 @@ export function TodoScreen(): ReactNode {
               columnWidth={narrowColumnInner}
               focused={true}
               variant="plain"
+              onSelectTodo={selectTodo}
+              onActivateTodo={(todo) => {
+                selectTodo(todo);
+                openEdit(todo);
+              }}
+              onWheel={(delta) => wheelColumn(focusedStatus, delta)}
             />
           </box>
         </box>

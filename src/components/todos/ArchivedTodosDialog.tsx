@@ -45,7 +45,7 @@ export function ArchivedTodosDialog(props: ArchivedTodosDialogProps): ReactNode 
             );
           })
         )}
-        <text fg={color(tokens.fgSubtle)}>{"r restore  R restore all  d delete  a/Esc close"}</text>
+        <text fg={color(tokens.fgSubtle)}>{"r restore  R restore all  d delete  a/esc close"}</text>
       </box>
     </Modal>
   );

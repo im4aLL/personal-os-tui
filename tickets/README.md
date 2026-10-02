@@ -36,7 +36,7 @@ One feature at a time: UI, then gate, then wiring.
 21. [M7](M7-dashboard-ui.md) - Dashboard UI (milestone, dashboard, done)
 22. [G7](G7-dashboard-ui-approval.md) - Dashboard UI approval (gate, dashboard, done)
 23. [W7](W7-dashboard-wiring.md) - Dashboard wiring (wiring, dashboard, done)
-24. [M8](M8-cross-cutting-polish-ui.md) - Cross-cutting polish (UI) (milestone, polish, not-started)
+24. [M8](M8-cross-cutting-polish-ui.md) - Cross-cutting polish (UI) (milestone, polish, done)
 25. [G8](G8-polish-ui-approval.md) - Polish UI approval (gate, polish, not-started)
 26. [F1](F1-configurable-keymap.md) - Configurable keymap from the config file (feature, polish, not-started)
 27. [W8](W8-real-data-hardening.md) - Real-data hardening and end-to-end (wiring, hardening, not-started)
@@ -47,7 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [M8](M8-cross-cutting-polish-ui.md) | Cross-cutting polish (UI) | milestone | polish |
 | [G8](G8-polish-ui-approval.md) | Polish UI approval | gate | polish |
 | [F1](F1-configurable-keymap.md) | Configurable keymap from the config file | feature | polish |
 | [W8](W8-real-data-hardening.md) | Real-data hardening and end-to-end | wiring | hardening |
@@ -85,6 +84,7 @@ One feature at a time: UI, then gate, then wiring.
 | [M7](M7-dashboard-ui.md) | Dashboard UI | milestone | dashboard |
 | [G7](G7-dashboard-ui-approval.md) | Dashboard UI approval | gate | dashboard |
 | [W7](W7-dashboard-wiring.md) | Dashboard wiring | wiring | dashboard |
+| [M8](M8-cross-cutting-polish-ui.md) | Cross-cutting polish (UI) | milestone | polish |
 
 ## Rules
 

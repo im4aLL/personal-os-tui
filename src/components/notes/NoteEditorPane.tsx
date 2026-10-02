@@ -2,26 +2,13 @@ import { SyntaxStyle } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { retryableError } from "../../utils/error";
 import { EmptyState } from "../ui/EmptyState";
+import { Skeleton } from "../ui/Skeleton";
 import { TagInput } from "../ui/TagInput";
 import { TextArea } from "../ui/TextArea";
 import type { NoteEditorPaneProps } from "./NoteEditorPane.types";
 import { NoteToolbar } from "./NoteToolbar";
-
-/** Body placeholder while the selected note loads. */
-function EditorSkeleton(): ReactNode {
-  const { theme, color } = useTheme();
-  const widths = [26, 34, 30, 22];
-  return (
-    <box flexDirection="column" gap={1} paddingTop={1}>
-      {widths.map((width) => (
-        <text key={width} fg={color(theme.tokens.bgHover)}>
-          {"█".repeat(width)}
-        </text>
-      ))}
-    </box>
-  );
-}
 
 // Right pane: toolbar, title, tags, and the edit body or the markdown preview.
 // Purely presentational; the screen owns the keys, autosave, and repo writes.
@@ -86,7 +73,7 @@ export function NoteEditorPane(props: NoteEditorPaneProps): ReactNode {
       paddingRight={1}
     >
       {props.note === null ? (
-        <EmptyState title="No note selected" hint="Pick a note from the list or create a new one" />
+        <EmptyState title="No note selected" hint="pick a note from the list or create a new one" />
       ) : (
         <>
           <NoteToolbar
@@ -97,11 +84,12 @@ export function NoteEditorPane(props: NoteEditorPaneProps): ReactNode {
             width={props.width}
           />
           {props.loading ? (
-            <EditorSkeleton />
+            <Skeleton lines={4} widths={[26, 34, 30, 22]} />
           ) : props.error !== null ? (
             <box flexDirection="column" gap={1} paddingTop={1}>
-              <text fg={color(tokens.danger)}>{"Could not load this note"}</text>
-              <text fg={color(tokens.fgSubtle)}>{`${props.error}  (r to retry)`}</text>
+              <text fg={color(tokens.danger)}>
+                {retryableError("Could not load this note", props.error)}
+              </text>
             </box>
           ) : (
             <>

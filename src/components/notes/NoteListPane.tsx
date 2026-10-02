@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { wheelDelta } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
+import { EmptyState } from "../ui/EmptyState";
 import { Skeleton } from "../ui/Skeleton";
 import type { NoteListPaneProps } from "./NoteListPane.types";
 import { NoteRow } from "./NoteRow";
@@ -31,6 +33,8 @@ export function NoteListPane(props: NoteListPaneProps): ReactNode {
           selected={note.id === props.selectedId}
           masked={props.privacyMode && note.id !== props.selectedId}
           width={innerWidth}
+          onSelect={() => props.onSelectNote?.(note.id)}
+          onActivate={() => props.onActivateNote?.(note.id)}
         />,
       );
     });
@@ -48,6 +52,12 @@ export function NoteListPane(props: NoteListPaneProps): ReactNode {
       titleColor={color(props.focused ? tokens.accent : tokens.fgMuted)}
       paddingLeft={1}
       paddingRight={1}
+      onMouseScroll={(event) => {
+        const delta = wheelDelta(event);
+        if (delta !== 0) {
+          props.onWheel?.(delta);
+        }
+      }}
     >
       <box flexShrink={0} paddingTop={1} paddingBottom={1}>
         <input
@@ -71,16 +81,10 @@ export function NoteListPane(props: NoteListPaneProps): ReactNode {
         {props.loading ? (
           <Skeleton lines={3} widths={[24, 18, 21]} />
         ) : props.items.length === 0 ? (
-          <box flexDirection="column" gap={1} paddingTop={1}>
-            {searching ? (
-              <text fg={color(tokens.fgSubtle)}>{"No notes match your search"}</text>
-            ) : (
-              <>
-                <text fg={color(tokens.fgSubtle)}>{"No notes yet."}</text>
-                <text fg={color(tokens.fgSubtle)}>{"n to add your first note"}</text>
-              </>
-            )}
-          </box>
+          <EmptyState
+            title={searching ? "No notes match your search" : "No notes yet"}
+            hint={searching ? "Try a different search" : "n to add your first note"}
+          />
         ) : (
           rows
         )}

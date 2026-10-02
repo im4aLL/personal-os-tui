@@ -15,4 +15,9 @@ export interface KanbanColumnProps {
   focused: boolean;
   /** `box` draws a bordered column (wide grid); `plain` draws rows only. */
   variant: "box" | "plain";
+  /** Mouse: select/activate a todo row without a keyboard. */
+  onSelectTodo?: (todo: Todo) => void;
+  onActivateTodo?: (todo: Todo) => void;
+  /** Mouse wheel over this column: -1 up, +1 down. */
+  onWheel?: (delta: number) => void;
 }

@@ -2,7 +2,7 @@
 id: M8
 title: Cross-cutting polish (UI)
 type: milestone
-status: not-started
+status: done
 phase: polish
 order: 24
 depends_on: [W7]
@@ -11,7 +11,7 @@ gate: G8
 
 # M8 - Cross-cutting polish (UI)
 
-> Type: milestone · Status: not-started · Phase: polish
+> Type: milestone · Status: done · Phase: polish
 
 ## Objective
 
@@ -19,16 +19,16 @@ The UI is finalized across all screens: a complete command palette, a generated 
 
 ## Deliverables
 
-- [ ] `src/commands/CommandPalette.tsx` (`/` or `Ctrl+P`): typing filters by command title, every listed command runs, and bound keys are shown next to each.
-- [ ] `src/commands/HelpScreen.tsx` (`?`): global and per-screen keys generated from the registry.
-- [ ] `src/theme/ThemeProvider.tsx` theme picker modal (`Ctrl+T`): selecting a theme applies instantly and persists across restart.
-- [ ] Mouse support as an additive layer: sidebar clicks, row select on click, edit on double-click, wheel scrolling, and pill clicks; `POS_NO_MOUSE=1` keeps full keyboard reachability.
-- [ ] `Ctrl+R` refreshes the current screen.
-- [ ] `src/app/MockStatePanel.tsx` in its final form: toggles scenario, latency, error injection, and fixture reset without a restart.
-- [ ] A dedicated audit pass over every screen in all four data states (empty, loading, populated, error) plus three narrow widths, correcting any screen that uses a different empty-state voice or skeleton shape.
-- [ ] No screen shows a raw error string without context; every error names the operation and offers a next step.
-- [ ] `large` transforms per domain and a `slow` transform (3 s latency) purely to review patience and cancel affordances.
-- [ ] A README section describing the keymap.
+- [x] `src/commands/CommandPalette.tsx` (`/` or `Ctrl+P`): typing filters by command title, every listed command runs, and bound keys are shown next to each.
+- [x] `src/commands/HelpScreen.tsx` (`?`): global and per-screen keys generated from the registry.
+- [x] `src/theme/ThemeProvider.tsx` theme picker modal (`Ctrl+T`): selecting a theme applies instantly and persists across restart.
+- [x] Mouse support as an additive layer: sidebar clicks, row select on click, edit on double-click, wheel scrolling, and pill clicks; `POS_NO_MOUSE=1` keeps full keyboard reachability.
+- [x] `Ctrl+R` refreshes the current screen.
+- [x] `src/app/MockStatePanel.tsx` in its final form: toggles scenario, latency, error injection, and fixture reset without a restart.
+- [x] A dedicated audit pass over every screen in all four data states (empty, loading, populated, error) plus three narrow widths, correcting any screen that uses a different empty-state voice or skeleton shape.
+- [x] No screen shows a raw error string without context; every error names the operation and offers a next step.
+- [x] `large` transforms per domain and a `slow` transform (3 s latency) purely to review patience and cancel affordances.
+- [x] A README section describing the keymap.
 
 ## Design notes
 
@@ -66,4 +66,7 @@ User-configurable keybindings are promoted to [F1](F1-configurable-keymap.md), w
 
 ## Notes
 
+- Dashboard panels intentionally use a compact single muted line instead of `EmptyState`: each stat card has a tight row budget and does not host loading or empty content the same way a list pane does. Voice still matches (title-only, no trailing period), and the same audit covered every other screen's empty/loading states.
+- Dashboard stat cards are the second compact-card exception: each is a single-value cell, so loading uses the same block glyph `Skeleton` draws (`█`) rather than a multi-line `Skeleton` bar, which cannot fit one value row.
+- Audit matrix (static pass over 4 data states x 3 narrow widths ~40 / ~60 / ~80): empty -> shared `EmptyState` on every list, board, grid, and pane; loading -> shared `Skeleton` on every list/pane except the two compact-card exceptions above; populated -> normal list/grid/board rendering; error -> `retryableError`/`operationError` banners plus shared `EmptyState` on the list screens. The only bespoke shapes are the Dashboard panel muted line and the stat-card `█`.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.

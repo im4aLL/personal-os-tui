@@ -13,4 +13,9 @@ export interface ProjectListPaneProps {
   width: number;
   /** Max project rows to render; the pane windows around the selection. */
   maxItems: number;
+  /** Mouse: select/activate a project row without a keyboard. */
+  onSelectProject?: (id: string) => void;
+  onActivateProject?: (id: string) => void;
+  /** Mouse wheel delta (-1 up, +1 down) over the list. */
+  onWheel?: (delta: number) => void;
 }

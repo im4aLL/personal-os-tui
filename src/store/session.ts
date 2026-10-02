@@ -7,11 +7,19 @@
 // chunk stays droppable in production builds. Without it the session keeps
 // inert defaults and every mock mutation is a no-op.
 import { create } from "zustand";
+import { saveUiPreferences } from "../lib/config";
 import type { MockScenario } from "../mock/scenario.types";
 import { nextThemeId } from "../theme/registry";
 import type { InitSessionValues, SessionState } from "./session.types";
 
 export const useSession = create<SessionState>((set, get) => {
+  /** Apply a theme and persist it to config.ui.theme. Persistence is
+   * best-effort: a read-only config directory must not break theme switching. */
+  function applyTheme(themeId: string): void {
+    set({ themeId });
+    void saveUiPreferences({ theme: themeId }).catch(() => {});
+  }
+
   return {
     profileName: "Alex Johnson",
     themeId: "mocha",
@@ -24,10 +32,14 @@ export const useSession = create<SessionState>((set, get) => {
     scenario: "default",
     scenarios: [],
     latencyMs: 0,
+    errorInjection: false,
     mockUi: null,
     resetMockData: null,
     cycleTheme: () => {
-      set((state) => ({ themeId: nextThemeId(state.themeId) }));
+      applyTheme(nextThemeId(get().themeId));
+    },
+    selectTheme: (themeId: string) => {
+      applyTheme(themeId);
     },
     setProfileName: (profileName: string) => {
       set({ profileName });
@@ -52,6 +64,13 @@ export const useSession = create<SessionState>((set, get) => {
       }
       set({ latencyMs: api.setLatencyMs(latencyMs) });
     },
+    setErrorInjection: (enabled: boolean) => {
+      const api = get().mockUi;
+      if (api === null) {
+        return;
+      }
+      set({ errorInjection: api.setErrorInjection(enabled) });
+    },
   };
 });
 
@@ -67,6 +86,7 @@ export function initSession(values: InitSessionValues): void {
     scenario: values.mockUi?.scenario ?? "default",
     scenarios: values.mockUi?.scenarios ?? [],
     latencyMs: values.mockUi?.latencyMs ?? 0,
+    errorInjection: values.mockUi?.errorInjection ?? false,
     mockUi: values.mockUi,
     resetMockData: values.resetMockData,
   });

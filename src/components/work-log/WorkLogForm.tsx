@@ -94,7 +94,7 @@ export function WorkLogForm(props: WorkLogFormProps): ReactNode {
 
         <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
         <text fg={color(tokens.fgSubtle)}>
-          {"Tab next field  Enter save  Ctrl+Enter from description  Esc cancel"}
+          {"tab next field  enter save  ctrl+enter from description  esc cancel"}
         </text>
       </box>
     </Modal>

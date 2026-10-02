@@ -13,7 +13,13 @@ import type {
   WorkLogFilter,
   WorkLogRepo,
 } from "../types";
-import { applyListScenario, isEmptyScenario, mockCall } from "./guard";
+import {
+  applyListScenario,
+  assertNotLargeClone,
+  isEmptyScenario,
+  mockCall,
+  mockMutationError,
+} from "./guard";
 
 /** Rows the `large` scenario grows to (PLAN M5). */
 const LARGE_TOTAL = 300;
@@ -104,7 +110,7 @@ export const mockWorkLogRepo: WorkLogRepo = {
     return mockCall(() => {
       const log = rows.find((row) => row.id === id);
       if (log === undefined) {
-        throw new Error(`mock work log not found: ${id}`);
+        throw mockMutationError("work log", id);
       }
       if (input.title !== undefined) {
         log.title = input.title;
@@ -127,6 +133,7 @@ export const mockWorkLogRepo: WorkLogRepo = {
 
   remove(id: string): Promise<void> {
     return mockCall(() => {
+      assertNotLargeClone("work log", id);
       rows = rows.filter((row) => row.id !== id);
     });
   },
