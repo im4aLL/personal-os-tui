@@ -2,7 +2,7 @@
 id: M6
 title: Project Planner UI
 type: milestone
-status: not-started
+status: done
 phase: projects
 order: 18
 depends_on: [W5]
@@ -11,7 +11,7 @@ gate: G6
 
 # M6 - Project Planner UI
 
-> Type: milestone · Status: not-started · Phase: projects
+> Type: milestone · Status: done · Phase: projects
 
 ## Objective
 
@@ -19,24 +19,24 @@ The Projects screen on fixtures: project list, week-grid Gantt with headers and 
 
 ## Deliverables
 
-- [ ] `src/screens/ProjectsScreen.tsx` with the project list pane, project header, and week grid.
-- [ ] `src/components/projects/ProjectListPane.tsx`, `ProjectListItem.tsx`, `WeekGrid.tsx`, `WeekGridHeader.tsx`, `ProjectHeader.tsx`, `ProjectForm.tsx`, `PhaseManager.tsx`, and `WorkItemForm.tsx`.
-- [ ] Project list showing `{n}w` and the start date, with the selected project clearly indicated.
-- [ ] Two header rows in the grid (dates and `Week N`) with the current week emphasized in both.
-- [ ] Phase bars starting and ending at the correct week columns, colored by phase and mixed with the base by status ratio: `pending` 0.4, `in_progress` 0.75, `done` 1.0 with a strikethrough title.
-- [ ] Phase legend in the project header, hidden when the project has no phases; a missing phase uses the fallback gray.
-- [ ] Separators rendering as full-width rules, added with `s` and removed with `d` without a confirmation.
-- [ ] Project create (`n`), edit (`e`), delete with confirmation (`d`), and reorder with `K`/`J`.
-- [ ] Work item create (`n`), edit (`Enter`), delete with confirmation (`d`), reorder with `K`/`J`, and separator add (`s`).
-- [ ] Work item fields including person, weeks, status, phase, comment, and Jira ticket; `o` opens a Jira URL and shows a clear message for a non-URL value; `c` shows the comment read-only.
-- [ ] Phase manager (`p`): add, rename, recolor, move up/down, and delete-when-empty, with correct item counts and delete disabled when the count is greater than zero.
-- [ ] Focus model: `1` focuses the project list, `2` focuses the grid, `Tab`/`Shift+Tab` move between list, header actions, and grid.
-- [ ] Empty states: no projects -> "No projects yet" with an `n` hint; no items -> "No items yet, press n to add"; no phases -> the legend is hidden and the item form defaults to no phase.
-- [ ] Loading: a skeleton project list plus a skeleton grid of two header rows and five empty rows.
-- [ ] Error: a mutation failure keeps the previous state and shows an inline error; an invalid work item (`end < start`, week out of range) is rejected with the desktop's messages.
-- [ ] Narrow: windowed mode when a single character per week does not fit (`[`/`]` shift the visible window), then list mode (`v`) below 60 columns.
-- [ ] Fixtures: 3 projects ("Personal OS v2" 12 weeks starting ~4 weeks ago, "Docs site" 8 weeks starting next week, "Marketing" 6 weeks starting 10 weeks ago), plus one 24-week project for windowing and one 52-week project for the upper bound; 5 phases with distinct colors including one empty phase and one project with no phases; 18 work items covering every status, multi-week and single-week spans, a full-length span, a comment, a Jira URL and a non-URL ticket, repeated and missing persons, a long title, and more items than fit the viewport; 3 separators including one at the top and one at the bottom; gappy positions (0, 2, 5, 9).
-- [ ] Scenario transforms: `empty`, `loading`, `large` (40 items, 52 weeks), `error`.
+- [x] `src/screens/ProjectsScreen.tsx` with the project list pane, project header, and week grid.
+- [x] `src/components/projects/ProjectListPane.tsx`, `ProjectListItem.tsx`, `WeekGrid.tsx`, `WeekGridHeader.tsx`, `ProjectHeader.tsx`, `ProjectForm.tsx`, `PhaseManager.tsx`, and `WorkItemForm.tsx`.
+- [x] Project list showing `{n}w` and the start date, with the selected project clearly indicated.
+- [x] Two header rows in the grid (dates and `Week N`) with the current week emphasized in both.
+- [x] Phase bars starting and ending at the correct week columns, colored by phase and mixed with the base by status ratio: `pending` 0.4, `in_progress` 0.75, `done` 1.0 with a strikethrough title.
+- [x] Phase legend in the project header, hidden when the project has no phases; a missing phase uses the fallback gray.
+- [x] Separators rendering as full-width rules, added with `s` and removed with `d` without a confirmation.
+- [x] Project create (`n`), edit (`e`), delete with confirmation (`d`), and reorder with `K`/`J`.
+- [x] Work item create (`n`), edit (`Enter`), delete with confirmation (`d`), reorder with `K`/`J`, and separator add (`s`).
+- [x] Work item fields including person, weeks, status, phase, comment, and Jira ticket; `o` opens a Jira URL and shows a clear message for a non-URL value; `c` shows the comment read-only.
+- [x] Phase manager (`p`): add, rename, recolor, move up/down, and delete-when-empty, with correct item counts and delete disabled when the count is greater than zero.
+- [x] Focus model: `1` focuses the project list, `2` focuses the grid, `Tab`/`Shift+Tab` move between list, header actions, and grid.
+- [x] Empty states: no projects -> "No projects yet" with an `n` hint; no items -> "No items yet, press n to add"; no phases -> the legend is hidden and the item form defaults to no phase.
+- [x] Loading: a skeleton project list plus a skeleton grid of two header rows and five empty rows.
+- [x] Error: a mutation failure keeps the previous state and shows an inline error; an invalid work item (`end < start`, week out of range) is rejected with the desktop's messages.
+- [x] Narrow: windowed mode when a single character per week does not fit (`[`/`]` shift the visible window), then list mode (`v`) below 60 columns.
+- [x] Fixtures: 3 projects ("Personal OS v2" 12 weeks starting ~4 weeks ago, "Docs site" 8 weeks starting next week, "Marketing" 6 weeks starting 10 weeks ago), plus one 24-week project for windowing and one 52-week project for the upper bound; 5 phases with distinct colors including one empty phase and one project with no phases; 18 work items covering every status, multi-week and single-week spans, a full-length span, a comment, a Jira URL and a non-URL ticket, repeated and missing persons, a long title, and more items than fit the viewport; 3 separators including one at the top and one at the bottom; gappy positions (0, 2, 5, 9).
+- [x] Scenario transforms: `empty`, `loading`, `large` (40 items, 52 weeks), `error`.
 
 ## Design notes
 

@@ -1,4 +1,4 @@
-import type { Link, Note, Project, Todo, WorkLog } from "../repos/types";
+import type { Link, Note, Project, ProjectPhase, Todo, WorkItem, WorkLog } from "../repos/types";
 
 export interface Fixtures {
   todos: Todo[];
@@ -9,4 +9,6 @@ export interface Fixtures {
   linkTags: string[];
   workLogs: WorkLog[];
   projects: Project[];
+  projectPhases: ProjectPhase[];
+  workItems: WorkItem[];
 }

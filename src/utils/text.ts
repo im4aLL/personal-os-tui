@@ -12,6 +12,32 @@ export function truncate(text: string, room: number): string {
   return `${text.slice(0, room - 3)}...`;
 }
 
+/** Greedily pack whole segments into lines no wider than `room`, joined by
+ * `joiner`. Segments are never split, so a shortcut like `[ ] window` stays
+ * intact; a segment wider than `room` still gets its own line. Used to wrap a
+ * shortcut footer instead of truncating it. */
+export function wrapSegments(segments: string[], joiner: string, room: number): string[] {
+  const lines: string[] = [];
+  let current = "";
+  for (const segment of segments) {
+    if (current === "") {
+      current = segment;
+      continue;
+    }
+    const candidate = `${current}${joiner}${segment}`;
+    if (candidate.length <= room) {
+      current = candidate;
+    } else {
+      lines.push(current);
+      current = segment;
+    }
+  }
+  if (current !== "") {
+    lines.push(current);
+  }
+  return lines;
+}
+
 /** Middle truncation: keeps the head (so a domain stays visible) and the tail
  * while the elided middle is replaced with `...`. Falls back to a hard slice
  * when the room is too small for an ellipsis. */

@@ -187,28 +187,97 @@ export interface WorkLogRepo {
 export interface Project {
   id: string;
   name: string;
-  description: string;
+  startDate: string; // YYYY-MM-DD
+  weekCount: number;
   position: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CreateProjectInput {
+export interface ProjectPhase {
+  id: string;
+  projectId: string;
   name: string;
-  description?: string;
+  color: string; // hex e.g. "#93C5FD"
+  position: number;
+  createdAt: string;
 }
 
-export interface UpdateProjectInput {
-  name?: string;
-  description?: string;
-  position?: number;
+export type WorkItemStatus = "pending" | "in_progress" | "done";
+
+export interface WorkItem {
+  id: string;
+  projectId: string;
+  phaseId: string | null;
+  title: string;
+  person: string | null;
+  comment: string | null;
+  jiraTicket: string | null;
+  status: WorkItemStatus;
+  startWeek: number;
+  endWeek: number;
+  position: number;
+  isSeparator: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
+
+export interface WorkItemWithPhase extends WorkItem {
+  phase: ProjectPhase | null;
+}
+
+export interface ProjectProgress {
+  projectId: string;
+  total: number;
+  done: number;
+}
+
+export interface CreateProjectInput {
+  name: string;
+  startDate: string;
+  weekCount: number;
+}
+
+export type UpdateProjectInput = Partial<Pick<Project, "name" | "startDate" | "weekCount">>;
+
+export interface CreatePhaseInput {
+  name: string;
+  color: string;
+}
+
+export type UpdatePhaseInput = Partial<Pick<ProjectPhase, "name" | "color" | "position">>;
+
+export interface CreateWorkItemInput {
+  phaseId: string | null;
+  title: string;
+  person: string | null;
+  comment: string | null;
+  jiraTicket: string | null;
+  status: WorkItemStatus;
+  startWeek: number;
+  endWeek: number;
+  position: number;
+  isSeparator: boolean;
+}
+
+export type UpdateWorkItemInput = Partial<CreateWorkItemInput>;
 
 export interface ProjectRepo {
   list(): Promise<Project[]>;
   create(input: CreateProjectInput): Promise<Project>;
   update(id: string, input: UpdateProjectInput): Promise<void>;
   remove(id: string): Promise<void>;
+  reorder(orderedIds: string[]): Promise<void>;
+  phases(projectId: string): Promise<ProjectPhase[]>;
+  createPhase(projectId: string, input: CreatePhaseInput): Promise<ProjectPhase>;
+  updatePhase(id: string, input: UpdatePhaseInput): Promise<void>;
+  removePhase(id: string): Promise<void>;
+  workItems(projectId: string): Promise<WorkItemWithPhase[]>;
+  createWorkItem(projectId: string, input: CreateWorkItemInput): Promise<WorkItemWithPhase>;
+  updateWorkItem(id: string, input: UpdateWorkItemInput): Promise<void>;
+  removeWorkItem(id: string): Promise<void>;
+  reorderWorkItems(projectId: string, orderedIds: string[]): Promise<void>;
+  progress(): Promise<ProjectProgress[]>;
 }
 
 export interface Profile {

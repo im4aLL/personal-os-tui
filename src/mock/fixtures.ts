@@ -4,7 +4,14 @@
 // notes (3 pinned, one untitled, a long markdown body, a single long line, 4
 // tagged, relative dates across today/yesterday/last week/last year).
 
-import type { Link, WorkLog } from "../repos/types";
+import type {
+  Link,
+  Project,
+  ProjectPhase,
+  WorkItem,
+  WorkItemStatus,
+  WorkLog,
+} from "../repos/types";
 import { addDaysISO, isoDateOffset, mondayOfWeekISO, todayISO } from "../utils/date";
 import type { Fixtures } from "./fixtures.types";
 
@@ -504,6 +511,377 @@ function workLogFixtures(): WorkLog[] {
   });
 }
 
+/** Deterministic ISO datetime for a project/phase fixture, derived from its
+ * start date and index so timestamps stay realistic without wall-clock
+ * dependence. */
+function projectStamp(date: string, index: number): string {
+  const hour = 7 + (index % 8);
+  return `${date}T${String(hour).padStart(2, "0")}:15:00.000Z`;
+}
+
+/** Deterministic ISO datetime for a work item fixture. */
+function workItemStamp(index: number): string {
+  const hour = 8 + (index % 9);
+  const minute = (index * 13) % 60;
+  return `${isoDateOffset(-(45 - index))}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`;
+}
+
+// Project Planner review set (PLAN M6). Five projects cover the windowing
+// bounds: the 12-week default, an 8-week project that has not started, a
+// 6-week project that already ended, a 24-week project for windowed scrolling,
+// and a 52-week project for the upper bound on an 80-column terminal. All
+// relative dates use `isoDateOffset` so the set holds at any run date.
+function projectFixtures(): Project[] {
+  const specs: Array<[id: string, name: string, startDate: string, weekCount: number]> = [
+    ["project-personal-os", "Personal OS v2", isoDateOffset(-28), 12],
+    ["project-docs", "Docs site", isoDateOffset(7), 8],
+    ["project-marketing", "Marketing", isoDateOffset(-70), 6],
+    ["project-platform", "Platform migration", isoDateOffset(-14), 24],
+    ["project-roadmap", "Year roadmap", isoDateOffset(-7), 52],
+  ];
+  return specs.map(([id, name, startDate, weekCount], index) => {
+    const stamp = projectStamp(startDate, index);
+    return { id, name, startDate, weekCount, position: index, createdAt: stamp, updatedAt: stamp };
+  });
+}
+
+// Five phases, all on "Personal OS v2", with distinct colors. "Polish" is the
+// empty phase (its phase manager count is zero). "Docs site" deliberately has
+// no phases, so its work items resolve to the fallback gray and its legend is
+// hidden.
+function projectPhaseFixtures(): ProjectPhase[] {
+  const created = `${isoDateOffset(-35)}T09:00:00.000Z`;
+  const specs: Array<[id: string, name: string, color: string]> = [
+    ["phase-design", "Design", "#93C5FD"],
+    ["phase-build", "Build", "#FCA5A5"],
+    ["phase-ship", "Ship", "#86EFAC"],
+    ["phase-support", "Support", "#FDBA74"],
+    ["phase-polish", "Polish", "#C4B5FD"],
+  ];
+  return specs.map(([id, name, color], index) => ({
+    id,
+    projectId: "project-personal-os",
+    name,
+    color,
+    position: index,
+    createdAt: created,
+  }));
+}
+
+interface WorkItemSpec {
+  id: string;
+  projectId: string;
+  phaseId: string | null;
+  title: string;
+  person: string | null;
+  comment?: string | null;
+  jiraTicket?: string | null;
+  status: WorkItemStatus;
+  startWeek: number;
+  endWeek: number;
+  position: number;
+  isSeparator?: boolean;
+}
+
+// Work item review set. Eighteen items live on "Personal OS v2" plus three
+// separators (top, middle, bottom) for 21 rows total, so the default selection
+// scrolls past the viewport. They cover every status, single-week and
+// multi-week spans, a full-length 1-12 span, a comment, a Jira URL ticket and a
+// plain ticket key, repeated and missing persons, and a long title. Positions
+// are gappy and include 0, 2, 5, and 9. Two phase-less items on "Docs site"
+// exercise the fallback gray.
+function workItemFixtures(): WorkItem[] {
+  const specs: WorkItemSpec[] = [
+    // Top separator.
+    {
+      id: "workitem-p1-sep-top",
+      projectId: "project-personal-os",
+      phaseId: null,
+      title: "",
+      person: null,
+      status: "pending",
+      startWeek: 1,
+      endWeek: 1,
+      position: 0,
+      isSeparator: true,
+    },
+    {
+      id: "workitem-p1-01",
+      projectId: "project-personal-os",
+      phaseId: "phase-design",
+      title: "Project shell and repo seam",
+      person: "Ana",
+      comment: "Port the seam first: stores must depend only on the interface.",
+      status: "pending",
+      startWeek: 1,
+      endWeek: 2,
+      position: 2,
+    },
+    {
+      id: "workitem-p1-02",
+      projectId: "project-personal-os",
+      phaseId: "phase-design",
+      title: "Phase legend",
+      person: null,
+      jiraTicket: "POS-101",
+      status: "pending",
+      startWeek: 1,
+      endWeek: 1,
+      position: 3,
+    },
+    {
+      id: "workitem-p1-03",
+      projectId: "project-personal-os",
+      phaseId: "phase-design",
+      title: "Week grid header",
+      person: "Ana",
+      jiraTicket: "https://example.com/browse/POS-102",
+      status: "in_progress",
+      startWeek: 2,
+      endWeek: 4,
+      position: 5,
+    },
+    {
+      id: "workitem-p1-04",
+      projectId: "project-personal-os",
+      phaseId: "phase-design",
+      title: "Keyboard focus model",
+      person: "Bob",
+      status: "done",
+      startWeek: 1,
+      endWeek: 3,
+      position: 6,
+    },
+    {
+      id: "workitem-p1-05",
+      projectId: "project-personal-os",
+      phaseId: "phase-build",
+      title: "Mock project repo",
+      person: "Bob",
+      status: "in_progress",
+      startWeek: 3,
+      endWeek: 7,
+      position: 9,
+    },
+    {
+      id: "workitem-p1-06",
+      projectId: "project-personal-os",
+      phaseId: "phase-build",
+      title: "Turso project repo",
+      person: "Kim",
+      jiraTicket: "POS-118",
+      status: "pending",
+      startWeek: 8,
+      endWeek: 12,
+      position: 10,
+    },
+    // Middle separator between Build and Ship work.
+    {
+      id: "workitem-p1-sep-mid",
+      projectId: "project-personal-os",
+      phaseId: null,
+      title: "",
+      person: null,
+      status: "pending",
+      startWeek: 1,
+      endWeek: 1,
+      position: 11,
+      isSeparator: true,
+    },
+    {
+      id: "workitem-p1-07",
+      projectId: "project-personal-os",
+      phaseId: "phase-build",
+      title: "Work item form",
+      person: null,
+      status: "pending",
+      startWeek: 4,
+      endWeek: 6,
+      position: 13,
+    },
+    {
+      id: "workitem-p1-08",
+      projectId: "project-personal-os",
+      phaseId: "phase-build",
+      title: "Phase manager",
+      person: "Kim",
+      status: "in_progress",
+      startWeek: 4,
+      endWeek: 6,
+      position: 14,
+    },
+    {
+      id: "workitem-p1-09",
+      projectId: "project-personal-os",
+      phaseId: "phase-build",
+      title: "Project list reorder",
+      person: "Ana",
+      status: "done",
+      startWeek: 5,
+      endWeek: 7,
+      position: 16,
+    },
+    {
+      id: "workitem-p1-10",
+      projectId: "project-personal-os",
+      phaseId: "phase-build",
+      title:
+        "Reconcile the desktop snake_case schema with the TUI camelCase repository seam without losing the SQL rollback semantics",
+      person: "Bob",
+      status: "pending",
+      startWeek: 2,
+      endWeek: 12,
+      position: 17,
+    },
+    {
+      id: "workitem-p1-11",
+      projectId: "project-personal-os",
+      phaseId: "phase-build",
+      title: "Gantt bar shades",
+      person: "Ana",
+      status: "done",
+      startWeek: 6,
+      endWeek: 8,
+      position: 19,
+    },
+    {
+      id: "workitem-p1-12",
+      projectId: "project-personal-os",
+      phaseId: "phase-ship",
+      title: "Ship v2",
+      person: "Ana",
+      status: "done",
+      startWeek: 9,
+      endWeek: 12,
+      position: 20,
+    },
+    {
+      id: "workitem-p1-13",
+      projectId: "project-personal-os",
+      phaseId: "phase-ship",
+      title: "Release notes",
+      person: "Bob",
+      status: "pending",
+      startWeek: 11,
+      endWeek: 12,
+      position: 22,
+    },
+    {
+      id: "workitem-p1-14",
+      projectId: "project-personal-os",
+      phaseId: "phase-ship",
+      title: "Docs site handoff",
+      person: "Kim",
+      status: "in_progress",
+      startWeek: 10,
+      endWeek: 12,
+      position: 23,
+    },
+    {
+      id: "workitem-p1-15",
+      projectId: "project-personal-os",
+      phaseId: "phase-support",
+      title: "Cutover",
+      person: "Kim",
+      status: "in_progress",
+      startWeek: 10,
+      endWeek: 12,
+      position: 25,
+    },
+    {
+      id: "workitem-p1-16",
+      projectId: "project-personal-os",
+      phaseId: "phase-support",
+      title: "Post-release fixes",
+      person: null,
+      status: "pending",
+      startWeek: 12,
+      endWeek: 12,
+      position: 26,
+    },
+    {
+      id: "workitem-p1-17",
+      projectId: "project-personal-os",
+      phaseId: "phase-support",
+      title: "Full rollout",
+      person: "Ana",
+      status: "pending",
+      startWeek: 1,
+      endWeek: 12,
+      position: 28,
+    },
+    {
+      id: "workitem-p1-18",
+      projectId: "project-personal-os",
+      phaseId: "phase-support",
+      title: "Retro",
+      person: "Bob",
+      status: "done",
+      startWeek: 12,
+      endWeek: 12,
+      position: 29,
+    },
+    // Bottom separator.
+    {
+      id: "workitem-p1-sep-bottom",
+      projectId: "project-personal-os",
+      phaseId: null,
+      title: "",
+      person: null,
+      status: "pending",
+      startWeek: 1,
+      endWeek: 1,
+      position: 30,
+      isSeparator: true,
+    },
+    // Phase-less items on "Docs site": the project has no phases, so these
+    // render at the fallback gray.
+    {
+      id: "workitem-p2-01",
+      projectId: "project-docs",
+      phaseId: null,
+      title: "Content migration",
+      person: null,
+      jiraTicket: "DOC-7",
+      status: "pending",
+      startWeek: 1,
+      endWeek: 4,
+      position: 0,
+    },
+    {
+      id: "workitem-p2-02",
+      projectId: "project-docs",
+      phaseId: null,
+      title: "Theme pass",
+      person: "Ana",
+      status: "in_progress",
+      startWeek: 3,
+      endWeek: 8,
+      position: 1,
+    },
+  ];
+
+  return specs.map((spec, index) => {
+    const stamp = workItemStamp(index);
+    return {
+      id: spec.id,
+      projectId: spec.projectId,
+      phaseId: spec.phaseId,
+      title: spec.title,
+      person: spec.person,
+      comment: spec.comment ?? null,
+      jiraTicket: spec.jiraTicket ?? null,
+      status: spec.status,
+      startWeek: spec.startWeek,
+      endWeek: spec.endWeek,
+      position: spec.position,
+      isSeparator: spec.isSeparator ?? false,
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+  });
+}
+
 export function createFixtures(): Fixtures {
   const stamp = now();
   return {
@@ -883,6 +1261,8 @@ export function createFixtures(): Fixtures {
     links: linkFixtures(),
     linkTags: [...LINK_TAGS],
     workLogs: workLogFixtures(),
-    projects: [],
+    projects: projectFixtures(),
+    projectPhases: projectPhaseFixtures(),
+    workItems: workItemFixtures(),
   };
 }
