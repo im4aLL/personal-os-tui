@@ -1,6 +1,6 @@
 {
   "name": "@im4all/personal-os-tui",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Keyboard-first terminal UI for Personal OS, built on OpenTUI + React.",
   "license": "MIT",
   "type": "module",
