@@ -33,8 +33,8 @@ One feature at a time: UI, then gate, then wiring.
 18. [M6](M6-project-planner-ui.md) - Project Planner UI (milestone, projects, done)
 19. [G6](G6-project-planner-ui-approval.md) - Project Planner UI approval (gate, projects, done)
 20. [W6](W6-project-planner-wiring.md) - Project Planner wiring (wiring, projects, done)
-21. [M7](M7-dashboard-ui.md) - Dashboard UI (milestone, dashboard, not-started)
-22. [G7](G7-dashboard-ui-approval.md) - Dashboard UI approval (gate, dashboard, not-started)
+21. [M7](M7-dashboard-ui.md) - Dashboard UI (milestone, dashboard, done)
+22. [G7](G7-dashboard-ui-approval.md) - Dashboard UI approval (gate, dashboard, done)
 23. [W7](W7-dashboard-wiring.md) - Dashboard wiring (wiring, dashboard, not-started)
 24. [M8](M8-cross-cutting-polish-ui.md) - Cross-cutting polish (UI) (milestone, polish, not-started)
 25. [G8](G8-polish-ui-approval.md) - Polish UI approval (gate, polish, not-started)
@@ -47,8 +47,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [M7](M7-dashboard-ui.md) | Dashboard UI | milestone | dashboard |
-| [G7](G7-dashboard-ui-approval.md) | Dashboard UI approval | gate | dashboard |
 | [W7](W7-dashboard-wiring.md) | Dashboard wiring | wiring | dashboard |
 | [M8](M8-cross-cutting-polish-ui.md) | Cross-cutting polish (UI) | milestone | polish |
 | [G8](G8-polish-ui-approval.md) | Polish UI approval | gate | polish |
@@ -85,6 +83,8 @@ One feature at a time: UI, then gate, then wiring.
 | [M6](M6-project-planner-ui.md) | Project Planner UI | milestone | projects |
 | [G6](G6-project-planner-ui-approval.md) | Project Planner UI approval | gate | projects |
 | [W6](W6-project-planner-wiring.md) | Project Planner wiring | wiring | projects |
+| [M7](M7-dashboard-ui.md) | Dashboard UI | milestone | dashboard |
+| [G7](G7-dashboard-ui-approval.md) | Dashboard UI approval | gate | dashboard |
 
 ## Rules
 

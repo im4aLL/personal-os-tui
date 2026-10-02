@@ -1,24 +1,24 @@
-import type { KeyEvent, TextareaRenderable } from "@opentui/core";
+import type { KeyEvent } from "@opentui/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArchivedTodosDialog } from "../components/todos/ArchivedTodosDialog";
 import { KanbanColumn } from "../components/todos/KanbanColumn";
 import { TodoForm } from "../components/todos/TodoForm";
-import type { TodoFormField, TodoFormValues } from "../components/todos/TodoForm.types";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
+import { useTodoForm } from "../hooks/useTodoForm";
 import type { Todo, TodoStatus } from "../repos/types";
 import { getRepos } from "../store/repos";
 import { useSession } from "../store/session";
 import { useTodos } from "../store/todos";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
-import { isValidISODate, todayISO } from "../utils/date";
+import { todayISO } from "../utils/date";
 import { messageOf } from "../utils/error";
 import { windowSlice } from "../utils/window";
-import type { TodoConfirmState, TodoFormState } from "./TodoScreen.types";
+import type { TodoConfirmState } from "./TodoScreen.types";
 
 const COLUMNS: TodoStatus[] = ["todo", "in-progress", "completed"];
 
@@ -34,20 +34,8 @@ const NEXT_STATUS: Record<TodoStatus, TodoStatus> = {
   completed: "todo",
 };
 
-const CREATE_FIELDS: TodoFormField[] = ["title", "description", "priority", "due"];
-const EDIT_FIELDS: TodoFormField[] = ["title", "description", "priority", "due", "status"];
-
 const HINT =
   "n new  Enter edit  m cycle status  H/L move column  K/J reorder  / search  d delete  a archived  A archive done  X clear done";
-
-const EMPTY_FORM: TodoFormState = {
-  open: false,
-  editing: null,
-  values: { title: "", priority: "none", dueDate: "", status: "todo" },
-  field: "title",
-  error: null,
-  saving: false,
-};
 
 function truncate(text: string, room: number): string {
   if (text.length <= room) {
@@ -96,7 +84,12 @@ export function TodoScreen(): ReactNode {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [searchActive, setSearchActive] = useState(false);
-  const [form, setForm] = useState<TodoFormState>(EMPTY_FORM);
+  const todoForm = useTodoForm({
+    onCreated: (todo) => {
+      setSelectedId(todo.id);
+      setFocusedColumn(COLUMNS.indexOf(todo.status));
+    },
+  });
   const [confirm, setConfirm] = useState<TodoConfirmState | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [archivedTodos, setArchivedTodos] = useState<Todo[]>([]);
@@ -104,7 +97,6 @@ export function TodoScreen(): ReactNode {
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const descriptionRef = useRef<TextareaRenderable | null>(null);
 
   const wide = width >= 100;
   const compact = width < 70;
@@ -183,7 +175,7 @@ export function TodoScreen(): ReactNode {
 
   // A focused field defers the global bindings so typed characters reach the
   // control (search or form); the scope still runs first for Tab/Esc/Enter.
-  const fieldOwned = form.open || searchActive;
+  const fieldOwned = todoForm.form.open || searchActive;
   useEffect(() => {
     useUi.getState().setFocusedField(fieldOwned ? "todo-field" : null);
     return () => {
@@ -236,103 +228,16 @@ export function TodoScreen(): ReactNode {
 
   // -- Form ----------------------------------------------------------------
 
+  // Thin wrappers: the shared controller owns the form state; the screen only
+  // closes its search field before opening the modal.
   function openCreate(status: TodoStatus): void {
     setSearchActive(false);
-    setForm({
-      open: true,
-      editing: null,
-      values: { title: "", priority: "none", dueDate: "", status },
-      field: "title",
-      error: null,
-      saving: false,
-    });
+    todoForm.openCreate(status);
   }
 
   function openEdit(todo: Todo): void {
     setSearchActive(false);
-    setForm({
-      open: true,
-      editing: todo,
-      values: {
-        title: todo.title,
-        priority: todo.priority ?? "none",
-        dueDate: todo.dueDate ?? "",
-        status: todo.status,
-      },
-      field: "title",
-      error: null,
-      saving: false,
-    });
-  }
-
-  function closeForm(): void {
-    setForm(EMPTY_FORM);
-  }
-
-  function patchForm(patch: Partial<TodoFormValues>): void {
-    setForm((current) => ({
-      ...current,
-      values: { ...current.values, ...patch },
-      error: null,
-    }));
-  }
-
-  function cycleFormField(delta: 1 | -1): void {
-    const fields = form.editing === null ? CREATE_FIELDS : EDIT_FIELDS;
-    setForm((current) => {
-      const index = fields.indexOf(current.field);
-      const next = index === -1 ? 0 : (index + delta + fields.length) % fields.length;
-      return { ...current, field: fields[next] };
-    });
-  }
-
-  async function submitForm(): Promise<void> {
-    if (!form.open || form.saving) {
-      return;
-    }
-    const values = form.values;
-    const title = values.title.trim();
-    if (title === "") {
-      setForm((current) => ({ ...current, error: "Title is required", field: "title" }));
-      return;
-    }
-    const due = values.dueDate.trim();
-    if (due !== "" && !isValidISODate(due)) {
-      setForm((current) => ({ ...current, error: "Use YYYY-MM-DD", field: "due" }));
-      return;
-    }
-    const description = (descriptionRef.current?.plainText ?? "").trim();
-    const priority = values.priority === "none" ? null : values.priority;
-    setForm((current) => ({ ...current, saving: true, error: null }));
-    try {
-      if (form.editing !== null) {
-        const id = form.editing.id;
-        const patch = {
-          title,
-          description: description === "" ? null : description,
-          priority,
-          dueDate: due === "" ? null : due,
-          status: values.status,
-        };
-        await getRepos().todos.update(id, patch);
-        useTodos.getState().patchTodo(id, patch);
-      } else {
-        const created = await getRepos().todos.create({
-          title,
-          description: description === "" ? null : description,
-          priority,
-          dueDate: due === "" ? null : due,
-          status: values.status,
-          position: fullByStatus[values.status].length,
-        });
-        useTodos.getState().addTodo(created);
-        setSelectedId(created.id);
-        setFocusedColumn(COLUMNS.indexOf(created.status));
-      }
-      setForm(EMPTY_FORM);
-    } catch (error) {
-      setForm((current) => ({ ...current, saving: false, error: messageOf(error) }));
-    }
+    todoForm.openEdit(todo);
   }
 
   // -- Write actions (optimistic, reload on failure) ------------------------
@@ -593,26 +498,26 @@ export function TodoScreen(): ReactNode {
       !key.ctrl && !meta && (name === char.toUpperCase() || (lower === char && key.shift === true));
 
     // Form: only intercept the keys the screen owns; typing reaches the field.
-    if (form.open) {
+    if (todoForm.form.open) {
       if (name === "escape") {
-        closeForm();
+        todoForm.close();
         return true;
       }
       // Ctrl+Enter submits from any field (including the description area).
       // Terminals report it as return, kpenter, or linefeed depending on mode.
       if (key.ctrl && (name === "return" || name === "kpenter" || name === "linefeed")) {
-        void submitForm();
+        void todoForm.submit();
         return true;
       }
       if (name === "tab") {
-        cycleFormField(key.shift ? -1 : 1);
+        todoForm.cycleField(key.shift ? -1 : 1);
         return true;
       }
       if (name === "return") {
-        if (form.field === "description") {
+        if (todoForm.form.field === "description") {
           return false;
         }
-        void submitForm();
+        void todoForm.submit();
         return true;
       }
       // Swallow the chords that would otherwise stack the mock panel
@@ -912,18 +817,16 @@ export function TodoScreen(): ReactNode {
         </text>
       </box>
 
-      {form.open ? (
+      {todoForm.form.open ? (
         <TodoForm
-          editing={form.editing}
-          focusedField={form.field}
-          values={form.values}
-          error={form.error}
-          saving={form.saving}
-          descriptionRef={descriptionRef}
-          onPatch={patchForm}
-          onDescriptionChange={() => {
-            setForm((current) => (current.error === null ? current : { ...current, error: null }));
-          }}
+          editing={todoForm.form.editing}
+          focusedField={todoForm.form.field}
+          values={todoForm.form.values}
+          error={todoForm.form.error}
+          saving={todoForm.form.saving}
+          descriptionRef={todoForm.descriptionRef}
+          onPatch={todoForm.patch}
+          onDescriptionChange={todoForm.clearError}
         />
       ) : null}
 

@@ -1,6 +1,8 @@
 // Mock fixture set. Todos carry the full M2 review surface: 12 active todos
 // with mixed statuses, priorities, due dates (gappy positions), plus 3
-// archived todos with stale timestamps. Notes carry the full M3 surface: 14
+// archived todos with stale timestamps. The active set also seeds the
+// Dashboard focus list: 2 overdue and 3 due today, one of them high priority.
+// Notes carry the full M3 surface: 14
 // notes (3 pinned, one untitled, a long markdown body, a single long line, 4
 // tagged, relative dates across today/yesterday/last week/last year).
 
@@ -369,25 +371,27 @@ function workLogStamp(date: string, index: number): string {
 }
 
 // Work Log review set: 14 entries whose distribution holds at any run date.
-// Exactly 3 fall in the current ISO week, 2 in the previous week, and 2 in the
-// week before that; the remaining 7 spread across the last year and include a
-// fixed year-boundary pair (2025-12-31 / 2026-01-01, both ISO 2026-W01) that
-// exercises the ISO week-key year logic. Three entries are multi-day ranges
-// (one in the current week whenever the day is not Monday, since a same-week
-// span with a future end date is not allowed), two carry no tags, and one has
-// a long title and description for truncation review.
+// Exactly 3 fall in `[monday, today]` for every review day, 2 in the previous
+// week, and 2 in the week before that; the remaining 7 spread across the last
+// year and include a fixed year-boundary pair (2025-12-31 / 2026-01-01, both
+// ISO 2026-W01) that exercises the ISO week-key year logic. `Release prep` is
+// a multi-day range from Monday through today (a single day when today is
+// Monday), so at most two other entries are multi-day ranges; two entries
+// carry no tags, and one has a long title and description for truncation
+// review.
 function workLogFixtures(): WorkLog[] {
   const today = todayISO();
   const monday = mondayOfWeekISO(0);
   const lastWeekMonday = mondayOfWeekISO(-1);
   const priorWeekMonday = mondayOfWeekISO(-2);
-  // Candidate current-week days, clamped so they never spill into the previous
-  // week and never land in the future.
-  const currentDay = (days: number): string => {
-    const candidate = addDaysISO(today, days);
-    return candidate < monday ? monday : candidate;
+  // The three current-week entries are anchored to this week's Monday and
+  // clamped to today, so exactly 3 always fall in `[monday, today]`:
+  // Monday -> Monday, Monday, Monday; Tuesday -> Monday, Tuesday, Tuesday;
+  // Wednesday onward -> Monday, Tuesday, Wednesday.
+  const inWeek = (offset: number): string => {
+    const candidate = addDaysISO(monday, offset);
+    return candidate > today ? today : candidate;
   };
-  const currentStart = today === monday ? monday : addDaysISO(today, -1);
   // On a Monday the current-week range collapses to a single day, so a spread
   // entry becomes the third multi-day range instead.
   const spreadSpan = today === monday ? 2 : 0;
@@ -397,22 +401,22 @@ function workLogFixtures(): WorkLog[] {
     {
       title: "Release prep",
       description: "Freeze the branch, cut the changelog, and dry-run the publish.",
-      startDate: currentStart,
+      startDate: inWeek(0),
       endDate: today,
       tags: ["work", "review"],
     },
     {
       title: "API cleanup",
       description: "Tidy the repository seam before the Work Log wiring starts.",
-      startDate: currentDay(-1),
-      endDate: currentDay(-1),
+      startDate: inWeek(1),
+      endDate: inWeek(1),
       tags: ["dev"],
     },
     {
       title: "Design review",
       description: null,
-      startDate: currentDay(-2),
-      endDate: currentDay(-2),
+      startDate: inWeek(2),
+      endDate: inWeek(2),
       tags: [],
     },
     {
@@ -589,7 +593,8 @@ interface WorkItemSpec {
 // multi-week spans, a full-length 1-12 span, a comment, a Jira URL ticket and a
 // plain ticket key, repeated and missing persons, and a long title. Positions
 // are gappy and include 0, 2, 5, and 9. Two phase-less items on "Docs site"
-// exercise the fallback gray.
+// exercise the fallback gray. Three "done" items on "Marketing" make it the
+// fully complete project (3/3, Done badge) for the Dashboard.
 function workItemFixtures(): WorkItem[] {
   const specs: WorkItemSpec[] = [
     // Top separator.
@@ -859,6 +864,41 @@ function workItemFixtures(): WorkItem[] {
       endWeek: 8,
       position: 1,
     },
+    // "Marketing" (6 weeks): three done items so the project is 3/3 and the
+    // Dashboard shows the Done badge plus the dimmed row style.
+    {
+      id: "workitem-p3-01",
+      projectId: "project-marketing",
+      phaseId: null,
+      title: "Landing page copy",
+      person: null,
+      status: "done",
+      startWeek: 1,
+      endWeek: 2,
+      position: 0,
+    },
+    {
+      id: "workitem-p3-02",
+      projectId: "project-marketing",
+      phaseId: null,
+      title: "Launch email",
+      person: "Kim",
+      status: "done",
+      startWeek: 3,
+      endWeek: 4,
+      position: 1,
+    },
+    {
+      id: "workitem-p3-03",
+      projectId: "project-marketing",
+      phaseId: null,
+      title: "Analytics review",
+      person: null,
+      status: "done",
+      startWeek: 5,
+      endWeek: 6,
+      position: 2,
+    },
   ];
 
   return specs.map((spec, index) => {
@@ -904,7 +944,7 @@ export function createFixtures(): Fixtures {
         description: null,
         status: "todo",
         priority: "medium",
-        dueDate: isoDateOffset(3),
+        dueDate: isoDateOffset(0),
         position: 1,
         archived: false,
         createdAt: dayStamp(-8, 10),

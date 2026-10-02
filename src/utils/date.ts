@@ -148,16 +148,59 @@ export function formatDueLabel(iso: string, completed: boolean): string {
   return formatShortDate(iso);
 }
 
+/** "Now" for the dashboard header. `POS_TIME_OVERRIDE` (an ISO-8601 local
+ * datetime such as `2026-10-01T14:30:00`) pins the greeting and the dated
+ * header for review; an unset or invalid value falls back to the real clock.
+ * This never affects `todayISO()` or fixture generation. */
+export function dashboardNow(): Date {
+  const override = process.env.POS_TIME_OVERRIDE;
+  if (override !== undefined && override !== "") {
+    const parsed = new Date(override);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+  return new Date();
+}
+
+/** Time-of-day greeting for `date` (defaults to the dashboard clock):
+ * `Working late` before 5, `Good morning` before 12, `Good afternoon` before
+ * 18, else `Good evening`. */
+export function timeOfDayGreeting(date: Date = dashboardNow()): string {
+  const hour = date.getHours();
+  if (hour < 5) {
+    return "Working late";
+  }
+  if (hour < 12) {
+    return "Good morning";
+  }
+  if (hour < 18) {
+    return "Good afternoon";
+  }
+  return "Good evening";
+}
+
+/** Long localized date line for `date` (defaults to the dashboard clock),
+ * e.g. `Thursday, October 1`, in the OS locale. */
+export function formatLongDate(date: Date = dashboardNow()): string {
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 /** Compact relative label for an ISO datetime: `Just now`, `12m ago`,
  * `3h ago`, `Yesterday`, `Aug 12`, or `Aug 12, 2025` for another year.
- * Falls back to the raw value when the input is not a valid date. */
-export function relativeTime(iso: string): string {
+ * `now` is the reference clock (defaults to the real clock) so the dashboard
+ * can pass `dashboardNow()` and stay consistent with the header under
+ * `POS_TIME_OVERRIDE`. Falls back to the raw value on an invalid date. */
+export function relativeTime(iso: string, now: Date = new Date()): string {
   const then = new Date(iso);
   if (Number.isNaN(then.getTime())) {
     return iso;
   }
-  const current = new Date();
-  const diff = current.getTime() - then.getTime();
+  const diff = now.getTime() - then.getTime();
   const minutes = Math.floor(diff / 60_000);
   const hours = Math.floor(diff / 3_600_000);
   if (minutes < 1) {
@@ -169,12 +212,12 @@ export function relativeTime(iso: string): string {
   if (hours < 24) {
     return `${hours}h ago`;
   }
-  const yesterday = new Date();
+  const yesterday = new Date(now.getTime());
   yesterday.setDate(yesterday.getDate() - 1);
   if (then.toDateString() === yesterday.toDateString()) {
     return "Yesterday";
   }
-  const sameYear = then.getFullYear() === current.getFullYear();
+  const sameYear = then.getFullYear() === now.getFullYear();
   return then.toLocaleDateString(
     undefined,
     sameYear
