@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { SCREEN_ORDER, SCREEN_SHORT_LABELS, SCREEN_TITLES } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
+import { menuRowMarker } from "../utils/marker";
 import type { SidebarProps } from "./Sidebar.types";
 
 /** Full sidebar column width; the brand cell in Layout tracks this value. */
@@ -63,7 +64,7 @@ export function Sidebar(props: SidebarProps): ReactNode {
               paddingRight={1}
             >
               <text fg={color(active ? tokens.sidebarActiveFg : tokens.fgMuted)}>
-                {`${active ? "> " : "  "}${fitLabel(SCREEN_TITLES[item])}`}
+                {`${menuRowMarker(active)}${fitLabel(SCREEN_TITLES[item])}`}
               </text>
             </box>
           );

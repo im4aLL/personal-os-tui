@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { todayISO } from "../../utils/date";
+import { rowMarker } from "../../utils/marker";
 import { windowSlice } from "../../utils/window";
 import { Modal } from "../ui/Modal";
 import type { ArchivedTodosDialogProps } from "./ArchivedTodosDialog.types";
@@ -34,7 +35,7 @@ export function ArchivedTodosDialog(props: ArchivedTodosDialogProps): ReactNode 
             return (
               <text key={todo.id} wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fgSubtle)}>
-                  {selected ? "> " : "  "}
+                  {rowMarker(selected)}
                 </span>
                 <span fg={color(selected ? tokens.fg : tokens.fgMuted)}>
                   {todo.title.length > 40 ? `${todo.title.slice(0, 37)}...` : todo.title}

@@ -2,6 +2,7 @@ import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { relativeTime } from "../../utils/date";
+import { rowMarker } from "../../utils/marker";
 import { noteDisplayTitle } from "../../utils/notes";
 import { truncate } from "../../utils/text";
 import type { NoteRowProps } from "./NoteRow.types";
@@ -15,7 +16,7 @@ export function NoteRow(props: NoteRowProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const { note, selected, masked } = props;
-  const marker = selected ? "> " : "  ";
+  const marker = rowMarker(selected);
   const title = masked
     ? "*".repeat(MASK_TITLE_WIDTH)
     : truncate(noteDisplayTitle(note), Math.max(4, props.width - 2));
@@ -30,7 +31,7 @@ export function NoteRow(props: NoteRowProps): ReactNode {
     >
       <text wrapMode="none">
         <span fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{marker}</span>
-        {note.pinned && !masked ? <span fg={color(tokens.warning)}>{"^ "}</span> : null}
+        {note.pinned && !masked ? <span fg={color(tokens.warning)}>{"★ "}</span> : null}
         <span fg={color(titleColor)} attributes={selected ? TextAttributes.BOLD : undefined}>
           {title}
         </span>

@@ -2,19 +2,20 @@ import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { formatMonthDay } from "../../lib/week-utils";
 import { useTheme } from "../../theme/ThemeProvider";
+import { rowMarker } from "../../utils/marker";
 import { truncate } from "../../utils/text";
 import type { ProjectListItemProps } from "./ProjectListItem.types";
 
 const MARKER = 2;
 
-// One project row: a `> ` marker when selected, the name, then a compact
+// One project row: an active marker when selected, the name, then a compact
 // `{n}w {M/D}` line (plus a completion percentage when progress is known).
 // Presentational only; the screen owns selection and keys.
 export function ProjectListItem(props: ProjectListItemProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const { project, selected, focused } = props;
-  const marker = selected ? "> " : "  ";
+  const marker = rowMarker(selected);
   const pct =
     props.stat !== undefined && props.stat.total > 0
       ? `  ${Math.round((props.stat.done / props.stat.total) * 100)}%`

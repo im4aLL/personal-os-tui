@@ -69,9 +69,7 @@ export function Header(props: HeaderProps): ReactNode {
       </box>
       {compact ? null : <text fg={color(tokens.fgSubtle)}>{theme.label}</text>}
       <ConnectionDot tone={connectionTone} label={connectionLabel} />
-      <text fg={color(tokens.fgMuted)}>
-        {compact ? initials(profileName) : `${initials(profileName)}  ${profileName}`}
-      </text>
+      <text fg={color(tokens.fgMuted)}>{compact ? initials(profileName) : profileName}</text>
     </box>
   );
 }

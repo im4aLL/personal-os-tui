@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { WorkItemStatus, WorkItemWithPhase } from "../../repos/types";
 import { mixWithBase } from "../../theme/degrade";
 import { useTheme } from "../../theme/ThemeProvider";
+import { rowMarker } from "../../utils/marker";
 import { truncate } from "../../utils/text";
 import type { WeekGridProps } from "./WeekGrid.types";
 
@@ -56,7 +57,7 @@ function GridRow(props: GridRowProps): ReactNode {
       flexShrink={0}
       backgroundColor={selected && props.focused ? color(tokens.bgHover) : undefined}
     >
-      <text fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{selected ? "> " : "  "}</text>
+      <text fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{rowMarker(selected)}</text>
       <text wrapMode="none" fg={color(titleColor)} attributes={attrs}>
         {truncate(item.title, taskRoom).padEnd(taskRoom)}
       </text>
@@ -138,7 +139,7 @@ function ListRow(props: {
       backgroundColor={props.selected && props.focused ? color(tokens.bgHover) : undefined}
     >
       <text fg={color(props.selected ? tokens.accent : tokens.fgSubtle)}>
-        {props.selected ? "> " : "  "}
+        {rowMarker(props.selected)}
       </text>
       <text wrapMode="none" fg={color(tokens.fgMuted)} attributes={attrs}>
         {truncate(item.title, taskRoom).padEnd(taskRoom)}

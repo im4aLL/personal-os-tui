@@ -17,6 +17,7 @@ import { useTodos } from "../store/todos";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { messageOf } from "../utils/error";
+import { ACTIVE_GLYPH } from "../utils/marker";
 import { noteDisplayTitle } from "../utils/notes";
 import { truncate } from "../utils/text";
 import { windowSlice } from "../utils/window";
@@ -879,7 +880,7 @@ export function NotesScreen(): ReactNode {
                 key={option.kind}
                 fg={color(index === exportIndex ? tokens.fg : tokens.fgMuted)}
               >
-                {`${index === exportIndex ? ">" : " "} ${option.label}  ${option.detail}`}
+                {`${index === exportIndex ? ACTIVE_GLYPH : " "} ${option.label}  ${option.detail}`}
               </text>
             ))}
             <text fg={color(tokens.fgSubtle)}>{"Enter export  Esc cancel"}</text>

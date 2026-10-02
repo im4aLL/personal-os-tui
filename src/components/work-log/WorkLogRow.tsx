@@ -2,6 +2,7 @@ import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { formatWorkLogRange } from "../../utils/date";
+import { rowMarker } from "../../utils/marker";
 import { truncate } from "../../utils/text";
 import type { WorkLogRowProps } from "./WorkLogRow.types";
 
@@ -23,7 +24,7 @@ export function WorkLogRow(props: WorkLogRowProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const { log, selected } = props;
-  const marker = selected ? "> " : "  ";
+  const marker = rowMarker(selected);
   const dateLabel = formatWorkLogRange(log.startDate, log.endDate);
   const tags = tagLabel(log.tags);
   const description = log.description ?? "";

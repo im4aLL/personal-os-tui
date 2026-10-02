@@ -2,6 +2,7 @@ import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { linkDateLabel, linkDisplayUrl } from "../../utils/links";
+import { rowMarker } from "../../utils/marker";
 import { truncate, truncateMiddle } from "../../utils/text";
 import type { LinkRowProps } from "./LinkRow.types";
 
@@ -20,7 +21,7 @@ export function LinkRow(props: LinkRowProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const { link, selected } = props;
-  const marker = selected ? "> " : "  ";
+  const marker = rowMarker(selected);
   const titleRoom = Math.max(4, props.width - MARKER - (props.narrow ? 0 : DATE_WIDTH));
   const titleColor = selected ? tokens.accent : tokens.fg;
   const label = linkDisplayUrl(link.url);

@@ -1,6 +1,7 @@
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { ACTIVE_MARKER, rowMarker } from "../../utils/marker";
 import { truncate } from "../../utils/text";
 import { Modal } from "../ui/Modal";
 import { TextField } from "../ui/TextField";
@@ -42,7 +43,7 @@ export function PhaseManager(props: PhaseManagerProps): ReactNode {
               (item) => !item.isSeparator && item.phaseId === phase.id,
             ).length;
             const isCursor = index === props.cursor && props.mode !== "add";
-            const marker = isCursor ? "> " : "  ";
+            const marker = rowMarker(isCursor);
             const deletable = count === 0;
             const countLabel = `${count} ${count === 1 ? "item" : "items"}`;
 
@@ -86,7 +87,7 @@ export function PhaseManager(props: PhaseManagerProps): ReactNode {
 
         {props.mode === "add" ? (
           <box flexDirection="row" height={1}>
-            <text fg={color(tokens.accent)}>{"> "}</text>
+            <text fg={color(tokens.accent)}>{ACTIVE_MARKER}</text>
             <text fg={color(props.addColor)}>{"(*) "}</text>
             <TextField
               value={props.addName}

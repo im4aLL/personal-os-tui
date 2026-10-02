@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { Todo } from "../../repos/types";
 import { useTheme } from "../../theme/ThemeProvider";
 import { formatDueLabel, isOverdue } from "../../utils/date";
+import { rowMarker } from "../../utils/marker";
 import type { TodoRowProps } from "./TodoRow.types";
 
 /** ASCII truncation; `...` when there is room, else a hard slice. */
@@ -41,7 +42,7 @@ export function TodoRow(props: TodoRowProps): ReactNode {
   const tokens = theme.tokens;
   const { todo, selected } = props;
   const completed = todo.status === "completed";
-  const marker = selected ? "> " : "  ";
+  const marker = rowMarker(selected);
   const markerColor = selected ? tokens.accent : tokens.fgSubtle;
 
   const priority = todo.priority;

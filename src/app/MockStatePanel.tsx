@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Modal } from "../components/ui/Modal";
 import { useSession } from "../store/session";
 import { useTheme } from "../theme/ThemeProvider";
+import { rowMarker } from "../utils/marker";
 
 // Minimal M0 dev panel (Ctrl+Shift+D): scenario, latency, reset.
 // Keys: 1-5 scenario, -/+ latency, r reset, Esc close (handled globally).
@@ -21,7 +22,7 @@ export function MockStatePanel(): ReactNode {
         const active = entry === scenario;
         return (
           <text key={entry} fg={color(active ? tokens.accent : tokens.fg)}>
-            {`${active ? "> " : "  "}${index + 1}  ${entry}`}
+            {`${rowMarker(active)}${index + 1}  ${entry}`}
           </text>
         );
       })}

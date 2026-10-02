@@ -26,6 +26,7 @@ import {
   timeOfDayGreeting,
   todayISO,
 } from "../utils/date";
+import { rowMarker } from "../utils/marker";
 import { noteDisplayTitle } from "../utils/notes";
 import { truncate } from "../utils/text";
 import { windowSlice } from "../utils/window";
@@ -483,7 +484,7 @@ export function DashboardScreen(): ReactNode {
       >
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : tokens.fg)}>
-            {`${selected ? "> " : "  "}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
+            {`${rowMarker(selected)}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
           </span>
           <span fg={color(todo.priority !== null ? priorityColor : tokens.fgSubtle)}>
             {padStart(priorityText, PRIORITY_COL)}
@@ -542,7 +543,7 @@ export function DashboardScreen(): ReactNode {
       >
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : rowFg)}>
-            {`${selected ? "> " : "  "}${padEnd(truncate(project.name, nameRoom), nameRoom)}`}
+            {`${rowMarker(selected)}${padEnd(truncate(project.name, nameRoom), nameRoom)}`}
           </span>
           <span fg={color(tokens.success)}>{completion.isDone ? "Done " : "     "}</span>
           <span fg={color(completion.isDone ? tokens.fgSubtle : tokens.fgMuted)}>
@@ -594,7 +595,7 @@ export function DashboardScreen(): ReactNode {
             >
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
-                  {`${selected ? "> " : "  "}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
+                  {`${rowMarker(selected)}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
                 </span>
                 <span fg={color(todo.priority !== null ? priorityColor : tokens.fgSubtle)}>
                   {padStart(priorityText, PRIORITY_COL)}
@@ -635,7 +636,7 @@ export function DashboardScreen(): ReactNode {
             >
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
-                  {`${selected ? "> " : "  "}${padEnd(truncate(item.title, titleRoom), titleRoom)} `}
+                  {`${rowMarker(selected)}${padEnd(truncate(item.title, titleRoom), titleRoom)} `}
                 </span>
                 <span fg={color(tokens.fgSubtle)}>{padStart(item.meta, KIND_COL)}</span>
                 <span fg={color(tokens.fgMuted)}>{` ${padStart(time, TIME_COL)}`}</span>
