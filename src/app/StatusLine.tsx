@@ -1,11 +1,42 @@
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
+import { commandKeys, formatKey } from "../commands/registry";
 import { useDashboard } from "../store/dashboard";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 
-const HINT_SEGMENTS = ["ctrl+p commands", "? help", "t/ctrl+t theme", "q quit"];
+/** Command hints derived from the effective registry bindings, so an override
+ * updates the hint with the handler. A command whose keys were cleared drops
+ * its segment. Defaults render exactly the prior hard-coded text. */
+function statusHintSegments(): string[] {
+  const segments: string[] = [];
+  const paletteKeys = commandKeys("global.palette");
+  const paletteKey = paletteKeys.find((binding) => binding.ctrl === true) ?? paletteKeys[0];
+  if (paletteKey !== undefined) {
+    segments.push(`${formatKey(paletteKey)} commands`);
+  }
+  const helpKey = commandKeys("global.help")[0];
+  if (helpKey !== undefined) {
+    segments.push(`${formatKey(helpKey)} help`);
+  }
+  const themeLabels: string[] = [];
+  for (const commandId of ["global.theme", "global.theme-picker"]) {
+    const key = commandKeys(commandId)[0];
+    if (key !== undefined) {
+      themeLabels.push(formatKey(key));
+    }
+  }
+  if (themeLabels.length > 0) {
+    segments.push(`${themeLabels.join("/")} theme`);
+  }
+  const quitKey = commandKeys("global.quit")[0];
+  if (quitKey !== undefined) {
+    segments.push(`${formatKey(quitKey)} quit`);
+  }
+  return segments;
+}
+
 const HINT_GAP = "  ";
 const MIN_GAP = 2;
 
@@ -33,6 +64,7 @@ export function StatusLine(): ReactNode {
   const latencyMs = useSession((state) => state.latencyMs);
   const scenario = useSession((state) => state.scenario);
   const loosePermissions = useSession((state) => state.loosePermissions);
+  const keymapSkipped = useSession((state) => state.keymapSkipped);
   const fromEnv = useSession((state) => state.fromEnv);
   const focusedField = useUi((state) => state.focusedField);
   const exOpen = useUi((state) => state.exOpen);
@@ -63,6 +95,7 @@ export function StatusLine(): ReactNode {
     ...(scenario !== "default" ? [scenario] : []),
     ...(fromEnv ? ["env creds"] : []),
     ...(loosePermissions ? ["config perms loose"] : []),
+    ...(keymapSkipped.length > 0 ? [`keymap: ${keymapSkipped.length} skipped`] : []),
   ];
 
   const inner = Math.max(0, width - 2);
@@ -70,7 +103,7 @@ export function StatusLine(): ReactNode {
   // body prints the Setup keymap, so the global browsing hints would be
   // wrong there. The mock/latency readout stays.
   const setupVisible = setupOpen || (!configComplete && !setupDismissed);
-  const hintSegments = setupVisible || focusedField !== null ? [] : HINT_SEGMENTS;
+  const hintSegments = setupVisible || focusedField !== null ? [] : statusHintSegments();
   // The right-hand readout wins: fit it first (dropping its own trailing
   // segments when extremely narrow), then fill the remainder with hints.
   const rightFitted = fitSegments(rightSegments, " | ", inner);

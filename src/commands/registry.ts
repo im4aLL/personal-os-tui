@@ -2,6 +2,7 @@
 // this registry, so the three cannot drift. Every command with a global
 // binding declares machine-readable `keys`; the handler matches them with
 // `findCommandForKey` and help renders them with `formatKey`.
+import type { KeymapBinding, KeymapSkip } from "../lib/config.types";
 import type { RepoMode } from "../repos/resolve.types";
 import type {
   Command,
@@ -334,6 +335,197 @@ export function commandKeys(id: string): KeyBinding[] {
   return commands.find((command) => command.id === id)?.keys ?? [];
 }
 
+/** Declared bindings captured once, so `applyKeymap` is idempotent: it can
+ * restore defaults before applying a fresh override set on every call. */
+const DEFAULT_KEYS = new Map<string, KeyBinding[]>(
+  commands.map((command) => [command.id, command.keys.map((binding) => ({ ...binding }))]),
+);
+
+/** Signatures a binding occupies for collision purposes. Mirrors `matchesKey`:
+ * `ctrl`/`meta` are exact, while an undeclared `shift` ignores the shift axis,
+ * so it overlaps both the plain and the shifted press. */
+function bindingSignatures(binding: KeymapBinding): string[] {
+  const parts: string[] = [];
+  if (binding.ctrl === true) {
+    parts.push("ctrl");
+  }
+  if (binding.meta === true) {
+    parts.push("meta");
+  }
+  parts.push(binding.name.toLowerCase());
+  const base = parts.join("+");
+  if (binding.shift === true) {
+    return [`shift+${base}`];
+  }
+  if (binding.shift === false) {
+    return [base];
+  }
+  return [base, `shift+${base}`];
+}
+
+/** Clones of the declared bindings captured at module load. Callers that only
+ * want to resolve (for example `pos doctor`) use this instead of mutating the
+ * shared command objects. */
+export function registryDefaults(): Map<string, KeyBinding[]> {
+  const clone = new Map<string, KeyBinding[]>();
+  for (const [commandId, bindings] of DEFAULT_KEYS) {
+    clone.set(
+      commandId,
+      bindings.map((binding) => ({ ...binding })),
+    );
+  }
+  return clone;
+}
+
+/** Pure resolution of overrides against a default binding set; never touches the
+ * live command objects. Starts from every default, substitutes each listed
+ * command's proposal, then rejects the first colliding listed command and
+ * rebuilds before continuing. Each rejection is recorded during resolution and
+ * described only once the set is stable, so a partner that was itself rejected
+ * is named as a proposed binding. Repeats until the set is stable. Returns the
+ * final effective set, the rejected entries, and the listed ids whose override
+ * survived.
+ *
+ * Semantics: a listed command replaces its bindings, an empty array deliberately
+ * clears them, an unknown id is skipped, and a command entry that ends up
+ * colliding is rejected keeping its default, recording the other command id. */
+export function resolveKeymap(
+  defaults: Map<string, KeyBinding[]>,
+  overrides: Record<string, KeymapBinding[]>,
+): { effective: Map<string, KeyBinding[]>; skipped: KeymapSkip[]; applied: string[] } {
+  const skipped: KeymapSkip[] = [];
+
+  // Effective set: every default, with each listed command taking its proposal.
+  const effective = new Map<string, KeyBinding[]>();
+  for (const [commandId, bindings] of defaults) {
+    effective.set(
+      commandId,
+      bindings.map((binding) => ({ ...binding })),
+    );
+  }
+
+  // Partition overrides into known listed commands (kept in file key order) and
+  // unknown ids. An unknown id has no defaults to fall back to.
+  const listed: string[] = [];
+  for (const commandId of Object.keys(overrides)) {
+    if (!defaults.has(commandId)) {
+      skipped.push({ commandId, reason: "unknown command id" });
+      continue;
+    }
+    listed.push(commandId);
+    effective.set(
+      commandId,
+      (overrides[commandId] ?? []).map((binding) => ({ ...binding })),
+    );
+  }
+
+  const rejected = new Set<string>();
+  // Recorded during resolution, described once the set is stable so a reason
+  // can distinguish a partner that was itself rejected from one that survives.
+  const rejections: { commandId: string; binding: KeyBinding; other: string }[] = [];
+
+  /** First proposed binding that another command also holds in this set. */
+  const findCollision = (
+    commandId: string,
+    proposed: KeyBinding[],
+    bySignature: Map<string, Set<string>>,
+  ): { binding: KeyBinding; other: string } | null => {
+    for (const binding of proposed) {
+      for (const signature of bindingSignatures(binding)) {
+        const owners = bySignature.get(signature);
+        if (owners === undefined) {
+          continue;
+        }
+        for (const owner of owners) {
+          if (owner !== commandId) {
+            return { binding, other: owner };
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // Each pass rejects at most one listed command, then rebuilds; it stops once a
+  // pass rejects nothing, so it terminates with a collision-free set.
+  for (;;) {
+    // (a) Current signature -> owning commands, from the whole effective set.
+    const bySignature = new Map<string, Set<string>>();
+    for (const [commandId, bindings] of effective) {
+      for (const binding of bindings) {
+        for (const signature of bindingSignatures(binding)) {
+          let owners = bySignature.get(signature);
+          if (owners === undefined) {
+            owners = new Set<string>();
+            bySignature.set(signature, owners);
+          }
+          owners.add(commandId);
+        }
+      }
+    }
+
+    // (b) Reject the first colliding listed command, in file order.
+    let rejectedOne = false;
+    for (const commandId of listed) {
+      if (rejected.has(commandId)) {
+        continue;
+      }
+      const collision = findCollision(commandId, overrides[commandId] ?? [], bySignature);
+      if (collision === null) {
+        continue;
+      }
+      // Keep the default; this command's proposal is out of the final set.
+      const fallback = defaults.get(commandId) ?? [];
+      effective.set(
+        commandId,
+        fallback.map((binding) => ({ ...binding })),
+      );
+      rejected.add(commandId);
+      rejections.push({ commandId, binding: collision.binding, other: collision.other });
+      rejectedOne = true;
+      // Rebuild immediately so the next pass sees the post-rejection set.
+      break;
+    }
+
+    // (c) Stable: nothing was rejected this pass, so nothing can cascade.
+    if (!rejectedOne) {
+      break;
+    }
+  }
+
+  // Describe rejections now that the final set is known. A partner that was
+  // itself rejected no longer holds its proposal, so name it as such.
+  for (const rejection of rejections) {
+    const reason = rejected.has(rejection.other)
+      ? `binding collides with a proposed binding of ${rejection.other}`
+      : `binding collides with ${rejection.other}`;
+    skipped.push({
+      commandId: rejection.commandId,
+      binding: formatKey(rejection.binding),
+      reason,
+    });
+  }
+
+  return { effective, skipped, applied: listed.filter((commandId) => !rejected.has(commandId)) };
+}
+
+/** Apply user overrides onto the shared command objects and return the rejected
+ * entries. A thin wrapper over `resolveKeymap`: it resolves against the captured
+ * defaults, then assigns the effective bindings to the command objects that
+ * `commands`, `NAV_COMMANDS`, and `GLOBAL_COMMANDS` share, so the handler,
+ * palette, and help all follow. Idempotent: every call starts from the same
+ * captured defaults. */
+export function applyKeymap(overrides: Record<string, KeymapBinding[]>): KeymapSkip[] {
+  const { effective, skipped } = resolveKeymap(DEFAULT_KEYS, overrides);
+  for (const command of commands) {
+    const bindings = effective.get(command.id);
+    if (bindings !== undefined) {
+      command.keys = bindings.map((binding) => ({ ...binding }));
+    }
+  }
+  return skipped;
+}
+
 const KEY_LABELS: Record<string, string> = {
   escape: "esc",
   return: "enter",
@@ -536,27 +728,44 @@ export function screenHint(screen: string): string {
 }
 
 /** Flat help model: Navigate, Global, then one section per screen. The help
- * overlay renders this with a native scrollbox. Global command rows apply the
- * two documented exceptions: the mock panel lists its universally reachable
- * fallback binding, and the palette lists Ctrl+P because `/` is preempted by
- * Notes/Todo list search. The runtime repo mode hides mock-only rows in turso
- * mode, matching the palette. */
+ * overlay renders this with a native scrollbox. Global command rows apply two
+ * exceptions, both derived from the effective bindings so an override cannot
+ * drop the row: the palette prefers its universally reachable Ctrl binding
+ * (because `/` is preempted by Notes/Todo list search) and falls back to the
+ * generic rows when none exists, and the mock panel labels the first non-shift
+ * fallback (listing any remaining non-shift bindings plainly) while a Shift
+ * primary exists; otherwise every effective binding is listed normally. The runtime
+ * repo mode hides mock-only rows in turso mode, matching the palette. */
 export function helpSections(repoMode: RepoMode): HelpSection[] {
   const commandRows = (source: Command[]): HelpLine[] =>
     source
       .filter((command) => isCommandAvailable(command, repoMode))
       .flatMap((command) => {
-        if (command.id === "global.mock-panel") {
-          const fallback = command.keys[1] ?? command.keys[0];
-          return fallback === undefined
-            ? []
-            : [{ key: `${formatKey(fallback)} (fallback)`, title: command.title }];
-        }
+        // Palette: prefer the universally reachable Ctrl binding, but if the
+        // override removed it, fall through to the real effective bindings so
+        // the command never disappears from help.
         if (command.id === "global.palette") {
           const universal = command.keys.find((binding) => binding.ctrl === true);
-          return universal === undefined
-            ? []
-            : [{ key: formatKey(universal), title: command.title }];
+          if (universal !== undefined) {
+            return [{ key: formatKey(universal), title: command.title }];
+          }
+        }
+        // Mock panel: while a Shift primary exists, list every reachable
+        // non-shift binding, labeling the first `(fallback)` and the rest as
+        // normal rows. With no primary, render every effective binding as a
+        // normal row. Derived by modifier, not by index, so an override cannot
+        // mislabel a binding.
+        if (command.id === "global.mock-panel") {
+          const primary = command.keys.find((binding) => binding.shift === true);
+          if (primary !== undefined) {
+            const fallbacks = command.keys.filter((binding) => binding.shift !== true);
+            if (fallbacks.length > 0) {
+              return fallbacks.map((binding, index) => ({
+                key: index === 0 ? `${formatKey(binding)} (fallback)` : formatKey(binding),
+                title: command.title,
+              }));
+            }
+          }
         }
         return command.keys.map((binding) => ({
           key: formatKey(binding),

@@ -68,6 +68,40 @@ Mouse is additive, never required: click a sidebar item to navigate, click a row
 
 In development builds, `ctrl+shift+d` opens the mock state panel: switch scenario (`1-6`, including `slow` at 3 s and `large`), adjust latency (`-`/`+`), toggle error injection (`e`), and reset fixtures (`r`) without a restart. On terminals that report `ctrl+shift+d` as plain `ctrl+d`, browsing consumes `ctrl+d` for half page, so open the panel from the command palette there instead.
 
+### Overriding keys with `keymap.json`
+
+Registry key bindings can be overridden from a `keymap.json` file in the same config directory as `config.json` (`POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > the platform default, which is `~/.config/personal-os-tui` on macOS/Linux and `%APPDATA%\personal-os-tui` on Windows). It is a sibling file, never a section in `config.json`: the keymap is not secret and is safe to share or keep in a dotfiles repository.
+
+An override replaces the bindings only for the command ids it names, and it replaces that command's entire list; every unlisted command keeps its full default set. An empty array clears a command's bindings deliberately.
+
+```json
+{
+  "version": 1,
+  "keys": {
+    "nav.todo": [{ "name": "t", "meta": true }],
+    "global.theme": [{ "name": "t", "shift": true }]
+  }
+}
+```
+
+This file changes two commands and leaves `global.quit` untouched, so all of its defaults (`q`, `ctrl+q`, and `ctrl+c`) survive. Because naming a command replaces its whole list, keeping only some of a command's defaults means repeating the ones you want.
+
+Key matching is case-insensitive, so a single-character `name`'s case is display-only: `{ "name": "t" }` fires on both `t` and `Shift+T`, and binding only `Shift+T` needs `{ "name": "t", "shift": true }` (as above), not `{ "name": "T" }`.
+
+- `version` must be `1`. Any other value rejects the whole file so a command rename in a later release cannot silently mis-map a stale keymap.
+- `keys` maps a command id to an array of bindings. A binding is `{ "name": "...", "ctrl"?: bool, "meta"?: bool, "shift"?: bool }`, the same shape shown by `?`. `meta` is Alt.
+- `name` is normalized and validated against the keys the renderer can emit: a single printable character (`q`, `?`, `/`, `\`, `2`, `-`, `+`) or a named key from the parser's set (navigation `up`/`down`/`left`/`right`/`home`/`end`/`pageup`/`pagedown`, editing `insert`/`delete`/`backspace`, `escape`, `return`, `linefeed`, `tab`, `space`, `enter`, function keys `f1`..`f35`, keypad `kp*`, media/volume names, and modifier names). The display aliases `esc` and `enter` are accepted and normalized to `escape` and `return`. Control characters and unknown names are rejected, never silently accepted as a dead key.
+- The modifiers must be booleans. Extra fields are ignored.
+- One malformed binding rejects that whole command entry, which then keeps its default.
+- An entry that collides with a different command's effective binding is rejected, keeping the default.
+- An unknown command id is rejected. Nothing is fatal: the app always starts.
+
+Rejected entries are reported. `pos doctor` prints the resolved keymap source and one line per skip, and the status line shows `keymap: N skipped` while any are present. `pos doctor` treats keymap problems as advisory, so they never change its exit status.
+
+Only registry commands are remappable: the `nav.*` and `global.*` commands and the visible mock commands in development builds. Bindings that bypass the registry are out of scope and cannot be overridden. The six screens own their keys imperatively (the per-screen table above lists them) and screen scopes run before the global registry, so an override onto a screen-owned key is shadowed while that screen is active and applies only where no screen scope claims it. Also out of scope: command-palette navigation (`up`/`down`/`ctrl+n`/`ctrl+p`), the mock dev panel's internal keys (`1`-`5`, `r`, `-`/`+`), Setup's `d` demo key, and the always-on `ctrl+q` quit path. The always-on quit filter follows the `global.quit` command's `ctrl+q` binding and quits from anywhere, including forms; it is not separately remappable, so remapping `global.quit` should keep a `ctrl+q` binding if that escape hatch is wanted.
+
+Dev-only commands such as the mock panel are part of the registry in development builds and reserve their keys. A file that remaps onto `ctrl+d` is therefore rejected in a dev build and accepted in a production build; it is reported as an advisory skip on the status line and in `pos doctor`, never a crash.
+
 ## Scripts
 
 | Script | Purpose |

@@ -13,7 +13,8 @@ import { type CliRenderer, createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import { App } from "./app/App";
 import { runDoctor } from "./cli/doctor";
-import { configPath, effectiveCredentials } from "./lib/config";
+import { applyKeymap } from "./commands/registry";
+import { configPath, effectiveCredentials, loadKeymap } from "./lib/config";
 import { setTursoConfig } from "./lib/turso";
 import { getRepos } from "./repos/index";
 import type { RepoBundle } from "./repos/index.types";
@@ -104,6 +105,12 @@ async function runApp(args: string[]): Promise<number> {
     return 1;
   }
 
+  // Keymap overrides are applied before the renderer exists so the handler,
+  // palette, and help all read the effective bindings from first paint. File
+  // parse skips and merge collisions combine into one advisory list.
+  const keymap = await loadKeymap();
+  const keymapSkipped = [...keymap.skipped, ...applyKeymap(keymap.overrides)];
+
   const themeId = bundle.loaded.config?.ui.theme ?? "mocha";
   initSession({
     themeId,
@@ -112,6 +119,7 @@ async function runApp(args: string[]): Promise<number> {
     configComplete: bundle.loaded.complete,
     fromEnv: bundle.loaded.fromEnv,
     loosePermissions: bundle.loaded.loosePermissions,
+    keymapSkipped,
     resetMockData: bundle.resetMockData,
     mockUi: bundle.mockUi,
   });

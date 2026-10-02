@@ -1,3 +1,4 @@
+import type { KeymapSkip } from "../lib/config.types";
 import type { MockScenario } from "../mock/scenario.types";
 import type { MockUiState } from "../repos/index.types";
 import type { RepoMode } from "../repos/resolve.types";
@@ -10,6 +11,9 @@ export interface SessionState {
   configComplete: boolean;
   fromEnv: boolean;
   loosePermissions: boolean;
+  /** Keymap entries rejected at bootstrap (file parse plus merge collisions),
+   * surfaced as an advisory status-line segment. */
+  keymapSkipped: KeymapSkip[];
   /** Bootstrap connectivity probe for the header dot, not live per-request
    * health: null = unknown (probe skipped or timed out), true = reachable at
    * bootstrap, false = bootstrap probe failed. Mock mode ignores it. */
@@ -39,6 +43,7 @@ export interface InitSessionValues {
   configComplete: boolean;
   fromEnv: boolean;
   loosePermissions: boolean;
+  keymapSkipped: KeymapSkip[];
   resetMockData: () => void;
   mockUi: MockUiState | null;
 }

@@ -2,7 +2,7 @@
 id: F1
 title: Configurable keymap from the config file
 type: feature
-status: not-started
+status: done
 phase: polish
 order: 27
 depends_on: [G8, F2]
@@ -10,7 +10,7 @@ depends_on: [G8, F2]
 
 # F1 - Configurable keymap from the config file
 
-> Type: feature · Status: not-started · Phase: polish
+> Type: feature · Status: done · Phase: polish
 
 ## Objective
 
@@ -18,16 +18,16 @@ Users can override the app's key bindings from a keymap file on macOS, Linux, an
 
 ## Deliverables
 
-- [ ] A keymap override read at startup from `keymap.json` in the existing config directory (`configDir()`: `POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default), never from `config.json` and never from a new home-root dotfile.
-- [ ] A resolver that merges overrides onto the registry defaults: a listed command id replaces that command's bindings; unlisted commands are untouched.
-- [ ] Validation: an unknown command id, a malformed key name, and a binding that collides with another command are reported and skipped, never fatal. Invalid entries leave the app fully usable.
-- [ ] `pos doctor` prints the resolved keymap source and any skipped entries.
-- [ ] A startup or status-line notice when entries were skipped, in the same advisory spirit as the loose-permissions warning.
-- [ ] Help and the command palette render the effective (overridden) keys, with no drift from the handler.
-- [ ] `Command.hint` no longer duplicates key text; hints derive from `keys` via `formatKey` (or are removed), so overriding a key never leaves a stale hint.
-- [ ] Document the remappable set: registry commands only, and name the keys that are not registry-driven as out of scope.
-- [ ] A `keymap` schema version so a later command rename cannot silently mis-map a user file.
-- [ ] A README section describing the file, the format, and a worked example.
+- [x] A keymap override read at startup from `keymap.json` in the existing config directory (`configDir()`: `POS_CONFIG_DIR` > `XDG_CONFIG_HOME` > platform default), never from `config.json` and never from a new home-root dotfile.
+- [x] A resolver that merges overrides onto the registry defaults: a listed command id replaces that command's bindings; unlisted commands are untouched.
+- [x] Validation: an unknown command id, a malformed key name, and a binding that collides with another command are reported and skipped, never fatal. Invalid entries leave the app fully usable.
+- [x] `pos doctor` prints the resolved keymap source and any skipped entries.
+- [x] A startup or status-line notice when entries were skipped, in the same advisory spirit as the loose-permissions warning.
+- [x] Help and the command palette render the effective (overridden) keys, with no drift from the handler.
+- [x] `Command.hint` no longer duplicates key text; hints derive from `keys` via `formatKey` (or are removed), so overriding a key never leaves a stale hint.
+- [x] Document the remappable set: registry commands only, and name the keys that are not registry-driven as out of scope.
+- [x] A `keymap` schema version so a later command rename cannot silently mis-map a user file.
+- [x] A README section describing the file, the format, and a worked example.
 
 ## Design notes
 

@@ -6,7 +6,11 @@ export type CommandGroup = "nav" | "global" | "mock";
 /** Machine-readable key binding for a command. The global key handler
  * matches these; unset modifiers must be absent on the event, while an
  * unset `shift` is ignored (terminals disagree on reporting shift for
- * printable keys, and shifted symbols like `?` imply it). */
+ * printable keys, and shifted symbols like `?` imply it).
+ *
+ * Keep this structurally compatible with `KeymapBinding` in
+ * `src/lib/config.types.ts`: the keymap layer feeds the registry, and the
+ * layers stay independent (no shared runtime import) by matching shapes. */
 export interface KeyBinding {
   name: string;
   ctrl?: boolean;

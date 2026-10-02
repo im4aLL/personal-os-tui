@@ -1290,7 +1290,7 @@ Resolve effective bindings once at startup: replace the `keys` of every command 
 
 #### Verification
 
-A config file remaps a command and the new key works while the old one stops; an unlisted command is unchanged; an invalid entry is skipped with a warning and the app still starts; help and the palette show the overridden keys; `pos doctor` reports the source; the README example works verbatim on macOS, Linux, and Windows.
+A config file remaps a command and the new key works while the old one stops; an unlisted command is unchanged; an invalid entry is skipped with a warning and the app still starts; a binding that duplicates another command's effective key is skipped with a warning and the default is kept; a two-way swap of two command keys is accepted; an explicit `shift: true` or `shift: false` binding collides only on the matching shift axis; a name containing a control or format character is skipped and `pos doctor` shows no raw byte; a command id containing a control or format character is skipped and `pos doctor` shows no raw byte; a `version` containing a control or format character is rejected and `pos doctor` prints no raw byte; a two-way same-key collision prints the "proposed binding of X" wording; the status-line notice and `pos doctor` list every rejected entry; help and the palette show the overridden keys; `pos doctor` reports the source; the README example works verbatim on macOS, Linux, and Windows.
 
 ---
 

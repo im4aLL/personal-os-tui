@@ -1,6 +1,13 @@
 // `pos doctor`: text diagnostics, printed without touching the terminal UI.
-import { effectiveCredentials, loadConfig, redactToken } from "../lib/config";
-import type { LoadedConfig } from "../lib/config.types";
+import { registryDefaults, resolveKeymap } from "../commands/registry";
+import {
+  effectiveCredentials,
+  loadConfig,
+  loadKeymap,
+  redactToken,
+  sanitizeKeyName,
+} from "../lib/config";
+import type { KeymapSkip, LoadedConfig } from "../lib/config.types";
 import { clearTursoConfig, setTursoConfig, tursoSelect } from "../lib/turso";
 import { describeResolution, resolveRepoMode } from "../repos/resolve";
 import type { RepoResolveInput } from "../repos/resolve.types";
@@ -79,6 +86,27 @@ export async function runDoctor(): Promise<number> {
     lines.push(
       `INFO Turso token: ${creds.token === "" ? "(not set)" : redactToken(creds.token)}${tokenNote}`,
     );
+  }
+
+  // Keymap diagnostics are advisory: a bad keymap never fails the exit status,
+  // unlike loose permissions. Resolving against a clone of the defaults also
+  // exercises the same merge path the app uses, without mutating the registry.
+  const keymap = await loadKeymap();
+  const resolved = resolveKeymap(registryDefaults(), keymap.overrides);
+  const keymapSkips: KeymapSkip[] = [...keymap.skipped, ...resolved.skipped];
+  const appliedCount = resolved.applied.length;
+  const keymapSource = appliedCount > 0 ? `${appliedCount} override(s) applied` : "defaults";
+  lines.push(`INFO Keymap: ${keymap.path} (${keymapSource})`);
+  for (const skip of keymapSkips) {
+    const parts = [skip.commandId, skip.binding].filter(
+      (part): part is string => part !== undefined && part !== "",
+    );
+    const where = parts.length > 0 ? `${parts.join(" ")}: ` : "";
+    // Sanitize the whole line at the print boundary: reasons embed untrusted
+    // text (version echo, JSON parse message) that JSON.stringify leaves C1/Cf
+    // raw, and a command id is a JSON key that can legally contain invisible
+    // code points. Stored values stay untouched.
+    lines.push(`WARN Keymap skipped: ${sanitizeKeyName(`${where}${skip.reason}`)}`);
   }
 
   const input = repoInput(loaded);
