@@ -49,6 +49,11 @@ function withProjectProgress(
   return { ...progress, [projectId]: { total, done } };
 }
 
+// Monotonic generation token: a competing `loadProjects`/`refreshProjects` or a
+// batched dashboard `setProjects` bumps it, so an in-flight read cannot land a
+// stale list after a newer write.
+let projectsGeneration = 0;
+
 export const useProjectsStore = create<ProjectsState>((set, get) => ({
   projects: [],
   selectedId: null,
@@ -60,18 +65,34 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
   error: null,
 
   loadProjects: async () => {
+    const gen = ++projectsGeneration;
     set({ loading: true, error: null });
     try {
       const [projects, progress] = await Promise.all([getRepos().projects.list(), loadProgress()]);
+      if (gen !== projectsGeneration) {
+        return;
+      }
       set({ projects, progress: toProgressMap(progress), loading: false });
     } catch (error) {
+      if (gen !== projectsGeneration) {
+        return;
+      }
       set({ loading: false, error: messageOf(error) });
     }
   },
 
+  setProjects: (projects, progress) => {
+    projectsGeneration += 1;
+    set({ projects, progress: toProgressMap(progress), loading: false, error: null });
+  },
+
   refreshProjects: async () => {
+    const gen = ++projectsGeneration;
     try {
       const [projects, progress] = await Promise.all([getRepos().projects.list(), loadProgress()]);
+      if (gen !== projectsGeneration) {
+        return;
+      }
       set({ projects, progress: toProgressMap(progress), error: null });
       const { selectedId } = get();
       if (selectedId !== null) {
@@ -79,6 +100,9 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
           getRepos().projects.phases(selectedId),
           getRepos().projects.workItems(selectedId),
         ]);
+        if (gen !== projectsGeneration) {
+          return;
+        }
         // A newer selection may have started during the fetch; drop the stale
         // result instead of landing it under the new selection.
         if (get().selectedId !== selectedId) {
@@ -87,6 +111,9 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         set({ phases, workItems });
       }
     } catch (error) {
+      if (gen !== projectsGeneration) {
+        return;
+      }
       set({ error: messageOf(error) });
     }
   },

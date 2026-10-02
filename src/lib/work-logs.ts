@@ -25,9 +25,10 @@ interface WorkLogRow {
 
 // The shared column projection for list reads. Tags are deliberately excluded;
 // `getWorkLogs` loads them for the whole page in one query.
-const WORK_LOG_COLUMNS = "id, title, description, start_date, end_date, created_at, updated_at";
+export const WORK_LOG_COLUMNS =
+  "id, title, description, start_date, end_date, created_at, updated_at";
 
-function toWorkLog(row: WorkLogRow): WorkLog {
+export function toWorkLog(row: WorkLogRow): WorkLog {
   return {
     id: row.id,
     title: row.title,

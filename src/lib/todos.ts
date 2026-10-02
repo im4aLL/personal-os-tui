@@ -34,7 +34,7 @@ function statusFromDb(status: string): TodoStatus {
   return status === "in_progress" ? "in-progress" : (status as TodoStatus);
 }
 
-function toTodo(row: TodoRow): Todo {
+export function toTodo(row: TodoRow): Todo {
   return {
     id: row.id,
     title: row.title,

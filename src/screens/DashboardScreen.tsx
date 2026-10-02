@@ -8,6 +8,7 @@ import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { useTodoForm } from "../hooks/useTodoForm";
 import { getProjectCompletion } from "../lib/project-progress";
 import type { Link, Note, Project, Todo, WorkLog } from "../repos/types";
+import { useDashboard } from "../store/dashboard";
 import { useLinks } from "../store/links";
 import { useNotes } from "../store/notes";
 import { useProjectsStore } from "../store/projects";
@@ -168,22 +169,15 @@ export function DashboardScreen(): ReactNode {
   const { width, height } = useTerminalDimensions();
 
   const todos = useTodos((state) => state.todos);
-  const todosLoading = useTodos((state) => state.loading);
-  const todosError = useTodos((state) => state.error);
   const notes = useNotes((state) => state.notes);
-  const notesLoading = useNotes((state) => state.loading);
-  const notesError = useNotes((state) => state.error);
   const links = useLinks((state) => state.links);
   const linksTotal = useLinks((state) => state.total);
-  const linksLoading = useLinks((state) => state.loading);
-  const linksError = useLinks((state) => state.error);
   const logs = useWorkLogs((state) => state.logs);
-  const logsLoading = useWorkLogs((state) => state.loading);
-  const logsError = useWorkLogs((state) => state.error);
   const projects = useProjectsStore((state) => state.projects);
   const progress = useProjectsStore((state) => state.progress);
-  const projectsLoading = useProjectsStore((state) => state.loading);
-  const projectsError = useProjectsStore((state) => state.error);
+  const dashboardLoading = useDashboard((state) => state.loading);
+  const dashboardError = useDashboard((state) => state.error);
+  const counts = useDashboard((state) => state.counts);
   const scenario = useSession((state) => state.scenario);
   const latencyMs = useSession((state) => state.latencyMs);
   const sidebarCollapsed = useUi((state) => state.sidebarCollapsed);
@@ -202,11 +196,7 @@ export function DashboardScreen(): ReactNode {
   useEffect(() => {
     void scenario;
     void latencyMs;
-    void useTodos.getState().loadTodos();
-    void useNotes.getState().loadNotes();
-    void useLinks.getState().loadLinks();
-    void useWorkLogs.getState().loadWorkLogs();
-    void useProjectsStore.getState().loadProjects();
+    void useDashboard.getState().loadDashboard();
   }, [scenario, latencyMs]);
 
   // A focused form defers the global plain-character bindings so typing reaches
@@ -249,10 +239,20 @@ export function DashboardScreen(): ReactNode {
   );
 
   const inProgressCount = todos.filter((todo) => todo.status === "in-progress").length;
-  const loggedThisWeek = logs.filter(
-    (log) => log.startDate >= weekStart && log.startDate <= today,
-  ).length;
-  const linksCount = linksTotal ?? links.length;
+  // The snapshot's three aggregates are authoritative; before the first
+  // success, fall back to the loaded lists (notes and work logs are unbounded).
+  const notesCount = counts?.notes ?? notes.length;
+  const linksCount = counts?.links ?? linksTotal ?? links.length;
+  const loggedThisWeek =
+    counts?.loggedThisWeek ??
+    logs.filter((log) => log.startDate >= weekStart && log.startDate <= today).length;
+  // A successful snapshot keeps the previous data visible across a later
+  // failure; before one exists, a failure shows the placeholder rather than a
+  // misleading 0.
+  const hasSnapshot = counts !== null;
+  const cardLoading = dashboardLoading;
+  const cardError = !dashboardLoading && dashboardError !== null && !hasSnapshot;
+  const cardValue = (value: number): number | null => (cardLoading || cardError ? null : value);
 
   const activity = useMemo<ActivityItem[]>(() => {
     const items: ActivityItem[] = [
@@ -287,30 +287,30 @@ export function DashboardScreen(): ReactNode {
     {
       label: "In Progress",
       target: "todo",
-      value: todosError === null ? inProgressCount : null,
-      loading: todosLoading,
-      error: todosError !== null,
+      value: cardValue(inProgressCount),
+      loading: cardLoading,
+      error: cardError,
     },
     {
       label: "Notes",
       target: "notes",
-      value: notesError === null ? notes.length : null,
-      loading: notesLoading,
-      error: notesError !== null,
+      value: cardValue(notesCount),
+      loading: cardLoading,
+      error: cardError,
     },
     {
       label: "Save Links",
       target: "links",
-      value: linksError === null ? linksCount : null,
-      loading: linksLoading,
-      error: linksError !== null,
+      value: cardValue(linksCount),
+      loading: cardLoading,
+      error: cardError,
     },
     {
       label: "Logged this week",
       target: "work-log",
-      value: logsError === null ? loggedThisWeek : null,
-      loading: logsLoading,
-      error: logsError !== null,
+      value: cardValue(loggedThisWeek),
+      loading: cardLoading,
+      error: cardError,
     },
   ];
 
@@ -324,7 +324,10 @@ export function DashboardScreen(): ReactNode {
   // line. Derive from the real height so nothing is pushed below the viewport
   // on a short terminal; the footer is only kept when a body row survives it.
   const viewportRows = Math.max(0, height - 2);
-  const fixedRows = HEADER_ROWS + statRows;
+  // One extra header row while the batch error is shown, so the error line
+  // never pushes panel content past the viewport.
+  const headerRows = dashboardError !== null ? HEADER_ROWS + 1 : HEADER_ROWS;
+  const fixedRows = headerRows + statRows;
   const showFooter = viewportRows - fixedRows >= FOOTER_ROWS + 1;
   const bodyRows = Math.max(0, viewportRows - fixedRows - (showFooter ? FOOTER_ROWS : 0));
   const columnWidth = wide ? Math.max(20, Math.floor((contentWidth - 1) / 2)) : contentWidth;
@@ -371,11 +374,11 @@ export function DashboardScreen(): ReactNode {
     if (rows <= 0) {
       return null;
     }
-    if (todosError !== null) {
-      return <ErrorLine message={todosError} width={columnWidth} />;
-    }
-    if (todosLoading) {
+    if (dashboardLoading) {
       return <SkeletonRows rows={rows} width={columnWidth} />;
+    }
+    if (dashboardError !== null && !hasSnapshot) {
+      return <MutedLine text="Could not load" width={columnWidth} />;
     }
     if (focusItems.length === 0) {
       return <MutedLine text="Nothing due, you are all caught up" width={columnWidth} />;
@@ -412,16 +415,16 @@ export function DashboardScreen(): ReactNode {
     if (rows <= 0) {
       return null;
     }
-    if (projectsError !== null) {
-      return <ErrorLine message={projectsError} width={columnWidth} />;
-    }
-    if (projectsLoading) {
+    if (dashboardLoading) {
       return (
         <SkeletonRows
           rows={Math.max(0, Math.floor(rows / PROJECT_ROWS) * PROJECT_ROWS)}
           width={columnWidth}
         />
       );
+    }
+    if (dashboardError !== null && !hasSnapshot) {
+      return <MutedLine text="Could not load" width={columnWidth} />;
     }
     if (projects.length === 0) {
       return <MutedLine text="No projects yet" width={columnWidth} />;
@@ -464,11 +467,11 @@ export function DashboardScreen(): ReactNode {
     if (rows <= 0) {
       return null;
     }
-    if (todosError !== null) {
-      return <ErrorLine message={todosError} width={columnWidth} />;
-    }
-    if (todosLoading) {
+    if (dashboardLoading) {
       return <SkeletonRows rows={rows} width={columnWidth} />;
+    }
+    if (dashboardError !== null && !hasSnapshot) {
+      return <MutedLine text="Could not load" width={columnWidth} />;
     }
     if (inProgressItems.length === 0) {
       return <MutedLine text="Nothing in progress right now" width={columnWidth} />;
@@ -495,11 +498,11 @@ export function DashboardScreen(): ReactNode {
     if (rows <= 0) {
       return null;
     }
-    if (notesError !== null && linksError !== null && logsError !== null) {
-      return <ErrorLine message="Activity could not load" width={columnWidth} />;
-    }
-    if ((notesLoading || linksLoading || logsLoading) && activity.length === 0) {
+    if (dashboardLoading) {
       return <SkeletonRows rows={rows} width={columnWidth} />;
+    }
+    if (dashboardError !== null && !hasSnapshot) {
+      return <MutedLine text="Could not load" width={columnWidth} />;
     }
     if (activity.length === 0) {
       return <MutedLine text="No activity yet" width={columnWidth} />;
@@ -630,11 +633,7 @@ export function DashboardScreen(): ReactNode {
   // -- Actions ---------------------------------------------------------------
 
   function reloadAll(): void {
-    void useTodos.getState().loadTodos();
-    void useNotes.getState().loadNotes();
-    void useLinks.getState().loadLinks();
-    void useWorkLogs.getState().loadWorkLogs();
-    void useProjectsStore.getState().loadProjects();
+    void useDashboard.getState().loadDashboard();
   }
 
   function cycleFocus(delta: number): void {
@@ -794,7 +793,7 @@ export function DashboardScreen(): ReactNode {
 
   return (
     <box flexDirection="column" flexGrow={1} minHeight={0} backgroundColor={color(tokens.bg)}>
-      <box flexDirection="column" height={HEADER_ROWS} flexShrink={0}>
+      <box flexDirection="column" height={headerRows} flexShrink={0}>
         <box height={1} flexShrink={0}>
           <text fg={color(tokens.fg)} wrapMode="none">
             {timeOfDayGreeting(now)}
@@ -817,6 +816,9 @@ export function DashboardScreen(): ReactNode {
             {"n  Add"}
           </text>
         </box>
+        {dashboardError !== null ? (
+          <ErrorLine message={dashboardError} width={contentWidth} />
+        ) : null}
       </box>
 
       {renderStats()}

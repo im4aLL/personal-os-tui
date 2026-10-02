@@ -96,6 +96,13 @@ export const useWorkLogs = create<WorkLogsState>((set, get) => ({
     await get().applyFilter(filter);
   },
 
+  setWorkLogs: (logs) => {
+    // Bump the generation so an in-flight load cannot overwrite the batched
+    // snapshot with a stale list.
+    workLogsGeneration += 1;
+    set({ logs, groups: groupByWeek(logs), filter: {}, loading: false, error: null });
+  },
+
   addWorkLog: (log) =>
     set((state) => {
       const logs = [log, ...state.logs];

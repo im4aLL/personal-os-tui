@@ -308,6 +308,31 @@ export interface SetupRepo {
   applySchema(): Promise<ApplySchemaResult>;
 }
 
+/** The dashboard's three `COUNT(*)` aggregates: notes total, links total, and
+ * work logs whose `start_date` falls in the current week through today. */
+export interface DashboardCounts {
+  notes: number;
+  links: number;
+  loggedThisWeek: number;
+}
+
+/** Everything the Dashboard needs, loaded in one round trip. */
+export interface DashboardSnapshot {
+  todos: Todo[];
+  notes: Note[];
+  links: Link[];
+  linksNextCursor: string | null;
+  linksTotal: number;
+  workLogs: WorkLog[];
+  projects: Project[];
+  progress: ProjectProgress[];
+  counts: DashboardCounts;
+}
+
+export interface DashboardRepo {
+  load(): Promise<DashboardSnapshot>;
+}
+
 /** The full bundle handed to the app at bootstrap. */
 export interface Repos {
   todos: TodoRepo;
@@ -316,6 +341,7 @@ export interface Repos {
   workLogs: WorkLogRepo;
   projects: ProjectRepo;
   settings: SettingsRepo;
+  dashboard: DashboardRepo;
 }
 
 /** A resolved repos implementation: the six domain repos plus setup. */

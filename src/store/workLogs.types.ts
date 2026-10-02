@@ -27,6 +27,8 @@ export interface WorkLogsState {
   applyFilter: (filter: WorkLogFilter) => Promise<void>;
   /** Repeat the last failed load/filter. */
   retry: () => Promise<void>;
+  /** Replace the list with a dashboard snapshot (no request). */
+  setWorkLogs: (logs: WorkLog[]) => void;
   addWorkLog: (log: WorkLog) => void;
   patchWorkLog: (id: string, patch: WorkLogPatch) => void;
   removeWorkLog: (id: string) => void;

@@ -236,6 +236,24 @@ export const useLinks = create<LinksState>((set, get) => ({
     await get().loadLinks();
   },
 
+  setLinksPage: (page) => {
+    // Bump the generation so an in-flight list request cannot overwrite the
+    // batched snapshot with a stale page.
+    linksGeneration += 1;
+    set({
+      links: page.links,
+      cursor: page.nextCursor,
+      hasMore: page.nextCursor !== null,
+      total: page.total,
+      mode: "all",
+      query: "",
+      tag: null,
+      loading: false,
+      error: null,
+      errorScope: null,
+    });
+  },
+
   addLink: (link) =>
     set((state) => ({
       links: [link, ...state.links],

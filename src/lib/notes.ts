@@ -15,7 +15,7 @@ interface NoteRow {
   updated_at: string;
 }
 
-function toNote(row: NoteRow): Note {
+export function toNote(row: NoteRow): Note {
   return {
     id: row.id,
     // The TUI domain title is a non-null string; the desktop column is
@@ -33,7 +33,7 @@ function toNote(row: NoteRow): Note {
 // `content` is included even though the list rows render only title and date:
 // NotesScreen filters over both `note.title` and `note.content` client-side.
 // Tags are deliberately excluded; only `getNoteById` loads them.
-const NOTE_COLUMNS = "id, title, content, pinned, created_at, updated_at";
+export const NOTE_COLUMNS = "id, title, content, pinned, created_at, updated_at";
 
 export async function getNotesList(): Promise<Note[]> {
   const rows = await tursoSelect<NoteRow>(

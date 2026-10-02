@@ -5,6 +5,7 @@ import type {
   CreateWorkItemInput,
   Project,
   ProjectPhase,
+  ProjectProgress,
   WorkItemWithPhase,
 } from "../repos/types";
 
@@ -37,6 +38,8 @@ export interface ProjectsState {
   loadProjects: () => Promise<void>;
   /** Silent reload of projects, progress, and the selected project's data. */
   refreshProjects: () => Promise<void>;
+  /** Replace projects and progress with a dashboard snapshot (no request). */
+  setProjects: (projects: Project[], progress: ProjectProgress[]) => void;
   /** Select a project and load its phases and work items. */
   selectProject: (id: string) => Promise<void>;
 

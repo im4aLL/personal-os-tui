@@ -25,7 +25,7 @@ interface LinkCursor {
   id: string;
 }
 
-function toLink(row: LinkRow): Link {
+export function toLink(row: LinkRow): Link {
   return {
     id: row.id,
     url: row.url,
@@ -39,7 +39,7 @@ function toLink(row: LinkRow): Link {
 
 /** Encode a keyset position as opaque base64url JSON. The store treats the
  * cursor as a black box, so the representation is an implementation detail. */
-function encodeCursor(cursor: LinkCursor): string {
+export function encodeCursor(cursor: LinkCursor): string {
   return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
 }
 

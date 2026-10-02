@@ -1,5 +1,6 @@
 // Turso bundle factory (M0 stubs; real wrappers arrive per wiring milestone).
 import type { ReposBundle } from "../types";
+import { tursoDashboardRepo } from "./dashboard";
 import { tursoLinkRepo } from "./links";
 import { tursoNoteRepo } from "./notes";
 import { tursoProjectRepo } from "./projects";
@@ -17,6 +18,7 @@ export function createTursoRepos(): ReposBundle {
       workLogs: tursoWorkLogRepo,
       projects: tursoProjectRepo,
       settings: tursoSettingsRepo,
+      dashboard: tursoDashboardRepo,
     },
     setup: tursoSetupRepo,
   };

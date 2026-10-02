@@ -56,7 +56,7 @@ interface WorkItemRow {
   updated_at: string;
 }
 
-function toProject(row: ProjectRow): Project {
+export function toProject(row: ProjectRow): Project {
   return {
     id: row.id,
     name: row.name,

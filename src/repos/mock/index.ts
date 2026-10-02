@@ -5,6 +5,7 @@ import { currentScenario, mockScenarios } from "../../mock/scenario";
 import type { MockScenario } from "../../mock/scenario.types";
 import type { MockUiState } from "../index.types";
 import type { ReposBundle } from "../types";
+import { mockDashboardRepo } from "./dashboard";
 import { mockLinkRepo, resetLinkFixtures } from "./links";
 import { mockNoteRepo, resetNoteFixtures } from "./notes";
 import { mockProjectRepo, resetProjectFixtures } from "./projects";
@@ -22,6 +23,7 @@ export function createMockRepos(): ReposBundle {
       workLogs: mockWorkLogRepo,
       projects: mockProjectRepo,
       settings: mockSettingsRepo,
+      dashboard: mockDashboardRepo,
     },
     setup: mockSetupRepo,
   };

@@ -1,5 +1,6 @@
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
+import { useDashboard } from "../store/dashboard";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
@@ -35,6 +36,10 @@ export function StatusLine(): ReactNode {
   const fromEnv = useSession((state) => state.fromEnv);
   const focusedField = useUi((state) => state.focusedField);
   const setupDismissed = useUi((state) => state.setupDismissed);
+  const screen = useUi((state) => state.screen);
+  const dashboardLatencyMs = useDashboard((state) => state.latencyMs);
+  const dashboardLoading = useDashboard((state) => state.loading);
+  const dashboardError = useDashboard((state) => state.error);
 
   // Latency is a mock concept; without mock UI state the segment is absent
   // rather than a misleading "0 ms".
@@ -42,6 +47,15 @@ export function StatusLine(): ReactNode {
   const rightSegments = [
     `${repoMode}`,
     ...(mockActive ? [`${latencyMs} ms`] : []),
+    // The batched dashboard request only reports on the dashboard, and only
+    // once it has actually succeeded, so the number is neither misattributed
+    // to another screen nor shown stale during a load or after a failure.
+    ...(screen === "dashboard" &&
+    !dashboardLoading &&
+    dashboardError === null &&
+    dashboardLatencyMs !== null
+      ? [`batch ${dashboardLatencyMs} ms`]
+      : []),
     ...(scenario !== "default" ? [scenario] : []),
     ...(fromEnv ? ["env creds"] : []),
     ...(loosePermissions ? ["config perms loose"] : []),

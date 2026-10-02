@@ -86,7 +86,9 @@ interface PipelineError {
 
 interface PipelineOk {
   type: "ok";
-  response: { result: TursoResult };
+  // `execute` responses carry `result`; the `close` response carries only
+  // `{ type: "close" }`, so `result` is absent for that item.
+  response: { result?: TursoResult };
 }
 
 type PipelineResult = PipelineOk | PipelineError;
@@ -158,7 +160,11 @@ async function pipeline(items: PipelineItem[]): Promise<TursoResult[]> {
           const index = executeCount > 1 && i < executeCount ? i : undefined;
           throw new Error(formatStatementError(item.error.message, index));
         }
-        results.push(item.response.result);
+        // Skip non-execute responses (the trailing `close`) so the results
+        // array holds one entry per execute statement.
+        if (item.response.result !== undefined) {
+          results.push(item.response.result);
+        }
       }
       return results;
     } catch (error) {
@@ -272,4 +278,27 @@ export async function tursoSelect<T>(sql: string, args: unknown[] = []): Promise
     }
     return obj as T;
   });
+}
+
+/** Run a batch of SELECTs in one `/v2/pipeline` request (N executes + close)
+ * and map each statement's rows to column-name -> value records, exactly like
+ * `tursoSelect`. Results keep statement order; an empty batch is a no-op. A
+ * failed statement throws with its index, since the request has more than one
+ * execute (see `tursoBatchExecute`). */
+export async function tursoBatchSelect(
+  queries: TursoStatement[],
+): Promise<Record<string, unknown>[][]> {
+  if (queries.length === 0) {
+    return [];
+  }
+  const results = await pipeline(buildItems(queries));
+  return results.map((result) =>
+    result.rows.map((row) => {
+      const obj: Record<string, unknown> = {};
+      for (let i = 0; i < result.cols.length; i++) {
+        obj[result.cols[i].name] = parseValue(row[i]);
+      }
+      return obj;
+    }),
+  );
 }

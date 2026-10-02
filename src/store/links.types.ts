@@ -34,6 +34,9 @@ export interface LinksState {
   loadMore: () => Promise<void>;
   /** Repeat the last failed request. */
   retry: () => Promise<void>;
+  /** Replace the list with a dashboard snapshot page (no request). Leaves the
+   * tag pool untouched. */
+  setLinksPage: (page: { links: Link[]; nextCursor: string | null; total: number | null }) => void;
   addLink: (link: Link) => void;
   patchLinkInList: (id: string, patch: Partial<Link>) => void;
   removeLink: (id: string) => void;
