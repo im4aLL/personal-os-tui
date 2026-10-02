@@ -32,6 +32,16 @@ function flattenHelp(repoMode: RepoMode): HelpRow[] {
         title: line.title,
       });
     }
+    // `:q` is an App ex-command, not a registry binding, so it is added
+    // explicitly to keep it listed beside the other global keys.
+    if (section.label === "Global") {
+      rows.push({
+        kind: "line",
+        id: "Global::q",
+        key: ":q",
+        title: "Quit (ex; :q! and :quit alias)",
+      });
+    }
   });
   return rows;
 }
@@ -124,9 +134,12 @@ export function HelpScreen(): ReactNode {
         <text fg={color(tokens.fgSubtle)}>
           {"/ searches the current list on Notes and Todo; elsewhere it opens the palette."}
         </text>
+        <text fg={color(tokens.fgSubtle)}>{"browsing: up/down = j/k, left/right = h/l"}</text>
         {isMockEnabled() && repoMode === "mock" ? (
           <text fg={color(tokens.fgSubtle)}>
-            {"ctrl+shift+d may arrive as ctrl+d on some terminals - both work."}
+            {
+              "ctrl+shift+d opens the mock panel; where a terminal reports it as ctrl+d, open it from the palette (browsing uses ctrl+d for half page)."
+            }
           </text>
         ) : null}
         <text fg={color(tokens.fgSubtle)}>{"j/k or up/down scroll  pageup/pagedown page"}</text>

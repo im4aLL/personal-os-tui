@@ -88,6 +88,8 @@ export function NotesScreen(): ReactNode {
   // The list panel spends two border rows and a three-row search strip.
   const listBodyHeight = Math.max(3, height - 8);
   const visibleCount = Math.max(1, Math.floor(listBodyHeight / LIST_ROW_ROWS));
+  // Ctrl+D/Ctrl+U move by half the visible rows, at least one item.
+  const pageStep = Math.max(1, Math.floor(visibleCount / 2));
 
   const [search, setSearch] = useState("");
   const [narrowPane, setNarrowPane] = useState<"list" | "editor">("list");
@@ -357,9 +359,10 @@ export function NotesScreen(): ReactNode {
     };
   }, [notice]);
 
-  // A focused field defers the global bindings so typed characters reach the
-  // control; the note scope still runs first for Tab/Esc/Enter.
-  const fieldOwned = focusedField !== null;
+  // An active field or local overlay defers the global bindings so typed
+  // characters reach the control and ex mode cannot open over a dialog; the
+  // note scope still runs first for Tab/Esc/Enter.
+  const fieldOwned = focusedField !== null || confirm !== null || exportOpen;
   useEffect(() => {
     useUi.getState().setFocusedField(fieldOwned ? "notes-field" : null);
     return () => {
@@ -456,6 +459,18 @@ export function NotesScreen(): ReactNode {
     const current = selectedId === null ? -1 : filtered.findIndex((note) => note.id === selectedId);
     const next = Math.min(filtered.length - 1, Math.max(0, current + delta));
     useNotes.getState().selectNote(filtered[next].id);
+  }
+
+  function selectFirst(): void {
+    if (filtered.length > 0) {
+      useNotes.getState().selectNote(filtered[0].id);
+    }
+  }
+
+  function selectLast(): void {
+    if (filtered.length > 0) {
+      useNotes.getState().selectNote(filtered[filtered.length - 1].id);
+    }
   }
 
   function switchPane(): void {
@@ -602,6 +617,10 @@ export function NotesScreen(): ReactNode {
     const meta = key.meta === true || key.option === true;
     const plain = (char: string): boolean =>
       !key.ctrl && !meta && key.shift !== true && name === char;
+    const shift = (char: string): boolean =>
+      !key.ctrl &&
+      !meta &&
+      (name === char.toUpperCase() || (name.toLowerCase() === char && key.shift === true));
     const ctrlChar = (char: string): boolean => key.ctrl === true && name === char;
 
     if (confirm !== null) {
@@ -721,17 +740,46 @@ export function NotesScreen(): ReactNode {
       return false;
     }
 
+    const listActive = !narrow || narrowPane === "list";
+    // Browsing: Ctrl+D/Ctrl+U move by half a page when the list owns the keys.
+    // In narrow editor mode the key falls through like the other screens rather
+    // than being swallowed. The `!key.shift` guard leaves Ctrl+Shift+D for the
+    // mock panel.
+    if (key.ctrl && !key.shift) {
+      if (name === "d") {
+        if (!listActive) {
+          return false;
+        }
+        moveSelection(pageStep);
+        return true;
+      }
+      if (name === "u") {
+        if (!listActive) {
+          return false;
+        }
+        moveSelection(-pageStep);
+        return true;
+      }
+      return false;
+    }
     if (key.ctrl || meta) {
       return false;
     }
 
-    const listActive = !narrow || narrowPane === "list";
     if (listActive && (plain("j") || name === "down")) {
       moveSelection(1);
       return true;
     }
     if (listActive && (plain("k") || name === "up")) {
       moveSelection(-1);
+      return true;
+    }
+    if (listActive && shift("g")) {
+      selectLast();
+      return true;
+    }
+    if (listActive && plain("g")) {
+      selectFirst();
       return true;
     }
     if (name === "/") {

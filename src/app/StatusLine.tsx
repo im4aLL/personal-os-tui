@@ -35,6 +35,9 @@ export function StatusLine(): ReactNode {
   const loosePermissions = useSession((state) => state.loosePermissions);
   const fromEnv = useSession((state) => state.fromEnv);
   const focusedField = useUi((state) => state.focusedField);
+  const exOpen = useUi((state) => state.exOpen);
+  const exQuery = useUi((state) => state.exQuery);
+  const exError = useUi((state) => state.exError);
   const setupDismissed = useUi((state) => state.setupDismissed);
   const setupOpen = useUi((state) => state.setupOpen);
   const screen = useUi((state) => state.screen);
@@ -78,11 +81,15 @@ export function StatusLine(): ReactNode {
     hints.length === 0 || right.length === 0
       ? ""
       : " ".repeat(Math.max(MIN_GAP, inner - hints.length - right.length));
-  const line = `${hints}${gap}${right}`;
+  // The ex prompt and its errors take over the whole single-line slot: they are
+  // transient, keyboard-owned, and should not compete with the readout.
+  const exLine = exOpen ? `:${exQuery}` : exError;
+  const line = exLine ?? `${hints}${gap}${right}`;
+  const lineColor = exError !== null && !exOpen ? tokens.danger : tokens.statusFg;
 
   return (
     <box backgroundColor={color(tokens.statusBg)} paddingLeft={1} paddingRight={1} height={1}>
-      <text fg={color(tokens.statusFg)}>{line}</text>
+      <text fg={color(lineColor)}>{line}</text>
     </box>
   );
 }

@@ -175,6 +175,9 @@ export function WorkLogScreen(): ReactNode {
     () => windowItems(items, selectedItemIndex, bodyHeight),
     [items, selectedItemIndex, bodyHeight],
   );
+  // Ctrl+D/Ctrl+U move by half the visible log entries (headers excluded).
+  const visibleLogCount = visibleItems.filter((item) => item.kind === "row").length;
+  const pageStep = Math.max(1, Math.floor(Math.max(1, visibleLogCount) / 2));
 
   const formSuggestions = useMemo(() => {
     const needle = form.tagInput.trim().toLowerCase();
@@ -239,9 +242,10 @@ export function WorkLogScreen(): ReactNode {
     };
   }, [notice]);
 
-  // A focused control defers the global bindings so typed characters reach it;
-  // this scope still runs first for Tab/Esc/Enter.
-  const fieldOwned = form.open || searchFocused || dateFocus !== "none";
+  // An active control or local confirm defers the global bindings so typed
+  // characters reach it and ex mode cannot open over the dialog; this scope
+  // still runs first for Tab/Esc/Enter.
+  const fieldOwned = form.open || searchFocused || dateFocus !== "none" || confirm !== null;
   useEffect(() => {
     useUi.getState().setFocusedField(fieldOwned ? "worklog-field" : null);
     return () => {
@@ -579,6 +583,20 @@ export function WorkLogScreen(): ReactNode {
       }
       if (name === "tab" || name === "backtab") {
         setDateFocus(dateFocus === "from" ? "to" : "from");
+        return true;
+      }
+      return false;
+    }
+
+    // Browsing: Ctrl+D/Ctrl+U move by half a page. The `!key.shift` guard
+    // leaves Ctrl+Shift+D for the mock panel where the terminal reports it.
+    if (key.ctrl && !key.shift) {
+      if (name === "d") {
+        moveSelection(pageStep);
+        return true;
+      }
+      if (name === "u") {
+        moveSelection(-pageStep);
         return true;
       }
       return false;

@@ -2,7 +2,7 @@
 id: F2
 title: Consistent vim-style navigation motions and :q
 type: feature
-status: not-started
+status: done
 phase: polish
 order: 26
 depends_on: [G8]
@@ -10,7 +10,7 @@ depends_on: [G8]
 
 # F2 - Consistent vim-style navigation motions and :q
 
-> Type: feature · Status: not-started · Phase: polish
+> Type: feature · Status: done · Phase: polish
 
 ## Objective
 
@@ -20,16 +20,16 @@ Every list surface answers the same basic vim motion keys: `j`/`k` for next/prev
 
 ## Deliverables
 
-- [ ] `j`/`k` select the next/previous item on all six screens. Screens already do this.
-- [ ] `j`/`k` move selection in the list-like modals that have no text entry: theme picker, archived todos, phase manager, and note export. Verified in code: theme picker (`App.tsx`), archived todos (`TodoScreen.tsx`), phase manager (`ProjectsScreen.tsx`), and note export (`NotesScreen.tsx`) already accept `j`/`k`; this deliverable is an audit and fill-in, not new behavior.
-- [ ] `h`/`l` move along the screen's existing horizontal axis: Todo columns and Dashboard stat cards already bind `h`/`l`; Links tag pills already bind `Left`/`Right` and gain `h`/`l` as aliases; Projects zones currently switch only with `Tab`/`Backtab` and `1`/`2` and gain `h`/`l` as new aliases. Notes and Work Log have no horizontal axis and leave `h`/`l` unbound.
-- [ ] `g` selects the first item and `G` selects the last item on all six screens. Todo and Work Log already do this; Dashboard, Links, Projects, and Notes gain it.
-- [ ] `Ctrl+d` and `Ctrl+u` move the selection down/up by half a page on all six screens, with each screen defining its own page size (half its visible rows in the active pane). Only Todo defines a page step today; the other five add it. Todo's step changes from a full screenful to half a page so all screens match.
-- [ ] Every `Ctrl+d`/`Ctrl+u` handler requires `!key.shift`, matching `TodoScreen.tsx`, so `Ctrl+Shift+D` is never swallowed where the terminal can distinguish it.
-- [ ] `:` at any normal-browsing surface opens a one-line ex prompt on the status line; typing `q`, `q!`, or `quit` and pressing `Enter` quits, `Esc` cancels, and an unknown command shows an inline error and returns to browsing.
-- [ ] `SCREEN_KEYMAPS` rows in `src/commands/registry.ts` are updated so help advertises the motions. Motion rows are appended after each group's action rows, because `screenHint` and `helpSections` read the same `rows` list: help renders the full set, while a screen footer that truncates its single `screenHint` line drops the trailing motion rows first and never hides an action hint.
-- [ ] The README keymap section describes the shared browsing motion set and `:q`.
-- [ ] `npm run check` and `npm run typecheck` pass.
+- [x] `j`/`k` select the next/previous item on all six screens. Screens already do this.
+- [x] `j`/`k` move selection in the list-like modals that have no text entry: theme picker, archived todos, phase manager, and note export. Verified in code: theme picker (`App.tsx`), archived todos (`TodoScreen.tsx`), phase manager (`ProjectsScreen.tsx`), and note export (`NotesScreen.tsx`) already accept `j`/`k`; this deliverable is an audit and fill-in, not new behavior.
+- [x] `h`/`l` move along the screen's existing horizontal axis: Todo columns and Dashboard stat cards already bind `h`/`l`; Links tag pills already bind `Left`/`Right` and gain `h`/`l` as aliases; Projects zones currently switch only with `Tab`/`Backtab` and `1`/`2` and gain `h`/`l` as new aliases. Notes and Work Log have no horizontal axis and leave `h`/`l` unbound.
+- [x] `g` selects the first item and `G` selects the last item on all six screens. Todo and Work Log already do this; Dashboard, Links, Projects, and Notes gain it.
+- [x] `Ctrl+d` and `Ctrl+u` move the selection down/up by half a page on all six screens, with each screen defining its own page size (half its visible rows in the active pane). Only Todo defines a page step today; the other five add it. Todo's step changes from a full screenful to half a page so all screens match.
+- [x] Every `Ctrl+d`/`Ctrl+u` handler requires `!key.shift`, matching `TodoScreen.tsx`, so `Ctrl+Shift+D` is never swallowed where the terminal can distinguish it.
+- [x] `:` at any normal-browsing surface opens a one-line ex prompt on the status line; typing `q`, `q!`, or `quit` and pressing `Enter` quits, `Esc` cancels, and an unknown command shows an inline error and returns to browsing.
+- [x] `SCREEN_KEYMAPS` rows in `src/commands/registry.ts` are updated so help advertises the motions. Motion rows are appended after each group's action rows, because `screenHint` and `helpSections` read the same `rows` list: help renders the full set, while a screen footer truncates its single `screenHint` line from the end, so action hints survive and only trailing motion text is cut.
+- [x] The README keymap section describes the shared browsing motion set and `:q`.
+- [x] `npm run check` and `npm run typecheck` pass.
 
 ## Non-goals
 
@@ -61,7 +61,7 @@ Vim's `Ctrl+d`/`Ctrl+u` move by half a text view. These screens navigate rows, s
 
 `:` opens a dedicated one-line ex mode rather than a general prefix buffer. State lives in `ui` (`exOpen`, `exQuery`, `exError`) and `App`'s global handler takes precedence over the screen scope and the registry while it is open. The branch sits after the `Ctrl+Q`/`Ctrl+C` filters (`App.tsx`) and before screen-scope resolution, so `q`, `d`, and `/` type into the prompt instead of triggering commands, while the always-on quit and copy filters are unaffected. The prompt renders in the status line's single-line slot, accepts printable characters and backspace, `Enter` runs, and `Esc` cancels.
 
-The only accepted commands are `q`, `q!`, and `quit`, all of which quit. The force form is a compatibility alias: notes autosave and shutdown runs `flushPendingWrites`, so there is no unsaved buffer for `q` to refuse. Any other input shows `not a command: <text>` and returns to browsing immediately.
+The only accepted commands are `q`, `q!`, and `quit`, all of which quit. The force form is a compatibility alias because the app has no dirty-buffer refusal; `:q` and `:q!` both quit immediately. Quitting does not flush the 1s-debounced note autosave: the PLAN's `flushPendingWrites` shutdown step is not yet implemented, so an edit made within the debounce window can be lost. That gap is pre-existing (bare `q` and `Ctrl+Q` behave the same way) and is tracked by the PLAN, not introduced by F2. Any other input shows `not a command: <text>` and returns to browsing immediately.
 
 `:` is entered only from normal browsing. The guard is `modal === "none"` **and** `focusedField === null` **and** `setupVisible === false`; the Setup case matters because Setup can be visible with no focused field during its connecting and failure steps, which `App` already treats as a separate deferral.
 

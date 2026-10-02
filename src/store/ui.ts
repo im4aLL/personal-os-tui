@@ -42,6 +42,9 @@ export const useUi = create<UiState>((set) => {
     setupDismissed: false,
     setupOpen: false,
     focusedField: null,
+    exOpen: false,
+    exQuery: "",
+    exError: null,
     setScreen: (screen: Screen) => {
       set({ screen, modal: "none" });
     },
@@ -72,6 +75,21 @@ export const useUi = create<UiState>((set) => {
     },
     setFocusedField: (focusedField: string | null) => {
       set({ focusedField });
+    },
+    openEx: () => {
+      set({ exOpen: true, exQuery: "", exError: null });
+    },
+    closeEx: () => {
+      set({ exOpen: false, exQuery: "" });
+    },
+    setExQuery: (exQuery: string) => {
+      set({ exQuery });
+    },
+    setExError: (exError: string) => {
+      set({ exError });
+    },
+    clearExError: () => {
+      set({ exError: null });
     },
     dismissSetup: () => {
       // Releasing focus: a dismissed Setup must never keep the global

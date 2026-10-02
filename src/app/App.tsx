@@ -173,6 +173,10 @@ function Shell(props: ShellProps): ReactNode {
 
   useKeyboard((key) => {
     const state = useUi.getState();
+    // A rejected ex command lingers on the status line until the next key.
+    if (!state.exOpen && state.exError !== null) {
+      state.clearExError();
+    }
     // Ctrl+Q quits from anywhere, even modals and text fields. (Bare `q` only
     // quits while browsing; it must keep typing in inputs.)
     const quitAlways = commandKeys("global.quit").filter(
@@ -199,6 +203,62 @@ function Shell(props: ShellProps): ReactNode {
           return;
         }
       }
+    }
+
+    const session = useSession.getState();
+    const setupVisible = state.setupOpen || (!session.configComplete && !state.setupDismissed);
+
+    // The `:` ex-line is its own mode, keyed wholly here so `q`, `d`, and `/`
+    // type into the prompt instead of reaching a screen scope or the registry.
+    // It sits after the always-on quit/copy filters and before screen-scope
+    // resolution, so it outranks every browsing binding while open.
+    if (state.exOpen) {
+      // Every ex keystroke is owned here; stop other OpenTUI-level listeners
+      // from also seeing it, matching the help modal's guard.
+      key.stopPropagation();
+      if (key.name === "escape") {
+        state.closeEx();
+        return;
+      }
+      if (key.name === "return" || key.name === "kpenter" || key.name === "linefeed") {
+        const command = state.exQuery.trim();
+        state.closeEx();
+        if (command === "") {
+          return;
+        }
+        if (command === "q" || command === "q!" || command === "quit") {
+          ctx.quit();
+          return;
+        }
+        state.setExError(`not a command: ${command}`);
+        return;
+      }
+      if (key.name === "backspace") {
+        state.setExQuery(state.exQuery.slice(0, -1));
+        return;
+      }
+      // Printable characters only: a single-character name with no modifier.
+      if (!key.ctrl && !key.meta && key.option !== true && key.name.length === 1) {
+        state.setExQuery(state.exQuery + key.name);
+        return;
+      }
+      return;
+    }
+
+    // `:` opens the ex prompt only from normal browsing: no modal, no focused
+    // field, and Setup not visible (its connecting/failure steps clear focus
+    // while still owning the viewport).
+    if (
+      state.modal === "none" &&
+      state.focusedField === null &&
+      !setupVisible &&
+      !key.ctrl &&
+      !key.meta &&
+      key.option !== true &&
+      (key.name === ":" || (key.name === ";" && key.shift === true))
+    ) {
+      state.openEx();
+      return;
     }
 
     if (state.modal === "command-palette") {
@@ -280,7 +340,6 @@ function Shell(props: ShellProps): ReactNode {
         state.closeModal();
         return;
       }
-      const session = useSession.getState();
       const digit =
         key.name.length === 1 && key.name >= "1" && key.name <= "9" ? Number(key.name) - 1 : -1;
       if (!key.ctrl && !key.meta && digit !== -1) {
@@ -326,8 +385,6 @@ function Shell(props: ShellProps): ReactNode {
     // stays reachable above. Ctrl+C with a text selection was consumed by the
     // copy handler above; with no selection it falls through to here, so a
     // focused control is never quit from.
-    const session = useSession.getState();
-    const setupVisible = state.setupOpen || (!session.configComplete && !state.setupDismissed);
     const focusedOrSetup = state.focusedField !== null || setupVisible;
     if (focusedOrSetup && key.ctrl && !key.meta && key.name.toLowerCase() === "c") {
       return;

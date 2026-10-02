@@ -105,6 +105,8 @@ export function TodoScreen(): ReactNode {
   // wide board also spends two rows on the column borders; the stacked layout
   // spends one on its status tab row.
   const visibleCount = Math.max(1, Math.floor((bodyRows - (wide ? 2 : 1)) / 3));
+  // Ctrl+D/Ctrl+U move by half the visible rows, at least one item.
+  const pageStep = Math.max(1, Math.floor(visibleCount / 2));
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -171,9 +173,10 @@ export function TodoScreen(): ReactNode {
     void loadTodos();
   }, [scenario, latencyMs, loadTodos]);
 
-  // A focused field defers the global bindings so typed characters reach the
-  // control (search or form); the scope still runs first for Tab/Esc/Enter.
-  const fieldOwned = todoForm.form.open || searchActive;
+  // An active field or local overlay defers the global bindings so typed
+  // characters reach the control and ex mode cannot open over a dialog; the
+  // scope still runs first for Tab/Esc/Enter.
+  const fieldOwned = todoForm.form.open || searchActive || confirm !== null || archivedOpen;
   useEffect(() => {
     useUi.getState().setFocusedField(fieldOwned ? "todo-field" : null);
     return () => {
@@ -614,14 +617,16 @@ export function TodoScreen(): ReactNode {
       return false;
     }
 
-    // Browsing: Ctrl+D pages (Ctrl+Shift+D still reaches the mock panel).
+    // Browsing: Ctrl+D pages down half a screen (Ctrl+Shift+D still reaches the
+    // mock panel). The `!key.shift` guard keeps Ctrl+Shift+D intact where the
+    // terminal can distinguish it.
     if (key.ctrl && !key.shift) {
       if (name === "d") {
-        moveSelection(visibleCount);
+        moveSelection(pageStep);
         return true;
       }
       if (name === "u") {
-        moveSelection(-visibleCount);
+        moveSelection(-pageStep);
         return true;
       }
       return false;

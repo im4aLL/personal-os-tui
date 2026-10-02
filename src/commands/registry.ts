@@ -427,6 +427,9 @@ export const SCREEN_KEYMAPS: ScreenKeyGroup[] = [
       { keys: "enter", title: "open" },
       { keys: "n", title: "add" },
       { keys: "r", title: "refresh" },
+      { keys: "h/l", title: "stat card" },
+      { keys: "g/G", title: "first/last" },
+      { keys: "ctrl+d/u", title: "half page" },
     ],
   },
   {
@@ -443,6 +446,9 @@ export const SCREEN_KEYMAPS: ScreenKeyGroup[] = [
       { keys: "a", title: "archived" },
       { keys: "A", title: "archive done" },
       { keys: "X", title: "clear done" },
+      { keys: "h/l", title: "focus column" },
+      { keys: "g/G", title: "first/last" },
+      { keys: "ctrl+d/u", title: "half page" },
     ],
   },
   {
@@ -457,6 +463,9 @@ export const SCREEN_KEYMAPS: ScreenKeyGroup[] = [
       { keys: "/", title: "search" },
       { keys: "tab", title: "tags" },
       { keys: "esc", title: "clear" },
+      { keys: "h/l", title: "tags" },
+      { keys: "g/G", title: "first/last" },
+      { keys: "ctrl+d/u", title: "half page" },
     ],
   },
   {
@@ -476,6 +485,9 @@ export const SCREEN_KEYMAPS: ScreenKeyGroup[] = [
       { keys: "o", title: "jira" },
       { keys: "c", title: "comment" },
       { keys: "[ ]", title: "window" },
+      { keys: "h/l", title: "zone" },
+      { keys: "g/G", title: "first/last" },
+      { keys: "ctrl+d/u", title: "half page" },
     ],
   },
   {
@@ -490,6 +502,8 @@ export const SCREEN_KEYMAPS: ScreenKeyGroup[] = [
       { keys: "f", title: "date" },
       { keys: "1-3", title: "preset" },
       { keys: "c", title: "clear" },
+      { keys: "g/G", title: "first/last" },
+      { keys: "ctrl+d/u", title: "half page" },
     ],
   },
   {
@@ -506,6 +520,8 @@ export const SCREEN_KEYMAPS: ScreenKeyGroup[] = [
       { keys: "enter", title: "open" },
       { keys: "ctrl+s", title: "save" },
       { keys: "ctrl+enter", title: "todo" },
+      { keys: "g/G", title: "first/last" },
+      { keys: "ctrl+d/u", title: "half page" },
     ],
   },
 ];

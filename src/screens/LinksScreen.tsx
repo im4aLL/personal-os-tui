@@ -115,6 +115,8 @@ export function LinksScreen(): ReactNode {
   // more"/"all shown") takes one more and is not a saved link.
   const sentinelRows = loadingMore ? 5 : 1;
   const visibleCount = Math.max(1, Math.floor((panelRows - 2 - sentinelRows) / rowRows));
+  // Ctrl+D/Ctrl+U move by half the visible rows, at least one item.
+  const pageStep = Math.max(1, Math.floor(visibleCount / 2));
 
   // The pill row is width-fit once here so the cursor and Enter always operate
   // on pills that are actually rendered (`all` first).
@@ -195,9 +197,10 @@ export function LinksScreen(): ReactNode {
     };
   }, [notice]);
 
-  // A focused field defers the global bindings so typed characters reach the
-  // control; the screen scope still runs first for Tab/Esc/Enter.
-  const fieldOwned = form.open || searchFocused || editing !== null;
+  // An active field or local overlay defers the global bindings so typed
+  // characters reach the control and ex mode cannot open over a dialog; the
+  // screen scope still runs first for Tab/Esc/Enter.
+  const fieldOwned = form.open || searchFocused || editing !== null || confirm !== null;
   useEffect(() => {
     useUi.getState().setFocusedField(fieldOwned ? "links-field" : null);
     return () => {
@@ -207,13 +210,29 @@ export function LinksScreen(): ReactNode {
 
   // -- Selection and navigation ---------------------------------------------
 
-  function moveUp(): void {
+  function moveSelection(delta: number): void {
     if (links.length === 0) {
       return;
     }
     const current = selectedId === null ? -1 : links.findIndex((link) => link.id === selectedId);
-    const next = Math.min(links.length - 1, Math.max(0, current - 1));
+    const next = Math.min(links.length - 1, Math.max(0, current + delta));
     setSelectedId(links[next].id);
+  }
+
+  function moveUp(): void {
+    moveSelection(-1);
+  }
+
+  function selectFirst(): void {
+    if (links.length > 0) {
+      setSelectedId(links[0].id);
+    }
+  }
+
+  function selectLast(): void {
+    if (links.length > 0) {
+      setSelectedId(links[links.length - 1].id);
+    }
   }
 
   async function moveDown(): Promise<void> {
@@ -498,6 +517,10 @@ export function LinksScreen(): ReactNode {
     const meta = key.meta === true || key.option === true;
     const plain = (char: string): boolean =>
       !key.ctrl && !meta && key.shift !== true && name === char;
+    const shift = (char: string): boolean =>
+      !key.ctrl &&
+      !meta &&
+      (name === char.toUpperCase() || (name.toLowerCase() === char && key.shift === true));
 
     if (confirm !== null) {
       if (name === "return" || plain("y")) {
@@ -589,6 +612,20 @@ export function LinksScreen(): ReactNode {
       return false;
     }
 
+    // Browsing: Ctrl+D/Ctrl+U move by half a page. The `!key.shift` guard
+    // leaves Ctrl+Shift+D for the mock panel where the terminal reports it.
+    if (key.ctrl && !key.shift) {
+      if (name === "d") {
+        moveSelection(pageStep);
+        return true;
+      }
+      if (name === "u") {
+        moveSelection(-pageStep);
+        return true;
+      }
+      return false;
+    }
+
     if (key.ctrl || meta) {
       return false;
     }
@@ -606,11 +643,11 @@ export function LinksScreen(): ReactNode {
         applyPill(tagIndex);
         return true;
       }
-      if (name === "left") {
+      if (name === "left" || plain("h")) {
         movePill(-1);
         return true;
       }
-      if (name === "right") {
+      if (name === "right" || plain("l")) {
         movePill(1);
         return true;
       }
@@ -627,6 +664,14 @@ export function LinksScreen(): ReactNode {
     }
     if (plain("k") || name === "up") {
       moveUp();
+      return true;
+    }
+    if (shift("g")) {
+      selectLast();
+      return true;
+    }
+    if (plain("g")) {
+      selectFirst();
       return true;
     }
     if (name === "/") {

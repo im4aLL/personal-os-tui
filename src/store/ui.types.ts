@@ -22,6 +22,13 @@ export interface UiState {
    * defer to them instead of hijacking typing (PLAN: global defers via
    * `ui.focusedField`). Setup owns its ids (`setup-url`, ...). */
   focusedField: string | null;
+  /** True while the `:` ex-line prompt owns the status line. */
+  exOpen: boolean;
+  /** Text typed after `:` while the prompt is open. */
+  exQuery: string;
+  /** Inline result of the last rejected ex command, shown on the status line
+   * until the next key. Null when there is nothing to report. */
+  exError: string | null;
   setScreen: (screen: Screen) => void;
   openModal: (modal: Exclude<ModalKind, "none">) => void;
   closeModal: () => void;
@@ -32,6 +39,11 @@ export interface UiState {
   setPaletteIndex: (index: number) => void;
   setThemePickerIndex: (index: number) => void;
   setFocusedField: (field: string | null) => void;
+  openEx: () => void;
+  closeEx: () => void;
+  setExQuery: (query: string) => void;
+  setExError: (error: string) => void;
+  clearExError: () => void;
   dismissSetup: () => void;
   showSetupScreen: () => void;
 }

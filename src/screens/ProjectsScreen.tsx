@@ -276,6 +276,12 @@ export function ProjectsScreen(): ReactNode {
 
   const selectedIndex = workItems.findIndex((item) => item.id === selectedItemId);
   const visibleItems = windowSlice(workItems, selectedIndex, bodyHeight);
+  // Ctrl+D/Ctrl+U page by half the focused zone's window: the project list is
+  // windowed by `listItemsMax`, the work-item list by its own window.
+  const pageStep =
+    focusZone === "list"
+      ? Math.max(1, Math.floor(listItemsMax / 2))
+      : Math.max(1, Math.floor(Math.max(1, visibleItems.length) / 2));
 
   const phaseOptions = useMemo(
     () => [
@@ -384,6 +390,36 @@ export function ProjectsScreen(): ReactNode {
         selectedItemId === null ? -1 : workItems.findIndex((item) => item.id === selectedItemId);
       const next = Math.min(workItems.length - 1, Math.max(0, current + delta));
       setSelectedItemId(workItems[next].id);
+    }
+  }
+
+  function selectFirst(): void {
+    if (focusZone === "list") {
+      if (projects.length > 0) {
+        const project = projects[0];
+        if (project.id !== selectedId) {
+          void useProjectsStore.getState().selectProject(project.id);
+        }
+      }
+      return;
+    }
+    if (focusZone === "grid" && workItems.length > 0) {
+      setSelectedItemId(workItems[0].id);
+    }
+  }
+
+  function selectLast(): void {
+    if (focusZone === "list") {
+      if (projects.length > 0) {
+        const project = projects[projects.length - 1];
+        if (project.id !== selectedId) {
+          void useProjectsStore.getState().selectProject(project.id);
+        }
+      }
+      return;
+    }
+    if (focusZone === "grid" && workItems.length > 0) {
+      setSelectedItemId(workItems[workItems.length - 1].id);
     }
   }
 
@@ -1027,6 +1063,20 @@ export function ProjectsScreen(): ReactNode {
       return !meta;
     }
 
+    // Browsing: Ctrl+D/Ctrl+U move by half a page. The `!key.shift` guard
+    // leaves Ctrl+Shift+D for the mock panel where the terminal reports it.
+    if (key.ctrl && !key.shift) {
+      if (name === "d") {
+        moveSelection(pageStep);
+        return true;
+      }
+      if (name === "u") {
+        moveSelection(-pageStep);
+        return true;
+      }
+      return false;
+    }
+
     if (key.ctrl || meta) {
       return false;
     }
@@ -1049,6 +1099,16 @@ export function ProjectsScreen(): ReactNode {
       setFocusZone(ZONES[(index - 1 + ZONES.length) % ZONES.length]);
       return true;
     }
+    if (plainChar("h") || name === "left") {
+      const index = ZONES.indexOf(focusZone);
+      setFocusZone(ZONES[(index - 1 + ZONES.length) % ZONES.length]);
+      return true;
+    }
+    if (plainChar("l") || name === "right") {
+      const index = ZONES.indexOf(focusZone);
+      setFocusZone(ZONES[(index + 1) % ZONES.length]);
+      return true;
+    }
 
     if (upperChar("k")) {
       reorder(-1);
@@ -1064,6 +1124,14 @@ export function ProjectsScreen(): ReactNode {
     }
     if (plainChar("k") || name === "up") {
       moveSelection(-1);
+      return true;
+    }
+    if (upperChar("g")) {
+      selectLast();
+      return true;
+    }
+    if (plainChar("g")) {
+      selectFirst();
       return true;
     }
 

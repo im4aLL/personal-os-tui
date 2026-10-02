@@ -872,6 +872,78 @@ export function DashboardScreen(): ReactNode {
     setActivityIndex((current) => clampIndex(current + delta, activity.length));
   }
 
+  /** Selectable items currently shown in the focused panel, derived from the
+   * same row budget that panel renders with (stats use the card count). */
+  function visibleItemCount(target: DashboardFocus): number {
+    if (target === "stats") {
+      return statCards.length;
+    }
+    const panelRows =
+      target === "focus"
+        ? wide
+          ? topRows
+          : focusPanelRows
+        : target === "projects"
+          ? wide
+            ? bottomRows
+            : projectPanelRows
+          : target === "in-progress"
+            ? wide
+              ? topRows
+              : inProgressPanelRows
+            : wide
+              ? bottomRows
+              : activityPanelRows;
+    const contentRows = Math.max(1, panelRows - panelChromeRows);
+    return target === "projects"
+      ? Math.max(1, Math.floor(contentRows / PROJECT_ROWS))
+      : contentRows;
+  }
+
+  function pageStep(): number {
+    return Math.max(1, Math.floor(visibleItemCount(focusTarget) / 2));
+  }
+
+  function selectFirst(): void {
+    if (focusTarget === "stats") {
+      setStatIndex(0);
+      return;
+    }
+    if (focusTarget === "focus") {
+      setFocusIndex(0);
+      return;
+    }
+    if (focusTarget === "projects") {
+      setProjectIndex(0);
+      return;
+    }
+    if (focusTarget === "in-progress") {
+      setInProgressIndex(0);
+      return;
+    }
+    setActivityIndex(0);
+  }
+
+  function selectLast(): void {
+    if (focusTarget === "stats") {
+      setStatIndex(Math.max(0, statCards.length - 1));
+      return;
+    }
+    if (focusTarget === "focus") {
+      setFocusIndex(Math.max(0, focusItems.length - 1));
+      return;
+    }
+    if (focusTarget === "projects") {
+      setProjectIndex(Math.max(0, projects.length - 1));
+      return;
+    }
+    if (focusTarget === "in-progress") {
+      setInProgressIndex(Math.max(0, inProgressItems.length - 1));
+      return;
+    }
+    setActivityIndex(Math.max(0, activity.length - 1));
+  }
+
   function activate(): void {
     if (focusTarget === "stats") {
       useUi.getState().setScreen(statCards[statSel].target);
@@ -912,6 +984,8 @@ export function DashboardScreen(): ReactNode {
     const meta = key.meta === true || key.option === true;
     const plainChar = (char: string): boolean =>
       !key.ctrl && !meta && key.shift !== true && name === char;
+    const shiftChar = (char: string): boolean =>
+      !key.ctrl && !meta && (name === char.toUpperCase() || (name === char && key.shift === true));
 
     if (todoForm.form.open) {
       if (name === "escape") {
@@ -939,6 +1013,19 @@ export function DashboardScreen(): ReactNode {
       return false;
     }
 
+    // Browsing: Ctrl+D/Ctrl+U move by half a panel. The `!key.shift` guard
+    // leaves Ctrl+Shift+D for the mock panel where the terminal reports it.
+    if (key.ctrl && !key.shift) {
+      if (name === "d") {
+        moveSelection(pageStep());
+        return true;
+      }
+      if (name === "u") {
+        moveSelection(-pageStep());
+        return true;
+      }
+      return false;
+    }
     if (key.ctrl || meta) {
       return false;
     }
@@ -975,6 +1062,14 @@ export function DashboardScreen(): ReactNode {
     }
     if (plainChar("k") || name === "up") {
       moveSelection(-1);
+      return true;
+    }
+    if (shiftChar("g")) {
+      selectLast();
+      return true;
+    }
+    if (plainChar("g")) {
+      selectFirst();
       return true;
     }
     if (plainChar("l") || name === "right") {
