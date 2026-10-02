@@ -486,14 +486,15 @@ Delivery is sequential, one feature at a time: each feature's UI is built and ap
 | 7 | Project Planner | M6 | G6 | W6 | M0 |
 | 8 | Dashboard | M7 | G7 | W7 | M2-M6 |
 | 9 | Cross-cutting polish (command palette, help, theme picker, mock panel full) | M8 | G8 | n/a | M0-M7 |
-| 10 | Configurable keymap (config file) | F1 | - | n/a | G8 |
-| 11 | Real-data hardening and end-to-end | W8 | - | - | W1-W7, F1 |
+| 10 | Vim-style navigation motions and `:q` | F2 | - | n/a | G8 |
+| 11 | Configurable keymap (config file) | F1 | - | n/a | G8, F2 |
+| 12 | Real-data hardening and end-to-end | W8 | - | - | W1-W7, F1, F2 |
 
-Notes on the table: the sequence is M0 -> G0 -> M1 -> G1 -> W1 -> M2 -> G2 -> W2 -> ... -> M7 -> G7 -> W7 -> M8 -> G8 -> F1 -> W8. Work Log's UI is listed after Todo only by preference; neither depends on the other's UI, because Todo's "Add as work log" action only needs the `WorkLogRepo` interface, which exists from M0. Dashboard is last among screens because it aggregates all domains, and its UI only needs mock aggregates plus working navigation targets.
+Notes on the table: the sequence is M0 -> G0 -> M1 -> G1 -> W1 -> M2 -> G2 -> W2 -> ... -> M7 -> G7 -> W7 -> M8 -> G8 -> F2 -> F1 -> W8. Work Log's UI is listed after Todo only by preference; neither depends on the other's UI, because Todo's "Add as work log" action only needs the `WorkLogRepo` interface, which exists from M0. Dashboard is last among screens because it aggregates all domains, and its UI only needs mock aggregates plus working navigation targets.
 
 ### Order flexibility provided by the seam
 
-- The chosen cadence is one feature at a time, so the default sequence is: M0, M1, W1, then M2/W2, M3/W3, M4/W4, M5/W5, M6/W6, M7/W7, then M8, G8, F1, and W8.
+- The chosen cadence is one feature at a time, so the default sequence is: M0, M1, W1, then M2/W2, M3/W3, M4/W4, M5/W5, M6/W6, M7/W7, then M8, G8, F2, F1, and W8.
 - Because every cross-feature dependency is expressed through an interface, mock implementations satisfy all of them from M0, so the feature UIs have no hard ordering constraint beyond "the shell exists". If priorities change, features can be reordered without rework.
 - Dashboard stays last among screens because it aggregates every domain. A partial Dashboard can also be approved early with placeholder panels if desired.
 - Todo's "Add as work log" and Notes' "Add as todo" only need the corresponding repository interface, so they work in mock mode regardless of when those screens are approved or wired.
@@ -1250,6 +1251,26 @@ Adds `large` transforms per domain and a `slow` transform (3 s latency) purely t
 #### Deliberately deferred
 
 Plugin slots, SSH serving, ASCII logo. (User-configurable keybindings are promoted to ticket F1.)
+
+---
+
+### Feature: Vim-style navigation motions and `:q` (F2)
+
+#### Outcome
+
+Every list surface answers the same basic motions: `j`/`k` next/previous, `h`/`l` along the screen's existing horizontal axis, `g`/`G` first/last, and `Ctrl+d`/`Ctrl+u` half-page. Typing `:q` (or `:q!`) from normal browsing quits. List-like modals without a text entry field gain `j`/`k`; the command palette keeps `Up`/`Down` and `Ctrl+n`/`Ctrl+p` because its filter input is always focused and a global `j`/`k` either also types or blocks filtering.
+
+#### Motions
+
+`j`/`k` already work on all six screens and are confirmed in the theme picker, archived todos, phase manager, and note export. `h`/`l` alias the horizontal axis each screen already uses: Todo columns and Dashboard stat cards bind them today, Links tag pills bind `Left`/`Right` and gain the aliases, and Projects zones currently switch only with `Tab`/`1`-`2` and gain `h`/`l` as new aliases; Notes and Work Log have no axis. `g`/`G` are added to Dashboard, Links, Projects, and Notes (Todo and Work Log already have them). `Ctrl+d`/`Ctrl+u` move half a page, with each screen defining its own page step from the list it navigates: only Todo has one today and changes from a full screenful to half; Dashboard, Projects, and Work Log define a step for the first time. Every handler requires `!key.shift` so `Ctrl+Shift+D` survives where the terminal distinguishes it. The motion keys stay inside each screen's `handleKey` because the six selection models are heterogeneous.
+
+#### The `:q` ex-line
+
+`:` opens a one-line ex prompt in the status line, implemented as its own mode rather than a general prefix engine. State lives in `ui` (`exOpen`, `exQuery`, `exError`); the branch sits after the `Ctrl+Q`/`Ctrl+C` filters and before screen-scope resolution, so typed keys reach the prompt, not commands. `Enter` runs, `Esc` cancels, and only `q`, `q!`, and `quit` are accepted (all quit; the force alias exists because notes autosave and shutdown flushes pending writes). An unknown command shows `not a command` and returns to browsing. `:` is entered only when no modal is open, no field is focused, and Setup is not visible. Help needs an explicit `:q` row because the mode is not a registry command.
+
+#### Verification
+
+Each motion key does the same thing on every screen; `g`/`G` land on the first/last item on a long and a short list; `Ctrl+d`/`Ctrl+u` move by half a page and never off the end; `:` then `q` then `Enter` quits, `Esc` cancels, an unknown command returns to browsing with an inline error, and `:` does nothing while Setup is visible or a field is focused; help and the README list the motions that work. Out of scope: counts, a general prefix engine, operators, text objects, visual mode, registers, macros, palette `j`/`k`, and modal editing of text fields.
 
 ---
 

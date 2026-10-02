@@ -4,8 +4,8 @@ title: Configurable keymap from the config file
 type: feature
 status: not-started
 phase: polish
-order: 26
-depends_on: [G8]
+order: 27
+depends_on: [G8, F2]
 ---
 
 # F1 - Configurable keymap from the config file
@@ -82,6 +82,6 @@ Reviewed as part of the end-to-end pass in [W8](W8-real-data-hardening.md). No s
 
 ## Notes
 
-- Follows [G8](G8-polish-ui-approval.md) so every screen's keys exist before the override schema is frozen; a user-facing keymap file is a compatibility surface, so it should settle once.
+- Follows [G8](G8-polish-ui-approval.md) and [F2](F2-vim-navigation-motions.md) so every screen's keys and the shared motion set exist before the override schema is frozen; a user-facing keymap file is a compatibility surface, so it should settle once. F2 adds no palette navigation, so the out-of-scope palette list above stays accurate.
 - Depends on the registry seam from M0: because the handler, palette, and help already read `Command.keys`, overriding them there updates all three together.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.

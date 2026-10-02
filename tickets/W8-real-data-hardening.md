@@ -4,8 +4,8 @@ title: Real-data hardening and end-to-end
 type: wiring
 status: not-started
 phase: hardening
-order: 27
-depends_on: [G8, F1]
+order: 28
+depends_on: [G8, F1, F2]
 ---
 
 # W8 - Real-data hardening and end-to-end
@@ -25,6 +25,7 @@ The application is production-ready against real data.
 - [ ] Packaging: `npm pack`, inspect the tarball, then a real global install on macOS arm64, Linux x64, and Windows x64.
 - [ ] Confirm the `build:prod` output contains no mock chunk and that `POS_MOCK=1` on that build prints the unavailable message.
 - [ ] Keymap overrides ([F1](F1-configurable-keymap.md)): a config file remaps a command while unlisted commands keep their defaults, an invalid entry is skipped with a warning, help and the palette show the overridden keys, and `pos doctor` reports the keymap source.
+- [ ] Vim motions ([F2](F2-vim-navigation-motions.md)): `j`/`k`, `h`/`l`, `g`/`G`, and `Ctrl+d`/`Ctrl+u` behave identically across the six screens, and `:q` quits from normal browsing while `Esc` cancels and an unknown command returns to browsing.
 
 ## Verification checklist
 
@@ -37,5 +38,5 @@ The application is production-ready against real data.
 ## Notes
 
 - Starts only after its gate is `done`.
-- Covers real-data hardening and the end-to-end pass after W1-W7 and [F1](F1-configurable-keymap.md); it does not wire a single UI milestone.
+- Covers real-data hardening and the end-to-end pass after W1-W7, [F1](F1-configurable-keymap.md), and [F2](F2-vim-navigation-motions.md); it does not wire a single UI milestone.
 - One feature at a time: UI, then gate, then wiring. The repository seam allows reordering features if priorities change.
