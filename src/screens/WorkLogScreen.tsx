@@ -145,10 +145,15 @@ export function WorkLogScreen(): ReactNode {
   const narrow = width < NARROW_MIN;
   const veryNarrow = width < VERY_NARROW_MIN;
   const sideWidth = width < 60 ? 0 : sidebarCollapsed || width < 80 ? 2 : 22;
-  const listWidth = Math.max(20, width - sideWidth - 2);
+  const contentWidth = Math.max(20, width - sideWidth - 2);
+  // The list lives in a bordered panel: two border cells plus one padding cell
+  // on each side. Rows budget against the inner text width.
+  const panelInnerWidth = Math.max(16, contentWidth - 4);
   const dateBarRows = veryNarrow ? 3 : 1;
-  const bannerRows = error !== null || notice !== null ? 1 : 0;
-  const bodyHeight = Math.max(3, height - 4 - dateBarRows - bannerRows);
+  // Rows outside the list panel: the app header and status line, the bordered
+  // search box, the spacer under it, the date bar, and the footer.
+  const listPanelRows = Math.max(3, height - 2 - 3 - 1 - dateBarRows - 1);
+  const bodyHeight = Math.max(3, listPanelRows - 2);
 
   const hasFilters =
     filter.query !== undefined || filter.dateFrom !== undefined || filter.dateTo !== undefined;
@@ -668,22 +673,37 @@ export function WorkLogScreen(): ReactNode {
 
   // -- Render ----------------------------------------------------------------
 
-  const banner: Notice | null =
-    notice ??
-    (error !== null && logs.length > 0 ? { text: `${error}  (r to retry)`, kind: "danger" } : null);
-  const hintText =
-    error !== null
-      ? `${HINT}  r retry`
-      : searchFocused
-        ? SEARCH_HINT
-        : dateFocus !== "none"
-          ? DATE_HINT
-          : HINT;
+  const hintText = searchFocused ? SEARCH_HINT : dateFocus !== "none" ? DATE_HINT : HINT;
+  const showError = error !== null && logs.length > 0;
+  const footerText = notice?.text ?? (showError ? `${error}  (r to retry)` : hintText);
+  const footerColor =
+    notice !== null
+      ? notice.kind === "success"
+        ? tokens.success
+        : tokens.danger
+      : showError
+        ? tokens.danger
+        : tokens.fgSubtle;
+  // The list keeps the default focus; the search, date fields, form, and confirm
+  // each take it over, so the panel border only lights when the list is active.
+  const listFocused = !form.open && !searchFocused && dateFocus === "none" && confirm === null;
+  const panelTitle = truncate(`Entries (${logs.length})`, Math.max(6, contentWidth - 4));
 
   return (
     <box flexDirection="column" flexGrow={1} minHeight={0} backgroundColor={color(tokens.bg)}>
-      {/* Header: search field plus the add affordance. */}
-      <box flexDirection="row" height={1} flexShrink={0} gap={1}>
+      {/* Bordered search field, matching the other list screens. The `n add`
+          affordance moved into the footer hint so the box stays one control. */}
+      <box
+        flexShrink={0}
+        border
+        borderStyle="single"
+        borderColor={color(searchFocused ? tokens.borderFocus : tokens.borderMuted)}
+        title=" Search "
+        titleColor={color(searchFocused ? tokens.accent : tokens.fgMuted)}
+        paddingLeft={1}
+        paddingRight={1}
+        height={3}
+      >
         <input
           focused={searchFocused}
           value={search}
@@ -693,8 +713,8 @@ export function WorkLogScreen(): ReactNode {
             setSearch(value);
           }}
           flexGrow={1}
-          backgroundColor={color(tokens.bgPanel)}
-          focusedBackgroundColor={color(tokens.bgPanel)}
+          backgroundColor={color(tokens.bg)}
+          focusedBackgroundColor={color(tokens.bg)}
           textColor={color(tokens.fg)}
           focusedTextColor={color(tokens.fg)}
           placeholderColor={color(tokens.fgDisabled)}
@@ -702,8 +722,9 @@ export function WorkLogScreen(): ReactNode {
           selectionBg={color(tokens.selectionBg)}
           selectionFg={color(tokens.selectionFg)}
         />
-        <text fg={color(tokens.accent)}>{"n  Add entry"}</text>
       </box>
+
+      <box height={1} flexShrink={0} />
 
       <DateRangeBar
         from={from}
@@ -711,27 +732,29 @@ export function WorkLogScreen(): ReactNode {
         fromFocused={dateFocus === "from"}
         toFocused={dateFocus === "to"}
         veryNarrow={veryNarrow}
-        width={listWidth}
+        width={contentWidth}
         onFromChange={setFrom}
         onToChange={setTo}
       />
 
-      {banner !== null ? (
-        <box height={1} flexShrink={0}>
-          <text
-            fg={color(banner.kind === "success" ? tokens.success : tokens.danger)}
-            wrapMode="none"
-          >
-            {truncate(banner.text, Math.max(8, listWidth))}
-          </text>
-        </box>
-      ) : null}
-
-      <box flexDirection="column" flexGrow={1} minHeight={0}>
+      {/* The entries list shares one titled panel across loading, empty, and
+          loaded states. */}
+      <box
+        flexDirection="column"
+        flexGrow={1}
+        minHeight={0}
+        border
+        borderStyle="single"
+        borderColor={color(listFocused ? tokens.borderFocus : tokens.borderMuted)}
+        title={` ${panelTitle} `}
+        titleColor={color(listFocused ? tokens.accent : tokens.fgMuted)}
+        paddingLeft={1}
+        paddingRight={1}
+      >
         {loading ? (
           <>
-            <GroupSkeleton width={Math.min(48, listWidth - 2)} />
-            <GroupSkeleton width={Math.min(52, listWidth - 2)} />
+            <GroupSkeleton width={panelInnerWidth} />
+            <GroupSkeleton width={panelInnerWidth} />
           </>
         ) : logs.length === 0 ? (
           error !== null ? (
@@ -753,14 +776,14 @@ export function WorkLogScreen(): ReactNode {
                 key={`header-${item.weekKey}`}
                 label={item.label}
                 count={item.count}
-                width={listWidth}
+                width={panelInnerWidth}
               />
             ) : (
               <WorkLogRow
                 key={item.log.id}
                 log={item.log}
                 selected={item.log.id === selectedId}
-                width={listWidth}
+                width={panelInnerWidth}
                 narrow={narrow}
                 veryNarrow={veryNarrow}
               />
@@ -770,8 +793,8 @@ export function WorkLogScreen(): ReactNode {
       </box>
 
       <box height={1} flexShrink={0}>
-        <text fg={color(tokens.fgSubtle)} wrapMode="none">
-          {truncate(hintText, Math.max(8, listWidth))}
+        <text fg={color(footerColor)} wrapMode="none">
+          {truncate(footerText, Math.max(8, contentWidth))}
         </text>
       </box>
 

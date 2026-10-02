@@ -32,7 +32,7 @@ export function NoteToolbar(props: NoteToolbarProps): ReactNode {
 
   const modeText = editing ? "[ Edit ] | Preview" : "Edit | [ Preview ]";
   const actions = `${props.pinned ? "b unpin" : "b pin"}  v privacy  x export  d delete`;
-  const room = Math.max(8, props.width - 2);
+  const room = Math.max(8, props.width);
 
   const modeSpans = (
     <>
@@ -53,7 +53,7 @@ export function NoteToolbar(props: NoteToolbarProps): ReactNode {
   );
 
   const row = (children: ReactNode): ReactNode => (
-    <box flexDirection="row" height={1} flexShrink={0} paddingLeft={1} paddingRight={1}>
+    <box flexDirection="row" height={1} flexShrink={0}>
       <text wrapMode="none">{children}</text>
     </box>
   );

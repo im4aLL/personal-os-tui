@@ -9,7 +9,7 @@ export interface ProjectListPaneProps {
   loading: boolean;
   /** Non-separator item progress keyed by project id. */
   progress: Record<string, ProjectProgressStat>;
-  /** Pane width in columns (the row column inside it is `width - 2`). */
+  /** Inner row width in columns; the pane adds its own 4-column frame. */
   width: number;
   /** Max project rows to render; the pane windows around the selection. */
   maxItems: number;

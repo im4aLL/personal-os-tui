@@ -64,7 +64,12 @@ export function TodoRow(props: TodoRowProps): ReactNode {
   const dueRoom = Math.max(4, metaRoom - PRIORITY_COL - 1);
 
   return (
-    <box flexDirection="column" width={props.width} flexShrink={0}>
+    <box
+      flexDirection="column"
+      width={props.width}
+      flexShrink={0}
+      backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+    >
       <text wrapMode="none">
         <span fg={color(markerColor)}>{marker}</span>
         <span fg={color(titleColor)} attributes={titleAttrs}>

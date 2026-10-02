@@ -21,13 +21,13 @@ export function ProjectListItem(props: ProjectListItemProps): ReactNode {
       : "";
   const meta = `${project.weekCount}w ${formatMonthDay(project.startDate)}${pct}`;
   const room = Math.max(4, props.width - MARKER);
-  const nameColor = selected ? tokens.fg : tokens.fgMuted;
+  const nameColor = selected ? tokens.accent : tokens.fg;
 
   return (
     <box
       flexDirection="column"
       flexShrink={0}
-      backgroundColor={selected && focused ? color(tokens.bgHover) : undefined}
+      backgroundColor={selected && focused ? color(tokens.bgAlt) : undefined}
     >
       <box flexDirection="row" height={1}>
         <text fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{marker}</text>

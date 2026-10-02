@@ -22,14 +22,18 @@ export function LinkRow(props: LinkRowProps): ReactNode {
   const { link, selected } = props;
   const marker = selected ? "> " : "  ";
   const titleRoom = Math.max(4, props.width - MARKER - (props.narrow ? 0 : DATE_WIDTH));
-  const titleColor = selected ? tokens.fg : tokens.fgMuted;
+  const titleColor = selected ? tokens.accent : tokens.fg;
   const label = linkDisplayUrl(link.url);
   const tags = tagLabel(link.tags);
   const metaRoom = Math.max(4, props.width - MARKER);
   const dateLabel = props.narrow ? "" : linkDateLabel(link.createdAt).padStart(DATE_WIDTH);
 
   return (
-    <box flexDirection="column" flexShrink={0}>
+    <box
+      flexDirection="column"
+      flexShrink={0}
+      backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+    >
       {/* Title line. The editing input occupies the same flex box as the
           truncated title, and the date stays a fixed column, so entering edit
           mode cannot shift the layout. */}
@@ -42,8 +46,8 @@ export function LinkRow(props: LinkRowProps): ReactNode {
               value={props.editValue}
               onInput={(value) => props.onEditChange(value)}
               width={titleRoom}
-              backgroundColor={color(tokens.bgPanel)}
-              focusedBackgroundColor={color(tokens.bgPanel)}
+              backgroundColor={color(tokens.bgAlt)}
+              focusedBackgroundColor={color(tokens.bgAlt)}
               textColor={color(tokens.fg)}
               focusedTextColor={color(tokens.fg)}
               cursorColor={color(tokens.cursor)}

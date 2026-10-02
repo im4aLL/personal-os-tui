@@ -63,8 +63,12 @@ function RowSkeleton(props: { width: number }): ReactNode {
   const tokens = theme.tokens;
   return (
     <box flexDirection="column" flexShrink={0}>
-      <text fg={color(tokens.bgHover)}>{"█".repeat(Math.min(42, props.width))}</text>
-      <text fg={color(tokens.bgHover)}>{"█".repeat(Math.min(26, props.width))}</text>
+      <text fg={color(tokens.bgHover)} wrapMode="none">
+        {"█".repeat(Math.min(42, props.width))}
+      </text>
+      <text fg={color(tokens.bgHover)} wrapMode="none">
+        {"█".repeat(Math.min(26, props.width))}
+      </text>
     </box>
   );
 }
@@ -112,10 +116,18 @@ export function LinksScreen(): ReactNode {
   const veryNarrow = width < VERY_NARROW_MIN;
   const sideWidth = width < 60 ? 0 : sidebarCollapsed || width < 80 ? 2 : 22;
   const listWidth = Math.max(20, width - sideWidth - 2);
-  const bodyHeight = Math.max(3, height - 8);
+  // The list lives in a bordered panel: two border cells plus one padding cell
+  // on each side. Rows budget against the inner text width so a fixed-width row
+  // can never push a renderable to wrap.
+  const panelInnerWidth = Math.max(16, listWidth - 4);
   const rowRows = narrow ? ROW_ROWS_NARROW : ROW_ROWS_WIDE;
+  // Rows outside the list panel: the app header and status line, the bordered
+  // search box, the spacer under it, the tag pill row, and the footer.
+  const panelRows = Math.max(3, height - 2 - 3 - 1 - 1 - 1);
+  // The panel spends two rows on its border; the sentinel line ("j to load
+  // more"/"all shown") takes one more and is not a saved link.
   const sentinelRows = loadingMore ? 5 : 1;
-  const visibleCount = Math.max(1, Math.floor((bodyHeight - sentinelRows) / rowRows));
+  const visibleCount = Math.max(1, Math.floor((panelRows - 2 - sentinelRows) / rowRows));
 
   // The pill row is width-fit once here so the cursor and Enter always operate
   // on pills that are actually rendered (`all` first).
@@ -668,34 +680,58 @@ export function LinksScreen(): ReactNode {
   // -- Render ----------------------------------------------------------------
 
   const filtered = mode !== "all";
-  const shownLabel = total !== null ? `${links.length} of ${total} shown` : `${links.length} shown`;
-  const statusText = hasMore ? `${shownLabel}, j to load more` : `${shownLabel}, all shown`;
+  const countLabel = total !== null ? `${links.length} of ${total}` : `${links.length}`;
+  const panelTitle = truncate(`Links (${countLabel})`, Math.max(6, listWidth - 4));
+  // The pagination affordance only means something once rows are on screen; an
+  // empty or errored list already explains itself in the panel body.
+  const statusText = links.length > 0 ? (hasMore ? "j to load more" : "all shown") : "";
   const hintText = pillFocused
     ? PILL_HINT
     : searchFocused
       ? SEARCH_HINT
       : editing !== null
         ? EDIT_HINT
-        : error !== null
-          ? `${HINT}  r retry`
-          : HINT;
-  const banner =
-    notice ??
-    (error !== null && links.length > 0 ? { text: error, kind: "danger" as const } : null);
+        : HINT;
+  const showError = error !== null && links.length > 0;
+  const footerText = notice?.text ?? (showError ? `${error}  (r to retry)` : hintText);
+  const footerColor =
+    notice !== null
+      ? notice.kind === "success"
+        ? tokens.success
+        : tokens.danger
+      : showError
+        ? tokens.danger
+        : tokens.fgSubtle;
+  // The list keeps the default focus; the search, pills, inline edit, form, and
+  // confirm each take it over, so the panel border only lights when the list is
+  // actually the thing the keys act on.
+  const listFocused =
+    !pillFocused && !searchFocused && editing === null && !form.open && confirm === null;
+  const footerRoom = Math.max(8, listWidth - statusText.length - 2);
 
   return (
     <box flexDirection="column" flexGrow={1} minHeight={0} backgroundColor={color(tokens.bg)}>
-      {/* Header: search field plus the save affordance. */}
-      <box flexDirection="row" height={1} flexShrink={0} gap={1}>
-        <text fg={color(tokens.fgMuted)}>{"Search"}</text>
+      {/* Bordered search field, matching the Todo board. The `n save` affordance
+          moved into the footer hint so the box stays a single control. */}
+      <box
+        flexShrink={0}
+        border
+        borderStyle="single"
+        borderColor={color(searchFocused ? tokens.borderFocus : tokens.borderMuted)}
+        title=" Search "
+        titleColor={color(searchFocused ? tokens.accent : tokens.fgMuted)}
+        paddingLeft={1}
+        paddingRight={1}
+        height={3}
+      >
         <input
           focused={searchFocused}
           value={search}
           placeholder="title or url"
           onInput={(value) => changeSearch(value)}
           flexGrow={1}
-          backgroundColor={color(tokens.bgPanel)}
-          focusedBackgroundColor={color(tokens.bgPanel)}
+          backgroundColor={color(tokens.bg)}
+          focusedBackgroundColor={color(tokens.bg)}
           textColor={color(tokens.fg)}
           focusedTextColor={color(tokens.fg)}
           placeholderColor={color(tokens.fgDisabled)}
@@ -703,8 +739,9 @@ export function LinksScreen(): ReactNode {
           selectionBg={color(tokens.selectionBg)}
           selectionFg={color(tokens.selectionFg)}
         />
-        <text fg={color(tokens.accent)}>{"n  Save link"}</text>
       </box>
+
+      <box height={1} flexShrink={0} />
 
       <TagFilterBar
         pills={pills}
@@ -714,23 +751,25 @@ export function LinksScreen(): ReactNode {
         appliedTag={tag}
       />
 
-      {banner !== null ? (
-        <box height={1} flexShrink={0}>
-          <text
-            fg={color(banner.kind === "success" ? tokens.success : tokens.danger)}
-            wrapMode="none"
-          >
-            {truncate(banner.text, Math.max(8, listWidth))}
-          </text>
-        </box>
-      ) : null}
-
-      <box flexDirection="column" flexGrow={1} minHeight={0}>
+      {/* The link list lives in one titled panel, so the empty, loading, and
+          loaded states share the same frame. */}
+      <box
+        flexDirection="column"
+        flexGrow={1}
+        minHeight={0}
+        border
+        borderStyle="single"
+        borderColor={color(listFocused ? tokens.borderFocus : tokens.borderMuted)}
+        title={` ${panelTitle} `}
+        titleColor={color(listFocused ? tokens.accent : tokens.fgMuted)}
+        paddingLeft={1}
+        paddingRight={1}
+      >
         {loading ? (
           <>
-            <RowSkeleton width={Math.min(42, listWidth - 2)} />
-            <RowSkeleton width={Math.min(36, listWidth - 2)} />
-            <RowSkeleton width={Math.min(40, listWidth - 2)} />
+            <RowSkeleton width={panelInnerWidth} />
+            <RowSkeleton width={panelInnerWidth} />
+            <RowSkeleton width={panelInnerWidth} />
           </>
         ) : links.length === 0 ? (
           error !== null ? (
@@ -750,7 +789,7 @@ export function LinksScreen(): ReactNode {
                 key={link.id}
                 link={link}
                 selected={link.id === selectedId}
-                width={listWidth}
+                width={panelInnerWidth}
                 narrow={narrow}
                 veryNarrow={veryNarrow}
                 editing={editing !== null && editing.id === link.id}
@@ -760,8 +799,8 @@ export function LinksScreen(): ReactNode {
             ))}
             {loadingMore ? (
               <>
-                <RowSkeleton width={Math.min(42, listWidth - 2)} />
-                <RowSkeleton width={Math.min(30, listWidth - 2)} />
+                <RowSkeleton width={panelInnerWidth} />
+                <RowSkeleton width={panelInnerWidth} />
                 <text fg={color(tokens.fgSubtle)}>{"loading more"}</text>
               </>
             ) : (
@@ -771,14 +810,15 @@ export function LinksScreen(): ReactNode {
         )}
       </box>
 
-      <box height={1} flexShrink={0}>
-        <text fg={color(tokens.fgSubtle)} wrapMode="none">
-          {truncate(hintText, Math.max(8, listWidth))}
+      {/* One footer: the transient notice or load error on the left, the
+          shown/loaded status on the right. */}
+      <box flexDirection="row" height={1} flexShrink={0}>
+        <text fg={color(footerColor)} wrapMode="none">
+          {truncate(footerText, footerRoom)}
         </text>
-      </box>
-      <box height={1} flexShrink={0}>
+        <box flexGrow={1} />
         <text fg={color(tokens.fgMuted)} wrapMode="none">
-          {truncate(`status: ${statusText}`, Math.max(8, listWidth))}
+          {statusText}
         </text>
       </box>
 

@@ -77,6 +77,11 @@ export function NoteEditorPane(props: NoteEditorPaneProps): ReactNode {
       flexGrow={1}
       flexShrink={1}
       minHeight={0}
+      border
+      borderStyle="single"
+      borderColor={color(props.focused ? tokens.borderFocus : tokens.borderMuted)}
+      title=" Note "
+      titleColor={color(props.focused ? tokens.accent : tokens.fgMuted)}
       paddingLeft={1}
       paddingRight={1}
     >

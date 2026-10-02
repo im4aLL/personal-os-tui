@@ -60,7 +60,9 @@ export interface CommentState {
 /** Grid geometry derived once per render and passed to the presentational
  * header and body so their week columns stay aligned. */
 export interface GridGeometry {
+  /** Inner row width of the list pane, in columns (the pane adds its frame). */
   listWidth: number;
+  /** Inner content width of the workspace panel, in columns. */
   gridWidth: number;
   taskWidth: number;
   resWidth: number;

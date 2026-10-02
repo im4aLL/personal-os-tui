@@ -33,7 +33,7 @@ export function WorkLogRow(props: WorkLogRowProps): ReactNode {
   const dateInTitle = !props.veryNarrow;
   const titleRoom = Math.max(4, props.width - MARKER - (dateInTitle ? DATE_WIDTH : 0));
   const metaRoom = Math.max(4, props.width - MARKER - 2);
-  const titleColor = selected ? tokens.fg : tokens.fgMuted;
+  const titleColor = selected ? tokens.accent : tokens.fg;
 
   const meta = props.narrow
     ? [dateInTitle ? "" : dateLabel, description, tags].filter((part) => part !== "").join("  ")
@@ -41,7 +41,11 @@ export function WorkLogRow(props: WorkLogRowProps): ReactNode {
   const descriptionRoom = tags === "" ? metaRoom : Math.max(8, metaRoom - tags.length - 2);
 
   return (
-    <box flexDirection="column" flexShrink={0}>
+    <box
+      flexDirection="column"
+      flexShrink={0}
+      backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+    >
       {/* Title line. */}
       <box flexDirection="row" height={1}>
         <text fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{marker}</text>

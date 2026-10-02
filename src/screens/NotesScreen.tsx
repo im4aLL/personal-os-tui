@@ -71,9 +71,20 @@ export function NotesScreen(): ReactNode {
   const setPrivacyMode = useUi((state) => state.setNotesPrivacyMode);
 
   const narrow = width < WIDE_MIN;
-  const listWidth = narrow ? width : Math.max(24, Math.min(34, Math.floor(width * 0.26)));
-  const editorWidth = narrow ? width : Math.max(20, width - listWidth - 2);
-  const listBodyHeight = Math.max(3, height - 9);
+  const sidebarCollapsed = useUi((state) => state.sidebarCollapsed);
+  const sideWidth = width < 60 ? 0 : sidebarCollapsed || width < 80 ? 2 : 22;
+  const contentWidth = Math.max(24, width - sideWidth - 2);
+  // Two bordered panes separated by one gap column. Each pane spends four
+  // columns on its frame (two border plus one padding cell each side), so rows
+  // budget against the inner width.
+  const paneGap = 1;
+  const listOuter = narrow
+    ? contentWidth
+    : Math.max(28, Math.min(38, Math.floor(contentWidth * 0.3)));
+  const editorOuter = narrow ? contentWidth : Math.max(20, contentWidth - listOuter - paneGap);
+  const editorInner = Math.max(8, editorOuter - 4);
+  // The list panel spends two border rows and a three-row search strip.
+  const listBodyHeight = Math.max(3, height - 8);
   const visibleCount = Math.max(1, Math.floor(listBodyHeight / LIST_ROW_ROWS));
 
   const [search, setSearch] = useState("");
@@ -762,6 +773,11 @@ export function NotesScreen(): ReactNode {
   // -- Render ---------------------------------------------------------------
 
   const searchFocused = focusedField === "search";
+  // The list panel owns focus by default (or while its search is active); the
+  // editor panel lights whenever a field there owns the keyboard.
+  const listPanelFocused =
+    searchFocused || (focusedField === null && (!narrow || narrowPane === "list"));
+  const editorPanelFocused = !listPanelFocused;
   const selectedIndex = filtered.findIndex((note) => note.id === selectedId);
   const visibleNotes = windowSlice(filtered, selectedIndex, visibleCount);
   const banner =
@@ -776,10 +792,11 @@ export function NotesScreen(): ReactNode {
       count={filtered.length}
       selectedId={selectedId}
       loading={loading}
+      focused={listPanelFocused}
       searchFocused={searchFocused}
       search={search}
       privacyMode={privacyMode}
-      width={Math.max(6, listWidth - 4)}
+      width={listOuter}
       onSearchChange={setSearch}
     />
   );
@@ -791,6 +808,7 @@ export function NotesScreen(): ReactNode {
       error={editorError}
       mode={mode}
       saveStatus={saveStatus}
+      focused={editorPanelFocused}
       focusedField={focusedField === "search" ? null : focusedField}
       privacyMode={privacyMode}
       title={title}
@@ -800,7 +818,7 @@ export function NotesScreen(): ReactNode {
       suggestions={suggestions}
       suggestionIndex={suggestionIndex}
       bodyKey={bodyKey}
-      width={editorWidth}
+      width={editorInner}
       bodyRef={bodyRef}
       onTitleChange={handleTitleChange}
       onTagInputChange={(value) => {
@@ -837,11 +855,10 @@ export function NotesScreen(): ReactNode {
           editorPane
         )
       ) : (
-        <box flexDirection="row" flexGrow={1} minHeight={0}>
-          <box width={listWidth} flexDirection="column" flexShrink={0} minHeight={0}>
+        <box flexDirection="row" flexGrow={1} minHeight={0} gap={paneGap}>
+          <box width={listOuter} flexDirection="column" flexShrink={0} minHeight={0}>
             {listPane}
           </box>
-          <box width={1} flexShrink={0} backgroundColor={color(tokens.borderMuted)} />
           <box flexDirection="column" flexGrow={1} flexShrink={1} minHeight={0}>
             {editorPane}
           </box>
@@ -850,7 +867,7 @@ export function NotesScreen(): ReactNode {
 
       <box height={1} flexShrink={0}>
         <text fg={color(statusColor)} wrapMode="none">
-          {truncate(statusText, Math.max(8, width - 2))}
+          {truncate(statusText, Math.max(8, contentWidth))}
         </text>
       </box>
 

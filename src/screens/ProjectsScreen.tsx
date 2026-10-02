@@ -43,6 +43,12 @@ const LIST_MODE_MAX = 60;
 const MIN_WEEK_COL = 7;
 /** Columns reserved for the window indicator when the project is windowed. */
 const INDICATOR_ROOM = 14;
+/** One-column gap between the two bordered panes. */
+const PANE_GAP = 1;
+/** A pane's frame: two border cells plus one padding cell on each side. */
+const PANE_CHROME = 4;
+/** Vertical cost of a pane's frame: the top and bottom border rows. */
+const PANE_BORDER_ROWS = 2;
 const ZONES: ProjectFocusZone[] = ["list", "header", "grid"];
 const PROJECT_FIELDS: ProjectFormState["field"][] = ["name", "start", "weeks"];
 const ITEM_FIELDS: WorkItemFormState["field"][] = [
@@ -131,12 +137,15 @@ function contentWidthFor(width: number, sidebarCollapsed: boolean): number {
 }
 
 /** Derive the list/grid split plus the visible week window from the content
- * width. Windowed mode reserves room for the header indicator and never shows
- * fewer than one week. `weekArea` is the space left for the visible week columns
- * after the Task/Res columns and the fixed one-column gaps between grid columns. */
+ * width. Both panes are bordered, so their rows budget against the inner width:
+ * the content minus the inter-pane gap and each pane's frame. Windowed mode
+ * reserves room for the header indicator and never shows fewer than one week.
+ * `weekArea` is the space left for the visible week columns after the Task/Res
+ * columns and the fixed one-column gaps between grid columns. */
 function computeGeometry(contentWidth: number, weekCount: number): GridGeometry {
-  const listWidth = Math.max(18, Math.min(24, Math.floor(contentWidth * 0.22)));
-  const gridWidth = Math.max(16, contentWidth - listWidth - 1);
+  const innerArea = Math.max(16, contentWidth - PANE_GAP - PANE_CHROME * 2);
+  const listWidth = Math.max(12, Math.min(22, Math.floor(contentWidth * 0.22)));
+  const gridWidth = Math.max(12, innerArea - listWidth);
   const taskWidth = Math.max(10, Math.min(22, Math.floor(gridWidth * 0.32)));
   const resWidth = Math.max(4, Math.min(8, Math.floor(gridWidth * 0.08)));
   // Fixed one-column gaps: two between the three leading column groups
@@ -240,11 +249,19 @@ export function ProjectsScreen(): ReactNode {
   // footer is capped so the body still gets its three-row minimum.
   const hintRoom = Math.max(8, geometry.gridWidth);
   const hintSegments = [...HINTS[focusZone], ...(error !== null ? ["r retry"] : [])];
-  const maxHintRows = Math.max(1, height - 2 - headerRows - gridHeaderRows - bannerRows - 3);
+  const maxHintRows = Math.max(
+    1,
+    height - 2 - PANE_BORDER_ROWS - headerRows - gridHeaderRows - bannerRows - 3,
+  );
   const hintLines = wrapSegments(hintSegments, "  ", hintRoom).slice(0, maxHintRows);
   const hintRows = hintLines.length;
-  const bodyHeight = Math.max(3, height - 2 - headerRows - gridHeaderRows - bannerRows - hintRows);
-  const listItemsMax = Math.max(2, Math.floor((height - 3) / 2));
+  const bodyHeight = Math.max(
+    3,
+    height - 2 - PANE_BORDER_ROWS - headerRows - gridHeaderRows - bannerRows - hintRows,
+  );
+  // The list pane is framed too, and each item is two rows plus a one-row
+  // divider, so the window holds `(inner + 1) / 3` items.
+  const listItemsMax = Math.max(2, Math.floor((height - 2 - PANE_BORDER_ROWS + 1) / 3));
 
   const visibleHeaders =
     selectedProject !== null && !listMode
@@ -1058,7 +1075,7 @@ export function ProjectsScreen(): ReactNode {
 
   return (
     <box flexDirection="column" flexGrow={1} minHeight={0} backgroundColor={color(tokens.bg)}>
-      <box flexDirection="row" flexGrow={1} minHeight={0}>
+      <box flexDirection="row" flexGrow={1} minHeight={0} gap={PANE_GAP}>
         <ProjectListPane
           projects={projects}
           selectedId={selectedId}
@@ -1069,83 +1086,70 @@ export function ProjectsScreen(): ReactNode {
           maxItems={listItemsMax}
         />
 
-        <box flexDirection="column" flexGrow={1} minHeight={0} paddingLeft={1}>
-          {selectedProject !== null ? (
-            <ProjectHeader
-              project={selectedProject}
-              phases={phases}
-              workItems={workItems}
-              stat={progress[selectedProject.id]}
-              focused={focusZone === "header"}
-              width={geometry.gridWidth}
-            />
-          ) : null}
+        <box flexDirection="column" flexGrow={1} minHeight={0}>
+          {/* The project workspace: the header summary, the week header, and the
+              grid/list body share one titled panel, so the empty, loading, and
+              loaded states draw the same frame. */}
+          <box
+            flexDirection="column"
+            flexGrow={1}
+            minHeight={0}
+            border
+            borderStyle="single"
+            borderColor={color(focusZone !== "list" ? tokens.borderFocus : tokens.borderMuted)}
+            title={` ${listMode ? "Items" : "Timeline"} `}
+            titleColor={color(focusZone !== "list" ? tokens.accent : tokens.fgMuted)}
+            paddingLeft={1}
+            paddingRight={1}
+          >
+            {selectedProject !== null ? (
+              <ProjectHeader
+                project={selectedProject}
+                phases={phases}
+                workItems={workItems}
+                stat={progress[selectedProject.id]}
+                focused={focusZone === "header"}
+                width={geometry.gridWidth}
+              />
+            ) : null}
 
-          {showSkeleton ? (
-            <>
-              <WeekGridHeader
-                headers={[]}
-                totalWeeks={0}
-                windowStart={0}
-                width={geometry.gridWidth}
-                taskWidth={geometry.taskWidth}
-                resWidth={geometry.resWidth}
-                weekColumnWidth={geometry.weekColumnWidth}
-                weekAreaWidth={geometry.weekAreaWidth}
-                focused={false}
-                loading={true}
-              />
-              <WeekGrid
-                workItems={[]}
-                selectedId={null}
-                focused={false}
-                listMode={false}
-                loading={true}
-                width={geometry.gridWidth}
-                taskWidth={geometry.taskWidth}
-                resWidth={geometry.resWidth}
-                weekColumnWidth={geometry.weekColumnWidth}
-                weekAreaWidth={geometry.weekAreaWidth}
-                windowStart={0}
-                visibleWeeks={0}
-              />
-            </>
-          ) : selectedProject === null ? (
-            <EmptyState title="No project selected" hint="Press n to create one" />
-          ) : listMode ? (
-            <WeekGrid
-              workItems={visibleItems}
-              selectedId={selectedItemId}
-              focused={focusZone === "grid"}
-              listMode={true}
-              loading={false}
-              width={geometry.gridWidth}
-              taskWidth={geometry.taskWidth}
-              resWidth={geometry.resWidth}
-              weekColumnWidth={geometry.weekColumnWidth}
-              weekAreaWidth={geometry.weekAreaWidth}
-              windowStart={windowStart}
-              visibleWeeks={geometry.visibleWeeks}
-            />
-          ) : (
-            <>
-              <WeekGridHeader
-                headers={visibleHeaders}
-                totalWeeks={selectedProject.weekCount}
-                windowStart={windowStart}
-                width={geometry.gridWidth}
-                taskWidth={geometry.taskWidth}
-                resWidth={geometry.resWidth}
-                weekColumnWidth={geometry.weekColumnWidth}
-                weekAreaWidth={geometry.weekAreaWidth}
-                focused={focusZone === "grid"}
-                loading={false}
-              />
+            {showSkeleton ? (
+              <>
+                <WeekGridHeader
+                  headers={[]}
+                  totalWeeks={0}
+                  windowStart={0}
+                  width={geometry.gridWidth}
+                  taskWidth={geometry.taskWidth}
+                  resWidth={geometry.resWidth}
+                  weekColumnWidth={geometry.weekColumnWidth}
+                  weekAreaWidth={geometry.weekAreaWidth}
+                  focused={false}
+                  loading={true}
+                />
+                <WeekGrid
+                  workItems={[]}
+                  selectedId={null}
+                  focused={false}
+                  listMode={false}
+                  loading={true}
+                  width={geometry.gridWidth}
+                  taskWidth={geometry.taskWidth}
+                  resWidth={geometry.resWidth}
+                  weekColumnWidth={geometry.weekColumnWidth}
+                  weekAreaWidth={geometry.weekAreaWidth}
+                  windowStart={0}
+                  visibleWeeks={0}
+                />
+              </>
+            ) : selectedProject === null ? (
+              <EmptyState title="No project selected" hint="Press n to create one" />
+            ) : listMode ? (
               <WeekGrid
                 workItems={visibleItems}
                 selectedId={selectedItemId}
                 focused={focusZone === "grid"}
-                listMode={false}
+                listMode={true}
                 loading={false}
                 width={geometry.gridWidth}
                 taskWidth={geometry.taskWidth}
@@ -1155,8 +1159,37 @@ export function ProjectsScreen(): ReactNode {
                 windowStart={windowStart}
                 visibleWeeks={geometry.visibleWeeks}
               />
-            </>
-          )}
+            ) : (
+              <>
+                <WeekGridHeader
+                  headers={visibleHeaders}
+                  totalWeeks={selectedProject.weekCount}
+                  windowStart={windowStart}
+                  width={geometry.gridWidth}
+                  taskWidth={geometry.taskWidth}
+                  resWidth={geometry.resWidth}
+                  weekColumnWidth={geometry.weekColumnWidth}
+                  weekAreaWidth={geometry.weekAreaWidth}
+                  focused={focusZone === "grid"}
+                  loading={false}
+                />
+                <WeekGrid
+                  workItems={visibleItems}
+                  selectedId={selectedItemId}
+                  focused={focusZone === "grid"}
+                  listMode={false}
+                  loading={false}
+                  width={geometry.gridWidth}
+                  taskWidth={geometry.taskWidth}
+                  resWidth={geometry.resWidth}
+                  weekColumnWidth={geometry.weekColumnWidth}
+                  weekAreaWidth={geometry.weekAreaWidth}
+                  windowStart={windowStart}
+                  visibleWeeks={geometry.visibleWeeks}
+                />
+              </>
+            )}
+          </box>
 
           {banner !== null ? (
             <box height={1} flexShrink={0}>

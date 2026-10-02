@@ -20,10 +20,14 @@ export function NoteRow(props: NoteRowProps): ReactNode {
     ? "*".repeat(MASK_TITLE_WIDTH)
     : truncate(noteDisplayTitle(note), Math.max(4, props.width - 2));
   const date = masked ? "*".repeat(MASK_DATE_WIDTH) : relativeTime(note.updatedAt);
-  const titleColor = selected ? tokens.fg : tokens.fgMuted;
+  const titleColor = selected ? tokens.accent : tokens.fg;
 
   return (
-    <box flexDirection="column">
+    <box
+      flexDirection="column"
+      flexShrink={0}
+      backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+    >
       <text wrapMode="none">
         <span fg={color(selected ? tokens.accent : tokens.fgSubtle)}>{marker}</span>
         {note.pinned && !masked ? <span fg={color(tokens.warning)}>{"^ "}</span> : null}

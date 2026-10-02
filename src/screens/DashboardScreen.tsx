@@ -475,7 +475,12 @@ export function DashboardScreen(): ReactNode {
     const titleRoom = Math.max(4, rowWidth - 2 - 1 - PRIORITY_COL - 1 - DUE_COL);
     const selected = todo.id === selectedFocusId;
     return (
-      <box key={todo.id} height={1} flexShrink={0}>
+      <box
+        key={todo.id}
+        height={1}
+        flexShrink={0}
+        backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+      >
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : tokens.fg)}>
             {`${selected ? "> " : "  "}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
@@ -528,7 +533,13 @@ export function DashboardScreen(): ReactNode {
     // percentage occupies a fixed 5-cell field so every bar ends flush right.
     const barWidth = Math.max(4, rowWidth - 2 - 5);
     return (
-      <box key={project.id} height={PROJECT_ROWS} flexShrink={0} flexDirection="column">
+      <box
+        key={project.id}
+        height={PROJECT_ROWS}
+        flexShrink={0}
+        flexDirection="column"
+        backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+      >
         <text wrapMode="none">
           <span fg={color(selected ? tokens.accent : rowFg)}>
             {`${selected ? "> " : "  "}${padEnd(truncate(project.name, nameRoom), nameRoom)}`}
@@ -575,7 +586,12 @@ export function DashboardScreen(): ReactNode {
                 : tokens.priorityLow;
           const titleRoom = Math.max(4, rowWidth - 2 - 1 - PRIORITY_COL);
           return (
-            <box key={todo.id} height={1} flexShrink={0}>
+            <box
+              key={todo.id}
+              height={1}
+              flexShrink={0}
+              backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+            >
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
                   {`${selected ? "> " : "  "}${padEnd(truncate(todo.title, titleRoom), titleRoom)} `}
@@ -611,7 +627,12 @@ export function DashboardScreen(): ReactNode {
           const selected = item.key === selectedActivityKey;
           const time = relativeTime(item.date, now);
           return (
-            <box key={item.key} height={1} flexShrink={0}>
+            <box
+              key={item.key}
+              height={1}
+              flexShrink={0}
+              backgroundColor={selected ? color(tokens.bgAlt) : undefined}
+            >
               <text wrapMode="none">
                 <span fg={color(selected ? tokens.accent : tokens.fg)}>
                   {`${selected ? "> " : "  "}${padEnd(truncate(item.title, titleRoom), titleRoom)} `}

@@ -14,6 +14,8 @@ export interface NoteEditorPaneProps {
   error: string | null;
   mode: NoteEditorMode;
   saveStatus: NoteSaveStatus;
+  /** True when the editor panel owns the keyboard (border/title emphasis). */
+  focused: boolean;
   focusedField: NoteEditorField | null;
   privacyMode: boolean;
   title: string;
