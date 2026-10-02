@@ -15,6 +15,7 @@ import { App } from "./app/App";
 import { runDoctor } from "./cli/doctor";
 import { applyKeymap } from "./commands/registry";
 import { configPath, effectiveCredentials, loadKeymap } from "./lib/config";
+import { runPendingWrites } from "./lib/pending-writes";
 import { setTursoConfig } from "./lib/turso";
 import { getRepos } from "./repos/index";
 import type { RepoBundle } from "./repos/index.types";
@@ -69,6 +70,8 @@ function printHelp(): void {
   lines.push(
     "  POS_CONFIG_DIR=dir       Override the config directory",
     "  POS_NO_MOUSE=1           Disable mouse; keyboard-only",
+    "  POS_TZ=zone              Override the calendar zone (e.g. Europe/Berlin)",
+    "  POS_LOCALE=tag           Override the display locale (e.g. de-DE)",
     "  POS_TURSO_URL / POS_TURSO_TOKEN",
     "                           Credential overrides (never persisted)",
   );
@@ -197,6 +200,14 @@ async function runApp(args: string[]): Promise<number> {
   process.on("uncaughtException", onFatal);
   process.on("unhandledRejection", onFatal);
 
+  /** Shutdown path for quit: drain pending writes, then request teardown. The
+   * renderer is destroyed only after the flush, so a debounced autosave can
+   * still reach the database. */
+  const requestQuit = async (): Promise<void> => {
+    await runPendingWrites();
+    requestShutdown();
+  };
+
   try {
     renderer = await createCliRenderer({
       exitOnCtrlC: false,
@@ -207,11 +218,7 @@ async function runApp(args: string[]): Promise<number> {
     });
     const root = createRoot(renderer);
     root.render(
-      <App
-        onRequestQuit={() => requestShutdown()}
-        setup={bundle.setup}
-        settings={bundle.repos.settings}
-      />,
+      <App onRequestQuit={requestQuit} setup={bundle.setup} settings={bundle.repos.settings} />,
     );
     await shutdown;
     root.unmount();
@@ -221,6 +228,14 @@ async function runApp(args: string[]): Promise<number> {
   } finally {
     process.off("uncaughtException", onFatal);
     process.off("unhandledRejection", onFatal);
+    // A fatal path (uncaught error, boot failure) skipped the quit handler, so
+    // flush here too; it is a no-op when requestQuit already drained. Then
+    // destroy restores raw mode, mouse, alternate screen, cursor, and title.
+    try {
+      await runPendingWrites();
+    } catch {
+      // Best-effort; teardown must still run.
+    }
     if (renderer !== null) {
       renderer.destroy();
     }

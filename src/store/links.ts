@@ -215,7 +215,19 @@ export const useLinks = create<LinksState>((set, get) => ({
         set({ loadingMore: false });
         return;
       }
-      set({ loadingMore: false, error: messageOf(error), errorScope: "more" });
+      // A malformed cursor is client-side corruption with no recovery path if
+      // it is retried verbatim (W4 review follow-up): retrying the same bad
+      // cursor can only fail again. Drop it and restart the active filter from
+      // page one. The error is still surfaced for this attempt; the caller's
+      // retry then hits a clean cursor.
+      const malformedCursor = messageOf(error).includes("invalid links cursor") && cursor !== null;
+      set({
+        loadingMore: false,
+        cursor: malformedCursor ? null : cursor,
+        hasMore: true,
+        error: messageOf(error),
+        errorScope: "more",
+      });
     }
   },
 

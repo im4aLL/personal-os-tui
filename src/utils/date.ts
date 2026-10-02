@@ -2,8 +2,42 @@
 // Dates are stored and compared as local `YYYY-MM-DD` strings: `toISOString()`
 // is UTC and can shift the day, so these functions build and compare local
 // calendar dates instead. Runtime only; no exported types live here.
+//
+// `POS_TZ` (a zone like `Europe/Berlin`) pins the calendar used to derive
+// "today", week boundaries, and month starts; when unset the process local zone
+// applies. `POS_LOCALE` (a BCP-47 tag like `de-DE`) pins the locale used for
+// display formatting; when unset the OS locale applies. Both are display/clock
+// overrides only: stored timestamps are always `toISOString()` (UTC), so no
+// remote row changes shape when an override is set.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+function timeZone(): string | undefined {
+  const value = process.env.POS_TZ;
+  return value !== undefined && value !== "" ? value : undefined;
+}
+
+function locale(): string | undefined {
+  const value = process.env.POS_LOCALE;
+  return value !== undefined && value !== "" ? value : undefined;
+}
+
+/** The date components of `date` in the configured zone, as a local-midnight
+ * Date. Only its year/month/day are meaningful; the time is zeroed. */
+function partsInZone(date: Date): Date {
+  const zone = timeZone();
+  if (zone === undefined) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string): number => Number(parts.find((part) => part.type === type)?.value);
+  return new Date(get("year"), get("month") - 1, get("day"));
+}
 
 /** Format a Date as a local `YYYY-MM-DD` string. */
 function toLocalISO(date: Date): string {
@@ -30,16 +64,14 @@ function parseLocalISO(iso: string): Date | null {
   return date;
 }
 
-/** Local start of today (midnight). */
+/** Local start of today (midnight) in the configured zone. */
 function startOfToday(): Date {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return now;
+  return partsInZone(new Date());
 }
 
-/** Today as a local `YYYY-MM-DD` string. */
+/** Today as a `YYYY-MM-DD` string in the configured zone. */
 export function todayISO(): string {
-  return toLocalISO(new Date());
+  return toLocalISO(startOfToday());
 }
 
 /** Local `YYYY-MM-DD` offset from today by `days` (negative is past). */
@@ -93,10 +125,11 @@ export function formatWorkLogRange(start: string, end: string): string {
   }
   const thisYear = new Date().getFullYear();
   const format = (date: Date): string =>
-    date.toLocaleDateString(undefined, {
+    date.toLocaleDateString(locale(), {
       month: "short",
       day: "numeric",
       ...(date.getFullYear() !== thisYear ? { year: "numeric" } : {}),
+      ...(timeZone() !== undefined ? { timeZone: timeZone() } : {}),
     });
   if (start === end) {
     return format(startDate);
@@ -110,7 +143,11 @@ export function formatShortDate(iso: string): string {
   if (date === null) {
     return iso;
   }
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+  return new Intl.DateTimeFormat(locale(), {
+    month: "short",
+    day: "numeric",
+    ...(timeZone() !== undefined ? { timeZone: timeZone() } : {}),
+  }).format(date);
 }
 
 /** Whole local-calendar days from `iso` to today (positive means past). */
@@ -183,10 +220,11 @@ export function timeOfDayGreeting(date: Date = dashboardNow()): string {
 /** Long localized date line for `date` (defaults to the dashboard clock),
  * e.g. `Thursday, October 1`, in the OS locale. */
 export function formatLongDate(date: Date = dashboardNow()): string {
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale(), {
     weekday: "long",
     month: "long",
     day: "numeric",
+    ...(timeZone() !== undefined ? { timeZone: timeZone() } : {}),
   });
 }
 
@@ -218,10 +256,12 @@ export function relativeTime(iso: string, now: Date = new Date()): string {
     return "Yesterday";
   }
   const sameYear = then.getFullYear() === now.getFullYear();
+  const zone = timeZone();
+  const zoneOption = zone !== undefined ? { timeZone: zone } : {};
   return then.toLocaleDateString(
-    undefined,
+    locale(),
     sameYear
-      ? { month: "short", day: "numeric" }
-      : { month: "short", day: "numeric", year: "numeric" },
+      ? { month: "short", day: "numeric", ...zoneOption }
+      : { month: "short", day: "numeric", year: "numeric", ...zoneOption },
   );
 }

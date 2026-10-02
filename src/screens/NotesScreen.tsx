@@ -11,6 +11,7 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Modal } from "../components/ui/Modal";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { exportNoteAsMarkdown, exportNoteAsTxt } from "../lib/export-note";
+import { registerPendingWrite } from "../lib/pending-writes";
 import { useNotes } from "../store/notes";
 import { getRepos } from "../store/repos";
 import { useSession } from "../store/session";
@@ -226,6 +227,10 @@ export function NotesScreen(): ReactNode {
       }
     };
   }, []);
+
+  // A quit during the 1s debounce window must not lose the edit: register the
+  // flush so the entrypoint drains it before the renderer is destroyed.
+  useEffect(() => registerPendingWrite(flush), [flush]);
 
   // -- Loading and selection ------------------------------------------------
 

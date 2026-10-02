@@ -40,7 +40,7 @@ One feature at a time: UI, then gate, then wiring.
 25. [G8](G8-polish-ui-approval.md) - Polish UI approval (gate, polish, done)
 26. [F2](F2-vim-navigation-motions.md) - Consistent vim-style navigation motions and :q (feature, polish, done)
 27. [F1](F1-configurable-keymap.md) - Configurable keymap from the config file (feature, polish, done)
-28. [W8](W8-real-data-hardening.md) - Real-data hardening and end-to-end (wiring, hardening, not-started)
+28. [W8](W8-real-data-hardening.md) - Real-data hardening and end-to-end (wiring, hardening, done)
 
 ## Status board
 
@@ -48,7 +48,6 @@ One feature at a time: UI, then gate, then wiring.
 
 | Ticket | Title | Type | Phase |
 | --- | --- | --- | --- |
-| [W8](W8-real-data-hardening.md) | Real-data hardening and end-to-end | wiring | hardening |
 
 ## in-progress
 
@@ -87,6 +86,7 @@ One feature at a time: UI, then gate, then wiring.
 | [G8](G8-polish-ui-approval.md) | Polish UI approval | gate | polish |
 | [F2](F2-vim-navigation-motions.md) | Consistent vim-style navigation motions and :q | feature | polish |
 | [F1](F1-configurable-keymap.md) | Configurable keymap from the config file | feature | polish |
+| [W8](W8-real-data-hardening.md) | Real-data hardening and end-to-end | wiring | hardening |
 
 ## Rules
 

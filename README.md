@@ -116,6 +116,35 @@ Dev-only commands such as the mock panel are part of the registry in development
 | `format` / `lint` | Formatting and linting alone |
 | `ci` | Biome's non-interactive CI check |
 
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `POS_CONFIG_DIR` | Override the config directory (default: `~/.config/personal-os-tui`, or `%APPDATA%\personal-os-tui`) |
+| `POS_TURSO_URL` / `POS_TURSO_TOKEN` | Credential overrides, never persisted |
+| `POS_TZ` | Override the calendar zone used for "today", week boundaries, and displayed dates (e.g. `Europe/Berlin`); defaults to the system zone |
+| `POS_LOCALE` | Override the display locale (e.g. `de-DE`); defaults to the OS locale |
+| `POS_NO_MOUSE` | Set to `1` for keyboard-only reachability |
+| `POS_MOCK` / `POS_MOCK_LATENCY` / `POS_MOCK_SCENARIO` | Development-build mock controls (see the mock sections above) |
+
+Stored timestamps are always UTC ISO strings; `POS_TZ` and `POS_LOCALE` only affect how the TUI derives calendar dates and renders them, so no remote row changes shape. `pos doctor` reports both, plus an advisory warning when a value is invalid and the process default is used instead.
+
+## Failure behavior
+
+- **Network off / unreachable database.** Every request retries once on a transient network error and then surfaces a classified message; screens keep the previous data visible with a retry key rather than blanking.
+- **Invalid or rotated token.** Turso HTTP 401/403 and `unauthorized` bodies map to "Could not authenticate with Turso. Check your token." Re-running Setup with a fresh token recovers; `pos doctor` fails its `SELECT 1` line and exits non-zero.
+- **Missing tables.** Setup applies `REMOTE_SCHEMAS` and tolerates benign `already exists` / `duplicate column` statements, so a partially migrated database is brought up to date instead of failing.
+- **Read-only config directory.** Writes use a temp file plus rename and are best-effort: a failed UI-preference or autosave write never crashes the app; the failure is surfaced in-app and `pos doctor` reports the config path and permissions.
+- **Slow or rate-limited database.** Requests time out after 15 s and retry once on HTTP 429/5xx with a 300 ms backoff, so a slow database degrades to an error with a retry instead of hanging a skeleton.
+
+## Packaging
+
+`npm pack` produces a tarball containing `bin/`, `dist/`, `README.md`, `LICENSE`, and `package.json`. A production build (`npm run build:prod`) emits only `dist/cli.js` and its sourcemap - no mock chunk. Requesting mock against that build (`POS_MOCK=1 pos` or `pos --mock`) fails loudly with `mock mode is not enabled in this build`. Install globally with `npm install -g @im4all/personal-os-tui`.
+
+## Terminal support
+
+Tested terminals are iTerm2, Terminal.app, Alacritty, Kitty, WezTerm, tmux, and GNU Screen on macOS/Linux, plus Windows Terminal (PowerShell and Git Bash). On a 256-color-only terminal (`TERM=xterm-256color`, no `COLORTERM`) colors degrade to the nearest ANSI slot rather than rendering invisibly. The terminal is restored on normal quit, `Ctrl+Q`, handled signals, uncaught exceptions, and unhandled rejections.
+
 ## Installed dependencies
 
 Runtime (exact versions from `package-lock.json` on the bootstrap machine, macOS arm64, Node v26.4.0):
@@ -145,4 +174,4 @@ Deliberately omitted: `zod` (hand-written validators), `date-fns`, `react-markdo
 
 ## Status
 
-All six feature screens (Dashboard, Todo, Save Links, Project Planner, Work Log, Notes) are implemented and wired to Turso through the repository seam, with Setup wired first. The M8 cross-cutting polish is complete: the command palette lists each command with its bound keys, `?` renders global and per-screen keys generated from one registry, `ctrl+t` opens a theme picker that persists to `config.json`, `ctrl+r` refreshes the current screen, the dev-only mock panel toggles scenario, latency, error injection, and fixtures, mouse is an additive layer (disabled with `POS_NO_MOUSE=1`), and every screen's empty, loading, and error states share one voice. The M8 milestone awaits G8 approval. Without credentials the app runs on in-memory mock data behind a MOCK DATA badge; `POS_MOCK_LATENCY` and `POS_MOCK_SCENARIO` (including `slow` and `large`) shape loading and error states in dev builds, and the mock chunk is dropped from `build:prod`.
+All six feature screens (Dashboard, Todo, Save Links, Project Planner, Work Log, Notes) are implemented and wired to Turso through the repository seam, with Setup wired first. The M8 cross-cutting polish is complete: the command palette lists each command with its bound keys, `?` renders global and per-screen keys generated from one registry, `ctrl+t` opens a theme picker that persists to `config.json`, `ctrl+r` refreshes the current screen, the dev-only mock panel toggles scenario, latency, error injection, and fixtures, mouse is an additive layer (disabled with `POS_NO_MOUSE=1`), and every screen's empty, loading, and error states share one voice. F1 and F2 add configurable key bindings (`keymap.json`) and the shared vim-style motion set with `:q`. W8 hardens the real-data path: quitting drains pending writes (including the Notes autosave) before the terminal is restored, `POS_TZ`/`POS_LOCALE` override the calendar and display locale, a malformed links cursor self-heals, and the failure passes (network off, invalid/rotated token, missing tables, read-only config directory, slow/rate-limited database) surface classified errors with retries. Without credentials the app runs on in-memory mock data behind a MOCK DATA badge; `POS_MOCK_LATENCY` and `POS_MOCK_SCENARIO` (including `slow` and `large`) shape loading and error states in dev builds, and the mock chunk is dropped from `build:prod`.

@@ -88,6 +88,39 @@ export async function runDoctor(): Promise<number> {
     );
   }
 
+  // Environment-driven display/clock overrides. Advisory only: an unknown zone
+  // or locale falls back to the process default at format time, so this never
+  // changes the exit status.
+  const zone = process.env.POS_TZ ?? "";
+  const zoneNote = zone === "" ? "(system default)" : zone;
+  let zoneValid = true;
+  if (zone !== "") {
+    try {
+      new Intl.DateTimeFormat("en-CA", { timeZone: zone });
+    } catch {
+      zoneValid = false;
+    }
+  }
+  lines.push(
+    `${zoneValid ? "INFO" : "WARN"} POS_TZ: ${zoneNote}${
+      zoneValid ? "" : " (unknown zone; using system default)"
+    }`,
+  );
+  const localeTag = process.env.POS_LOCALE ?? "";
+  let localeValid = true;
+  if (localeTag !== "") {
+    try {
+      Intl.getCanonicalLocales(localeTag);
+    } catch {
+      localeValid = false;
+    }
+  }
+  lines.push(
+    `${localeValid ? "INFO" : "WARN"} POS_LOCALE: ${
+      localeTag === "" ? "(system default)" : localeTag
+    }${localeValid ? "" : " (invalid tag; using system default)"}`,
+  );
+
   // Keymap diagnostics are advisory: a bad keymap never fails the exit status,
   // unlike loose permissions. Resolving against a clone of the defaults also
   // exercises the same merge path the app uses, without mutating the registry.

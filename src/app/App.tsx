@@ -1,6 +1,6 @@
 import { useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CommandPalette } from "../commands/CommandPalette";
 import { HelpScreen } from "../commands/HelpScreen";
 import {
@@ -13,6 +13,7 @@ import {
 } from "../commands/registry";
 import type { CommandContext } from "../commands/registry.types";
 import { resolveKeyScope } from "../hooks/useKeyboardScope";
+import { runPendingWrites } from "../lib/pending-writes";
 import { DashboardScreen } from "../screens/DashboardScreen";
 import { LinksScreen } from "../screens/LinksScreen";
 import { NotesScreen } from "../screens/NotesScreen";
@@ -68,6 +69,10 @@ function Shell(props: ShellProps): ReactNode {
   const { width } = useTerminalDimensions();
   const renderer = useRenderer();
   const [narrowOpen, setNarrowOpen] = useState(false);
+  // Set once a quit begins: the keyboard handler stops accepting input while
+  // the pending-write flush runs, and `ctx.quit` becomes idempotent.
+  const [stopping, setStopping] = useState(false);
+  const stoppingRef = useRef(false);
 
   useEffect(() => {
     if (width >= 60) {
@@ -167,11 +172,30 @@ function Shell(props: ShellProps): ReactNode {
       resetMockData: () => {
         useSession.getState().resetMockData?.();
       },
-      quit: props.quit,
+      quit: () => {
+        // Flush any pending write (the Notes debounced autosave is the only
+        // one today) before asking the entrypoint to tear down. The guard makes
+        // a second quit a no-op, and the handler is disabled while stopping so
+        // keystrokes cannot queue more work behind the flush.
+        if (stoppingRef.current) {
+          return;
+        }
+        stoppingRef.current = true;
+        setStopping(true);
+        void runPendingWrites().finally(() => {
+          void props.quit();
+        });
+      },
     };
   }, [props.quit, width]);
 
   useKeyboard((key) => {
+    // A quit is in flight: ignore new keys so no command queues work behind the
+    // pending-write flush (an autosave timer, a create, another quit).
+    if (stopping) {
+      key.stopPropagation();
+      return;
+    }
     const state = useUi.getState();
     // A rejected ex command lingers on the status line until the next key.
     if (!state.exOpen && state.exError !== null) {
