@@ -461,7 +461,14 @@ function Shell(props: ShellProps): ReactNode {
       ) : (
         <ScreenContent key={screen} screen={screen} />
       )}
-      {modal === "command-palette" ? <CommandPalette /> : null}
+      {modal === "command-palette" ? (
+        <CommandPalette
+          onRun={(command) => {
+            useUi.getState().closeModal();
+            command.run(ctx);
+          }}
+        />
+      ) : null}
       {modal === "help" ? <HelpScreen /> : null}
       {modal === "theme-picker" ? <ThemePicker /> : null}
       {modal === "mock-panel" &&

@@ -9,6 +9,7 @@ import { NoteListPane } from "../components/notes/NoteListPane";
 import type { NoteEditorMode, NoteSaveStatus } from "../components/notes/NoteToolbar.types";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Modal } from "../components/ui/Modal";
+import { claimFocusedField, useFocusedField } from "../hooks/useFocusedField";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { exportNoteAsMarkdown, exportNoteAsTxt } from "../lib/export-note";
 import { registerPendingWrite } from "../lib/pending-writes";
@@ -20,9 +21,10 @@ import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { messageOf, operationError, retryableError } from "../utils/error";
 import { ACTIVE_GLYPH } from "../utils/marker";
-import { isReadOnlyRow } from "../utils/mouse";
+import { isReadOnlyRow, pressHandler } from "../utils/mouse";
 import { noteDisplayTitle } from "../utils/notes";
 import { truncate } from "../utils/text";
+import { topPositionFor } from "../utils/todo-order";
 import { windowSlice } from "../utils/window";
 import type { NoteConfirmState, NoteNotice } from "./NotesScreen.types";
 
@@ -96,6 +98,16 @@ export function NotesScreen(): ReactNode {
   const [narrowPane, setNarrowPane] = useState<"list" | "editor">("list");
   const [mode, setMode] = useState<NoteEditorMode>("edit");
   const [focusedField, setFocusedField] = useState<NoteEditorField | "search" | null>(null);
+  // Mirrors `focusedField === "search"` synchronously. The scope runs the
+  // handler captured on the last committed render, so a plain key that arrives
+  // in the same input chunk as the `/` that opened search must read this ref to
+  // defer instead of falling through to the browsing bindings. The effect below
+  // resyncs it for closes that do not go through a key handler; a key handler
+  // clears the ref itself and releases the claim, because an open and its close
+  // in one commit skip the effects, except a tab handoff that keeps the claim
+  // (it was never released, and the same id stays owned, so the effect does not
+  // re-run).
+  const searchFocusedRef = useRef(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -255,7 +267,13 @@ export function NotesScreen(): ReactNode {
       setEditorLoading(true);
       setSaveStatus("idle");
       setMode("edit");
-      setFocusedField(null);
+      // A search-driven selection change reloads the editor on every filter
+      // step; it must not steal focus from the search field, or the rest of the
+      // query lands on the browsing bindings. Only clear focus when the user is
+      // not typing in search.
+      if (!searchFocusedRef.current) {
+        setFocusedField(null);
+      }
       setBodyKey(`${id}:loading`);
       try {
         await flushPromise;
@@ -368,12 +386,11 @@ export function NotesScreen(): ReactNode {
   // characters reach the control and ex mode cannot open over a dialog; the
   // note scope still runs first for Tab/Esc/Enter.
   const fieldOwned = focusedField !== null || confirm !== null || exportOpen;
+  useFocusedField(fieldOwned, "notes-field");
+
   useEffect(() => {
-    useUi.getState().setFocusedField(fieldOwned ? "notes-field" : null);
-    return () => {
-      useUi.getState().setFocusedField(null);
-    };
-  }, [fieldOwned]);
+    searchFocusedRef.current = focusedField === "search";
+  }, [focusedField]);
 
   // Selection text drives Ctrl+Enter; the handler also checks the renderer at
   // key time as a fallback for terminals that do not emit selection events.
@@ -486,6 +503,21 @@ export function NotesScreen(): ReactNode {
     setNarrowPane((pane) => (pane === "list" ? "editor" : "list"));
   }
 
+  /** Mouse: focus the list search, mirroring the `/` key. Claims ownership
+   * synchronously so a key in the same input chunk types into the field. */
+  function focusSearch(): void {
+    searchFocusedRef.current = true;
+    claimFocusedField("notes-field");
+    setNarrowPane("list");
+    setFocusedField("search");
+  }
+
+  /** Mouse: focus one editor field (title, tags, body). */
+  function focusEditorField(field: NoteEditorField): void {
+    setNarrowPane("editor");
+    setFocusedField(field);
+  }
+
   /** Mouse double-click / Enter on a row: select it and focus the editor body.
    * `large` clones stay in preview so the edit surface never opens on a row
    * whose autosave can only fail. */
@@ -538,7 +570,12 @@ export function NotesScreen(): ReactNode {
     const todoTitle = long ? `${text.slice(0, TODO_TITLE_MAX_LENGTH).trimEnd()}...` : text;
     const description = long ? text : null;
     try {
-      const created = await getRepos().todos.create({ title: todoTitle, description });
+      const created = await getRepos().todos.create({
+        title: todoTitle,
+        description,
+        // A new todo lands at the top of the board, matching the Todo form.
+        position: topPositionFor(useTodos.getState().todos, "todo"),
+      });
       useTodos.getState().addTodo(created);
       selectionTextRef.current = "";
       setNotice({ text: "Added to todo", kind: "success" });
@@ -660,6 +697,37 @@ export function NotesScreen(): ReactNode {
       return !meta;
     }
 
+    // The search field owns typing while it is focused, and outranks every
+    // browsing key on this screen: this branch runs before the screen-scoped
+    // modified keys below and returns for the rest, so no screen binding fires
+    // while typing. The ref, not just the committed field, keeps a same-chunk
+    // key behind the `/` from falling through.
+    if (searchFocusedRef.current) {
+      if (name === "escape") {
+        searchFocusedRef.current = false;
+        claimFocusedField(null);
+        setSearch("");
+        setFocusedField(null);
+        return true;
+      }
+      if (name === "return") {
+        searchFocusedRef.current = false;
+        claimFocusedField(null);
+        setFocusedField(null);
+        return true;
+      }
+      if (name === "tab") {
+        // The title field takes over typing on the same screen field id; leave
+        // the claim in place (it was never released) and clear only the search
+        // flag.
+        searchFocusedRef.current = false;
+        setFocusedField("title");
+        setNarrowPane("editor");
+        return true;
+      }
+      return false;
+    }
+
     if (ctrlChar("s")) {
       void flush();
       return true;
@@ -671,24 +739,6 @@ export function NotesScreen(): ReactNode {
     if (key.ctrl && name === "n") {
       switchPane();
       return true;
-    }
-
-    if (focusedField === "search") {
-      if (name === "escape") {
-        setSearch("");
-        setFocusedField(null);
-        return true;
-      }
-      if (name === "return") {
-        setFocusedField(null);
-        return true;
-      }
-      if (name === "tab") {
-        setFocusedField("title");
-        setNarrowPane("editor");
-        return true;
-      }
-      return false;
     }
     if (focusedField === "title") {
       if (name === "escape") {
@@ -788,8 +838,10 @@ export function NotesScreen(): ReactNode {
       return true;
     }
     if (name === "/") {
-      setNarrowPane("list");
-      setFocusedField("search");
+      // Claim ownership synchronously: a key in the same input chunk as this
+      // one must not reach the global bindings before the focus effect commits,
+      // and this scope's search branch must already see the flag.
+      focusSearch();
       return true;
     }
     if (name === "return") {
@@ -887,6 +939,7 @@ export function NotesScreen(): ReactNode {
       privacyMode={privacyMode}
       width={listOuter}
       onSearchChange={setSearch}
+      onFocusSearch={focusSearch}
       onSelectNote={(id) => {
         useNotes.getState().selectNote(id);
       }}
@@ -927,6 +980,9 @@ export function NotesScreen(): ReactNode {
       onRetry={() => {
         void reloadNote();
       }}
+      onFocusField={focusEditorField}
+      onAcceptSuggestion={addTag}
+      onRemoveTag={removeTag}
     />
   );
 
@@ -934,14 +990,21 @@ export function NotesScreen(): ReactNode {
     <box flexDirection="column" flexGrow={1} minHeight={0} backgroundColor={color(tokens.bg)}>
       {narrow ? (
         <box flexDirection="row" height={1} flexShrink={0} gap={1}>
-          <text wrapMode="none">
-            <span
-              fg={color(activePane === "list" ? tokens.accent : tokens.fgMuted)}
-            >{`${activePane === "list" ? "[ " : ""}List${activePane === "list" ? " ]" : ""}`}</span>
-            <span fg={color(tokens.fgSubtle)}>{"  "}</span>
-            <span
-              fg={color(activePane === "editor" ? tokens.accent : tokens.fgMuted)}
-            >{`${activePane === "editor" ? "[ " : ""}Editor${activePane === "editor" ? " ]" : ""}`}</span>
+          <text
+            wrapMode="none"
+            fg={color(activePane === "list" ? tokens.accent : tokens.fgMuted)}
+            selectable={false}
+            onMouseDown={pressHandler(() => setNarrowPane("list"))}
+          >
+            {activePane === "list" ? "[ List ]" : "List"}
+          </text>
+          <text
+            wrapMode="none"
+            fg={color(activePane === "editor" ? tokens.accent : tokens.fgMuted)}
+            selectable={false}
+            onMouseDown={pressHandler(() => setNarrowPane("editor"))}
+          >
+            {activePane === "editor" ? "[ Editor ]" : "Editor"}
           </text>
         </box>
       ) : null}
@@ -976,6 +1039,11 @@ export function NotesScreen(): ReactNode {
               <text
                 key={option.kind}
                 fg={color(index === exportIndex ? tokens.fg : tokens.fgMuted)}
+                selectable={false}
+                onMouseDown={pressHandler(() => {
+                  setExportIndex(index);
+                  void runExport(option.kind);
+                })}
               >
                 {`${index === exportIndex ? ACTIVE_GLYPH : " "} ${option.label}  ${option.detail}`}
               </text>
@@ -991,6 +1059,10 @@ export function NotesScreen(): ReactNode {
           body={confirm.body}
           confirmLabel={confirm.confirmLabel}
           destructive={confirm.destructive}
+          onConfirm={() => {
+            void runDelete();
+          }}
+          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </box>

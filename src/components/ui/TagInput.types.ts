@@ -9,4 +9,10 @@ export interface TagInputProps {
   /** Content width available for the tag row, in columns. */
   width: number;
   onInputChange: (value: string) => void;
+  /** Mouse: a primary click asks the owning screen to focus the tag field. */
+  onFocusRequest?: () => void;
+  /** Mouse: a primary click on a suggestion applies it. */
+  onAcceptSuggestion?: (tag: string) => void;
+  /** Mouse: a primary click on an applied tag removes it. */
+  onRemoveTag?: (tag: string) => void;
 }

@@ -57,6 +57,7 @@ export function TodoForm(props: TodoFormProps): ReactNode {
             focused={props.focusedField === "title"}
             placeholder="What needs to be done?"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("title")}
           />
         </Field>
 
@@ -68,6 +69,7 @@ export function TodoForm(props: TodoFormProps): ReactNode {
             height={3}
             textareaRef={props.descriptionRef}
             onChange={props.onDescriptionChange}
+            onFocusRequest={() => props.onFocusField?.("description")}
           />
         </Field>
 
@@ -76,6 +78,7 @@ export function TodoForm(props: TodoFormProps): ReactNode {
             options={PRIORITY_OPTIONS}
             selectedIndex={priorityIndex}
             focused={props.focusedField === "priority"}
+            onFocusRequest={() => props.onFocusField?.("priority")}
             onChange={(_index, value) =>
               props.onPatch({ priority: (value as PriorityChoice) ?? "none" })
             }
@@ -88,6 +91,7 @@ export function TodoForm(props: TodoFormProps): ReactNode {
             onChange={(value) => props.onPatch({ dueDate: value })}
             focused={props.focusedField === "due"}
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("due")}
           />
         </Field>
 
@@ -97,6 +101,7 @@ export function TodoForm(props: TodoFormProps): ReactNode {
               options={STATUS_OPTIONS}
               selectedIndex={statusIndex}
               focused={props.focusedField === "status"}
+              onFocusRequest={() => props.onFocusField?.("status")}
               onChange={(_index, value) =>
                 props.onPatch({ status: (value as TodoStatus) ?? "todo" })
               }
@@ -106,7 +111,13 @@ export function TodoForm(props: TodoFormProps): ReactNode {
 
         {props.error !== null ? <text fg={color(tokens.danger)}>{props.error}</text> : null}
 
-        <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
+        <Button
+          primary={true}
+          focused={false}
+          disabled={props.saving}
+          label={submitLabel}
+          onPress={props.onSubmit}
+        />
         <text fg={color(tokens.fgSubtle)}>
           {`tab next field  enter ${editing ? "save" : "create"}  ctrl+enter from description  esc cancel`}
         </text>

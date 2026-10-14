@@ -163,23 +163,17 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
       selectedId: state.selectedId === id ? null : state.selectedId,
     })),
 
-  reorderProjects: async (orderedIds) => {
-    const previous = get().projects;
-    const byId = new Map(previous.map((project) => [project.id, project]));
-    const reordered = orderedIds
-      .map((id, index) => {
-        const project = byId.get(id);
-        return project !== undefined ? { ...project, position: index } : null;
-      })
-      .filter((project): project is Project => project !== null);
-    set({ projects: reordered, error: null });
-
-    try {
-      await getRepos().projects.reorder(orderedIds);
-    } catch (error) {
-      set({ projects: previous, error: messageOf(error) });
-    }
-  },
+  applyProjectOrder: (orderedIds) =>
+    set((state) => {
+      const byId = new Map(state.projects.map((project) => [project.id, project]));
+      const projects = orderedIds
+        .map((id, index) => {
+          const project = byId.get(id);
+          return project !== undefined ? { ...project, position: index } : null;
+        })
+        .filter((project): project is Project => project !== null);
+      return { projects, error: null };
+    }),
 
   addPhase: async (input) => {
     const { selectedId } = get();
@@ -344,24 +338,15 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
     }
   },
 
-  reorderWorkItems: async (orderedIds) => {
-    const { selectedId, workItems: previous } = get();
-    if (selectedId === null) {
-      return;
-    }
-    const byId = new Map(previous.map((item) => [item.id, item]));
-    const reordered = orderedIds
-      .map((id, index) => {
-        const item = byId.get(id);
-        return item !== undefined ? { ...item, position: index } : null;
-      })
-      .filter((item): item is WorkItemWithPhase => item !== null);
-    set({ workItems: reordered, error: null });
-
-    try {
-      await getRepos().projects.reorderWorkItems(selectedId, orderedIds);
-    } catch (error) {
-      set({ workItems: previous, error: messageOf(error) });
-    }
-  },
+  applyWorkItemOrder: (orderedIds) =>
+    set((state) => {
+      const byId = new Map(state.workItems.map((item) => [item.id, item]));
+      const workItems = orderedIds
+        .map((id, index) => {
+          const item = byId.get(id);
+          return item !== undefined ? { ...item, position: index } : null;
+        })
+        .filter((item): item is WorkItemWithPhase => item !== null);
+      return { workItems, error: null };
+    }),
 }));

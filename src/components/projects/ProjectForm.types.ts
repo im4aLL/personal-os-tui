@@ -17,4 +17,8 @@ export interface ProjectFormProps {
   error: string | null;
   saving: boolean;
   onPatch: (patch: Partial<ProjectFormValues>) => void;
+  /** Mouse: focus the clicked field. */
+  onFocusField?: (field: ProjectFormField) => void;
+  /** Mouse: click on the submit button (same path as Enter). */
+  onSubmit?: () => void;
 }

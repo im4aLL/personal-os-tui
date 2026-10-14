@@ -270,7 +270,11 @@ export function DashboardScreen(): ReactNode {
   );
 
   const inProgressItems = useMemo(
-    () => todos.filter((todo) => todo.status === "in-progress").slice(0, FOCUS_CAP),
+    () =>
+      todos
+        .filter((todo) => todo.status === "in-progress")
+        .sort((a, b) => a.position - b.position)
+        .slice(0, FOCUS_CAP),
     [todos],
   );
 
@@ -1216,6 +1220,10 @@ export function DashboardScreen(): ReactNode {
           descriptionRef={todoForm.descriptionRef}
           onPatch={todoForm.patch}
           onDescriptionChange={todoForm.clearError}
+          onFocusField={todoForm.focusField}
+          onSubmit={() => {
+            void todoForm.submit();
+          }}
         />
       ) : null}
     </box>

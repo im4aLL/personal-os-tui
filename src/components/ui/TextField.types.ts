@@ -8,6 +8,9 @@ interface TextFieldBaseProps {
   /** Drop the outer border and padding so the field reads like a bare input
    * (used by the compact date-range toolbar). */
   borderless?: boolean;
+  /** Mouse: a primary click asks the owning screen to focus this field, so a
+   * click keeps the app's single-field focus in sync. */
+  onFocusRequest?: () => void;
 }
 
 /** Editable field: renders an `<input>` and reports every change. */

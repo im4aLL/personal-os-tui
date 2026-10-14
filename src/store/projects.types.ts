@@ -46,8 +46,9 @@ export interface ProjectsState {
   addProject: (input: CreateProjectInput) => Promise<Project>;
   patchProject: (id: string, patch: ProjectPatch) => void;
   removeProject: (id: string) => void;
-  /** Optimistic reorder, restoring the previous array when the write fails. */
-  reorderProjects: (orderedIds: string[]) => Promise<void>;
+  /** Apply a new project order optimistically. The screen owns the debounced
+   * write and reloads on failure. */
+  applyProjectOrder: (orderedIds: string[]) => void;
 
   addPhase: (input: CreatePhaseInput) => Promise<void>;
   patchPhase: (id: string, patch: PhasePatch) => void;
@@ -58,6 +59,7 @@ export interface ProjectsState {
   patchWorkItem: (id: string, patch: WorkItemPatch) => void;
   removeWorkItem: (id: string) => Promise<void>;
   addSeparator: () => Promise<void>;
-  /** Optimistic reorder, restoring the previous array when the write fails. */
-  reorderWorkItems: (orderedIds: string[]) => Promise<void>;
+  /** Apply a new work-item order optimistically. The screen owns the debounced
+   * write and reloads on failure. */
+  applyWorkItemOrder: (orderedIds: string[]) => void;
 }

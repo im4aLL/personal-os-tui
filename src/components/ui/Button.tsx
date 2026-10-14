@@ -1,6 +1,7 @@
 import { TextAttributes } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { pressHandler } from "../../utils/mouse";
 import type { ButtonProps } from "./Button.types";
 
 // OpenTUI has no native button primitive, so this stays a box+text
@@ -13,12 +14,20 @@ export function Button(props: ButtonProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const primary = props.primary === true;
+  const destructive = props.destructive === true;
   const focused = props.focused === true;
   const disabled = props.disabled === true;
+  const onPress = props.onPress;
 
   const borderColor = disabled ? tokens.borderMuted : focused ? tokens.borderFocus : tokens.border;
-  const foreground = disabled ? tokens.fgDisabled : primary ? tokens.accent : tokens.fg;
-  const bold = !disabled && (primary || focused);
+  const foreground = disabled
+    ? tokens.fgDisabled
+    : destructive
+      ? tokens.danger
+      : primary
+        ? tokens.accent
+        : tokens.fg;
+  const bold = !disabled && (primary || destructive || focused);
 
   return (
     <box
@@ -27,8 +36,13 @@ export function Button(props: ButtonProps): ReactNode {
       paddingLeft={1}
       paddingRight={1}
       alignSelf="flex-start"
+      onMouseDown={!disabled && onPress !== undefined ? pressHandler(onPress) : undefined}
     >
-      <text fg={color(foreground)} attributes={bold ? TextAttributes.BOLD : undefined}>
+      <text
+        fg={color(foreground)}
+        attributes={bold ? TextAttributes.BOLD : undefined}
+        selectable={false}
+      >
         {props.label}
       </text>
       {props.children}

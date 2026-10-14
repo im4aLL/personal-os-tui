@@ -18,6 +18,7 @@ import type { ApplySchemaResult } from "../repos/types";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
+import { pressHandler } from "../utils/mouse";
 import type { ConnectStage, SetupScreenProps, SetupStep } from "./SetupScreen.types";
 
 // First-run Setup: connect form, three-stage connecting state,
@@ -537,7 +538,13 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
     (typeof POS_MOCK_ENABLED === "undefined" ? true : POS_MOCK_ENABLED) &&
     repoMode === "mock" &&
     (focusedField === null || focusedField === FOCUS_CONNECT) ? (
-      <text fg={color(tokens.fgSubtle)}>{"d  Demo data (dev only)"}</text>
+      <text
+        fg={color(tokens.fgSubtle)}
+        selectable={false}
+        onMouseDown={pressHandler(demoWithMockData)}
+      >
+        {"d  Demo data (dev only)"}
+      </text>
     ) : null;
 
   return (
@@ -567,6 +574,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
                 focused={focusedField === FOCUS_URL}
                 placeholder="https://your-db.turso.io"
                 width={formWidth}
+                onFocusRequest={() => useUi.getState().setFocusedField(FOCUS_URL)}
               />
             </Field>
             <Field label="Auth token">
@@ -576,6 +584,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
                 placeholder="Auth token"
                 secure={true}
                 width={formWidth}
+                onFocusRequest={() => useUi.getState().setFocusedField(FOCUS_TOKEN)}
               />
             </Field>
             <Button
@@ -583,6 +592,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
               focused={focusedField === FOCUS_CONNECT}
               disabled={!canSubmit}
               label={editing ? "Continue" : "Connect"}
+              onPress={attemptConnect}
             />
             <text fg={color(tokens.fgSubtle)}>
               {editing
@@ -616,7 +626,13 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
                 </text>
               );
             })}
-            <text fg={color(tokens.fgSubtle)}>{"esc  back"}</text>
+            <text
+              fg={color(tokens.fgSubtle)}
+              selectable={false}
+              onMouseDown={pressHandler(() => backToConnect())}
+            >
+              {"esc  back"}
+            </text>
           </>
         ) : null}
 
@@ -625,10 +641,31 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
             <text fg={color(tokens.fg)}>{"Could not connect"}</text>
             <text fg={color(tokens.danger)}>{truncate(failureError, formWidth)}</text>
             <text fg={color(tokens.fgMuted)}>{`URL  ${truncate(url.trim(), formWidth - 5)}`}</text>
-            <text fg={color(tokens.fgSubtle)}>
-              {"r  retry      e  edit credentials      esc  back"}
-            </text>
-            <text fg={color(tokens.fgSubtle)}>{"enter  retry"}</text>
+            <box flexDirection="row" height={1} gap={2}>
+              <text
+                fg={color(tokens.fgSubtle)}
+                selectable={false}
+                onMouseDown={pressHandler(() => {
+                  void runConnecting(url.trim(), token);
+                })}
+              >
+                {"enter  retry"}
+              </text>
+              <text
+                fg={color(tokens.fgSubtle)}
+                selectable={false}
+                onMouseDown={pressHandler(() => backToConnect())}
+              >
+                {"e  edit credentials"}
+              </text>
+              <text
+                fg={color(tokens.fgSubtle)}
+                selectable={false}
+                onMouseDown={pressHandler(() => backToConnect())}
+              >
+                {"esc  back"}
+              </text>
+            </box>
           </>
         ) : null}
 
@@ -648,6 +685,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
                 focused={focusedField === FOCUS_NAME}
                 placeholder="Alex Johnson"
                 width={formWidth}
+                onFocusRequest={() => useUi.getState().setFocusedField(FOCUS_NAME)}
               />
             </Field>
             <Field label="Email" error={emailError}>
@@ -662,6 +700,7 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
                 focused={focusedField === FOCUS_EMAIL}
                 placeholder="alex@example.com"
                 width={formWidth}
+                onFocusRequest={() => useUi.getState().setFocusedField(FOCUS_EMAIL)}
               />
             </Field>
             {profileError !== null ? <text fg={color(tokens.danger)}>{profileError}</text> : null}
@@ -670,6 +709,9 @@ export function SetupScreen(props: SetupScreenProps): ReactNode {
               focused={focusedField === FOCUS_START}
               disabled={false}
               label={editing ? "Save" : "Get started"}
+              onPress={() => {
+                void submitProfile();
+              }}
             />
             <text fg={color(tokens.fgSubtle)}>
               {editing

@@ -27,4 +27,11 @@ export interface WorkLogFormProps {
   onPatch: (patch: Partial<WorkLogFormValues>) => void;
   onTagInputChange: (value: string) => void;
   onDescriptionChange?: () => void;
+  /** Mouse: focus the clicked field. */
+  onFocusField?: (field: WorkLogFormField) => void;
+  /** Mouse: click on the submit button (same path as Enter). */
+  onSubmit?: () => void;
+  /** Mouse: apply a suggestion or remove an applied tag. */
+  onAcceptSuggestion?: (tag: string) => void;
+  onRemoveTag?: (tag: string) => void;
 }

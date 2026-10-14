@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { isPrimaryClick } from "../../utils/mouse";
 import type { TextFieldProps } from "./TextField.types";
 
 // Single-line input with a bordered wrapper. OpenTUI has no labeled-input
@@ -28,6 +29,11 @@ export function TextField(props: TextFieldProps): ReactNode {
       paddingLeft={borderless ? 0 : 1}
       paddingRight={borderless ? 0 : 1}
       width={width}
+      onMouseDown={(event) => {
+        if (isPrimaryClick(event)) {
+          props.onFocusRequest?.();
+        }
+      }}
     >
       {child}
     </box>

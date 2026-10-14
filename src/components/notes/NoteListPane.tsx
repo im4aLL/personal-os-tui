@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
-import { wheelDelta } from "../../utils/mouse";
+import { isPrimaryClick, wheelDelta } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
 import { EmptyState } from "../ui/EmptyState";
 import { Skeleton } from "../ui/Skeleton";
@@ -59,7 +59,16 @@ export function NoteListPane(props: NoteListPaneProps): ReactNode {
         }
       }}
     >
-      <box flexShrink={0} paddingTop={1} paddingBottom={1}>
+      <box
+        flexShrink={0}
+        paddingTop={1}
+        paddingBottom={1}
+        onMouseDown={(event) => {
+          if (isPrimaryClick(event)) {
+            props.onFocusSearch?.();
+          }
+        }}
+      >
         <input
           focused={props.searchFocused}
           value={props.search}

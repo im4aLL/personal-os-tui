@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { isPrimaryClick } from "../../utils/mouse";
 import type { TextAreaProps } from "./TextArea.types";
 
 // Themed wrapper around the OpenTUI `<textarea>` primitive. The primitive is
@@ -21,6 +22,11 @@ export function TextArea(props: TextAreaProps): ReactNode {
       flexGrow={fill ? 1 : undefined}
       flexShrink={fill ? 1 : undefined}
       minHeight={fill ? 0 : undefined}
+      onMouseDown={(event) => {
+        if (isPrimaryClick(event)) {
+          props.onFocusRequest?.();
+        }
+      }}
     >
       <textarea
         ref={props.textareaRef}

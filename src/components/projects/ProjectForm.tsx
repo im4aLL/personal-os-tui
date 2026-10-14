@@ -29,6 +29,7 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
             focused={props.focusedField === "name"}
             placeholder="Project name"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("name")}
           />
         </Field>
 
@@ -38,6 +39,7 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
             onChange={(value) => props.onPatch({ startDate: value })}
             focused={props.focusedField === "start"}
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("start")}
           />
         </Field>
 
@@ -48,12 +50,19 @@ export function ProjectForm(props: ProjectFormProps): ReactNode {
             focused={props.focusedField === "weeks"}
             placeholder="12"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("weeks")}
           />
         </Field>
 
         {props.error !== null ? <text fg={color(tokens.danger)}>{props.error}</text> : null}
 
-        <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
+        <Button
+          primary={true}
+          focused={false}
+          disabled={props.saving}
+          label={submitLabel}
+          onPress={props.onSubmit}
+        />
         <text fg={color(tokens.fgSubtle)}>{"tab next field  enter save  esc cancel"}</text>
       </box>
     </Modal>

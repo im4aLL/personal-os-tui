@@ -2,6 +2,7 @@ import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { ACTIVE_MARKER, rowMarker } from "../../utils/marker";
+import { pressHandler } from "../../utils/mouse";
 import { truncate } from "../../utils/text";
 import { EmptyState } from "../ui/EmptyState";
 import { Modal } from "../ui/Modal";
@@ -23,7 +24,9 @@ export const PHASE_COLORS = [
 
 // Phase manager modal. Presentational: the screen owns the keys and drafts, so
 // this renders the phase rows (swatch, name, item count, move/delete
-// affordances) plus the add row ("No phases yet" when empty).
+// affordances) plus the add row ("No phases yet" when empty). Each affordance
+// is also a mouse target: the row selects, the swatch recolors, `^`/`v` move,
+// and `x` deletes (a phase with items stays a non-clickable `-`).
 export function PhaseManager(props: PhaseManagerProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
@@ -66,18 +69,47 @@ export function PhaseManager(props: PhaseManagerProps): ReactNode {
             }
 
             return (
-              <box key={phase.id} flexDirection="row" height={1}>
+              <box
+                key={phase.id}
+                flexDirection="row"
+                height={1}
+                onMouseDown={pressHandler(() => props.onSelect?.(index))}
+              >
                 <text fg={color(isCursor ? tokens.accent : tokens.fgSubtle)}>{marker}</text>
-                <text fg={color(phase.color)}>{"(*) "}</text>
+                <text
+                  fg={color(phase.color)}
+                  selectable={false}
+                  onMouseDown={pressHandler(() => props.onRecolor?.(index))}
+                >
+                  {"(*) "}
+                </text>
                 <text
                   wrapMode="none"
                   fg={color(isCursor ? tokens.fg : tokens.fgMuted)}
                 >{`${truncate(phase.name, nameRoom).padEnd(nameRoom)} `}</text>
-                <text wrapMode="none" fg={color(tokens.fgSubtle)}>{`${countLabel}  ^v `}</text>
+                <text wrapMode="none" fg={color(tokens.fgSubtle)}>{`${countLabel}  `}</text>
+                <text
+                  wrapMode="none"
+                  fg={color(tokens.fgSubtle)}
+                  selectable={false}
+                  onMouseDown={pressHandler(() => props.onMove?.(index, "up"))}
+                >
+                  {"^"}
+                </text>
+                <text
+                  wrapMode="none"
+                  fg={color(tokens.fgSubtle)}
+                  selectable={false}
+                  onMouseDown={pressHandler(() => props.onMove?.(index, "down"))}
+                >
+                  {"v "}
+                </text>
                 <text
                   fg={color(
                     deletable ? (isCursor ? tokens.danger : tokens.fgSubtle) : tokens.fgDisabled,
                   )}
+                  selectable={false}
+                  onMouseDown={deletable ? pressHandler(() => props.onDelete?.(index)) : undefined}
                 >
                   {deletable ? "x" : "-"}
                 </text>

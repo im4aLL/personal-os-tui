@@ -25,4 +25,8 @@ export interface TodoFormProps {
   descriptionRef: Ref<TextareaRenderable>;
   onPatch: (patch: Partial<TodoFormValues>) => void;
   onDescriptionChange?: () => void;
+  /** Mouse: focus the clicked field. */
+  onFocusField?: (field: TodoFormField) => void;
+  /** Mouse: click on the submit button (same path as Enter). */
+  onSubmit?: () => void;
 }

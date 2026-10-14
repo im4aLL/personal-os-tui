@@ -1,6 +1,7 @@
-import type { SelectOption as CoreSelectOption } from "@opentui/core";
+import type { SelectOption as CoreSelectOption, MouseEvent } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
+import { isPrimaryClick, optionRowFromPress } from "../../utils/mouse";
 import type { SelectProps } from "./Select.types";
 
 // Thin themed wrapper around the OpenTUI `<select>` primitive (the same
@@ -8,6 +9,11 @@ import type { SelectProps } from "./Select.types";
 // highlight; `onChange` maps to SELECTION_CHANGED, so the value updates as
 // the highlight moves. Height tracks the option count: a bare `<select>`
 // measures zero under yoga.
+//
+// The primitive has no mouse handling, so a primary press picks the row under
+// the pointer. Every select in the app is sized to its option count and shows
+// one line per option (`showDescription` off), so the pressed row maps directly
+// to an option with no scroll offset to account for.
 export function Select(props: SelectProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
@@ -16,6 +22,20 @@ export function Select(props: SelectProps): ReactNode {
     description: "",
     value: option.value,
   }));
+
+  const press = (event: MouseEvent): void => {
+    if (!isPrimaryClick(event)) {
+      return;
+    }
+    props.onFocusRequest?.();
+    const index = optionRowFromPress(event);
+    const option = props.options[index];
+    if (option === undefined || index === props.selectedIndex) {
+      return;
+    }
+    props.onChange(index, option.value);
+  };
+
   return (
     <select
       options={options}
@@ -31,6 +51,7 @@ export function Select(props: SelectProps): ReactNode {
       selectedTextColor={color(tokens.selectionFg)}
       descriptionColor={color(tokens.fgSubtle)}
       selectedDescriptionColor={color(tokens.selectionFg)}
+      onMouseDown={press}
       onChange={(index) => props.onChange(index, props.options[index]?.value ?? null)}
     />
   );

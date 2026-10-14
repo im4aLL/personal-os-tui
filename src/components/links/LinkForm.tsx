@@ -29,6 +29,7 @@ export function LinkForm(props: LinkFormProps): ReactNode {
             focused={props.focusedField === "url"}
             placeholder="https://example.com/article"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("url")}
           />
         </Field>
 
@@ -39,6 +40,7 @@ export function LinkForm(props: LinkFormProps): ReactNode {
             focused={props.focusedField === "title"}
             placeholder="Blank uses the domain"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("title")}
           />
         </Field>
 
@@ -51,12 +53,21 @@ export function LinkForm(props: LinkFormProps): ReactNode {
             suggestionIndex={props.suggestionIndex}
             width={fieldWidth}
             onInputChange={props.onTagInputChange}
+            onFocusRequest={() => props.onFocusField?.("tags")}
+            onAcceptSuggestion={props.onAcceptSuggestion}
+            onRemoveTag={props.onRemoveTag}
           />
         </Field>
 
         {props.error !== null ? <text fg={color(tokens.danger)}>{props.error}</text> : null}
 
-        <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
+        <Button
+          primary={true}
+          focused={false}
+          disabled={props.saving}
+          label={submitLabel}
+          onPress={props.onSubmit}
+        />
         <text fg={color(tokens.fgSubtle)}>
           {"tab next field  enter save  ctrl+enter save from tags  esc cancel"}
         </text>

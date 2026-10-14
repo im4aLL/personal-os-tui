@@ -12,6 +12,7 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { claimFocusedField, useFocusedField } from "../hooks/useFocusedField";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { openUrl } from "../lib/open-url";
 import type { Link } from "../repos/types";
@@ -22,7 +23,7 @@ import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { messageOf, operationError, retryableError } from "../utils/error";
 import { linkDomain, linkScheme } from "../utils/links";
-import { isReadOnlyRow, wheelDelta } from "../utils/mouse";
+import { isPrimaryClick, isReadOnlyRow, wheelDelta } from "../utils/mouse";
 import { truncate } from "../utils/text";
 import { windowSlice } from "../utils/window";
 import type { LinkConfirmState, LinkFormState } from "./LinksScreen.types";
@@ -81,6 +82,14 @@ export function LinksScreen(): ReactNode {
 
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  // Mirrors `searchFocused` synchronously. The scope runs the handler captured
+  // on the last committed render, so a plain key that arrives in the same input
+  // chunk as the `/` that opened search must read this ref to defer instead of
+  // falling through to the browsing bindings. The effect below resyncs it for
+  // closes that do not go through a key handler; a key handler that closes
+  // search clears the ref and releases the claim itself, because an open and its
+  // close in one commit skip the effects.
+  const searchFocusedRef = useRef(false);
   const [pillFocused, setPillFocused] = useState(false);
   const [tagIndex, setTagIndex] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -201,12 +210,11 @@ export function LinksScreen(): ReactNode {
   // characters reach the control and ex mode cannot open over a dialog; the
   // screen scope still runs first for Tab/Esc/Enter.
   const fieldOwned = form.open || searchFocused || editing !== null || confirm !== null;
+  useFocusedField(fieldOwned, "links-field");
+
   useEffect(() => {
-    useUi.getState().setFocusedField(fieldOwned ? "links-field" : null);
-    return () => {
-      useUi.getState().setFocusedField(null);
-    };
-  }, [fieldOwned]);
+    searchFocusedRef.current = searchFocused;
+  }, [searchFocused]);
 
   // -- Selection and navigation ---------------------------------------------
 
@@ -398,6 +406,11 @@ export function LinksScreen(): ReactNode {
     });
   }
 
+  /** Mouse: focus the clicked field. */
+  function focusFormField(field: LinkFormField): void {
+    setForm((current) => (current.field === field ? current : { ...current, field }));
+  }
+
   function addFormTag(raw: string): void {
     const name = normalizeTag(raw);
     setForm((current) => {
@@ -418,6 +431,14 @@ export function LinksScreen(): ReactNode {
     setForm((current) => ({
       ...current,
       values: { ...current.values, tags: current.values.tags.slice(0, -1) },
+    }));
+  }
+
+  /** Mouse: remove one applied tag by clicking its chip. */
+  function removeFormTag(tag: string): void {
+    setForm((current) => ({
+      ...current,
+      values: { ...current.values, tags: current.values.tags.filter((name) => name !== tag) },
     }));
   }
 
@@ -594,17 +615,26 @@ export function LinksScreen(): ReactNode {
       return false;
     }
 
-    if (searchFocused) {
+    // The search field owns typing once active. The ref, not just the committed
+    // flag, keeps a same-chunk key behind the `/` from falling through to the
+    // browsing bindings below.
+    if (searchFocusedRef.current) {
       if (name === "escape") {
+        searchFocusedRef.current = false;
+        claimFocusedField(null);
         changeSearch("");
         setSearchFocused(false);
         return true;
       }
       if (name === "return") {
+        searchFocusedRef.current = false;
+        claimFocusedField(null);
         setSearchFocused(false);
         return true;
       }
       if (name === "tab") {
+        searchFocusedRef.current = false;
+        claimFocusedField(null);
         setSearchFocused(false);
         setPillFocused(true);
         return true;
@@ -675,6 +705,11 @@ export function LinksScreen(): ReactNode {
       return true;
     }
     if (name === "/") {
+      // Claim ownership synchronously: a key in the same input chunk as this
+      // one must not reach the global bindings before the focus effect commits,
+      // and this scope's search branch must already see the flag.
+      searchFocusedRef.current = true;
+      claimFocusedField("links-field");
       setPillFocused(false);
       setSearchFocused(true);
       return true;
@@ -768,6 +803,14 @@ export function LinksScreen(): ReactNode {
         paddingLeft={1}
         paddingRight={1}
         height={3}
+        onMouseDown={(event) => {
+          if (isPrimaryClick(event) && !searchFocused) {
+            searchFocusedRef.current = true;
+            claimFocusedField("links-field");
+            setPillFocused(false);
+            setSearchFocused(true);
+          }
+        }}
       >
         <input
           focused={searchFocused}
@@ -903,6 +946,12 @@ export function LinksScreen(): ReactNode {
           onTagInputChange={(value) => {
             setForm((current) => ({ ...current, tagInput: value, suggestionIndex: 0 }));
           }}
+          onFocusField={focusFormField}
+          onSubmit={() => {
+            void submitForm();
+          }}
+          onAcceptSuggestion={addFormTag}
+          onRemoveTag={removeFormTag}
         />
       ) : null}
 
@@ -912,6 +961,10 @@ export function LinksScreen(): ReactNode {
           body={`Delete "${selectedLink?.title ?? confirm.title}" permanently? This cannot be undone.`}
           confirmLabel="Delete"
           destructive={true}
+          onConfirm={() => {
+            void runDelete();
+          }}
+          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </box>

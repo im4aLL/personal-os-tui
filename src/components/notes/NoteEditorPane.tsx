@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { retryableError } from "../../utils/error";
+import { isPrimaryClick } from "../../utils/mouse";
 import { EmptyState } from "../ui/EmptyState";
 import { Skeleton } from "../ui/Skeleton";
 import { TagInput } from "../ui/TagInput";
@@ -94,7 +95,15 @@ export function NoteEditorPane(props: NoteEditorPaneProps): ReactNode {
             </box>
           ) : (
             <>
-              <box flexShrink={0} paddingTop={1}>
+              <box
+                flexShrink={0}
+                paddingTop={1}
+                onMouseDown={(event) => {
+                  if (isPrimaryClick(event)) {
+                    props.onFocusField?.("title");
+                  }
+                }}
+              >
                 <input
                   focused={props.focusedField === "title"}
                   value={props.title}
@@ -119,6 +128,9 @@ export function NoteEditorPane(props: NoteEditorPaneProps): ReactNode {
                 suggestionIndex={props.suggestionIndex}
                 width={props.width}
                 onInputChange={props.onTagInputChange}
+                onFocusRequest={() => props.onFocusField?.("tags")}
+                onAcceptSuggestion={props.onAcceptSuggestion}
+                onRemoveTag={props.onRemoveTag}
               />
               {props.mode === "edit" ? (
                 <box
@@ -137,6 +149,7 @@ export function NoteEditorPane(props: NoteEditorPaneProps): ReactNode {
                     bordered={false}
                     textareaRef={props.bodyRef}
                     onChange={props.onBodyChange}
+                    onFocusRequest={() => props.onFocusField?.("body")}
                   />
                 </box>
               ) : (

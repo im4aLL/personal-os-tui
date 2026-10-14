@@ -11,4 +11,7 @@ export interface DateRangeBarProps {
   width: number;
   onFromChange: (value: string) => void;
   onToChange: (value: string) => void;
+  /** Mouse: a primary click focuses the From/To field. */
+  onFromFocus?: () => void;
+  onToFocus?: () => void;
 }

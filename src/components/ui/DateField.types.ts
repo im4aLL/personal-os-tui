@@ -11,4 +11,6 @@ export interface DateFieldProps {
   borderless?: boolean;
   /** Hide the "YYYY-MM-DD" format hint under the field. */
   hideHint?: boolean;
+  /** Mouse: a primary click asks the owning screen to focus this field. */
+  onFocusRequest?: () => void;
 }

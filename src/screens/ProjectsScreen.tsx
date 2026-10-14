@@ -12,6 +12,7 @@ import { WorkItemForm } from "../components/projects/WorkItemForm";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Modal } from "../components/ui/Modal";
+import { useDebouncedWrite } from "../hooks/useDebouncedWrite";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { openUrl } from "../lib/open-url";
 import { getCurrentWeek, getWeekHeaders } from "../lib/week-utils";
@@ -38,6 +39,8 @@ import type {
 } from "./ProjectsScreen.types";
 
 const NOTICE_MS = 2200;
+// Quiet period before a settled K/J reorder is written (see the reorder writes).
+const REORDER_DEBOUNCE_MS = 400;
 /** Below this terminal width the grid is forced into list mode. */
 const LIST_MODE_MAX = 60;
 /** Minimum readable week column: fits `Week 52`. */
@@ -423,6 +426,29 @@ export function ProjectsScreen(): ReactNode {
     }
   }
 
+  // K/J reorder is optimistic locally but debounced on write, so a rapid burst
+  // coalesces into one position batch instead of hammering a cloud connection.
+  const projectsReorderWrite = useDebouncedWrite<string[]>(async (orderedIds) => {
+    try {
+      await getRepos().projects.reorder(orderedIds);
+    } catch (reorderError) {
+      setNotice({ text: `Reorder failed: ${messageOf(reorderError)}`, kind: "danger" });
+      void useProjectsStore.getState().loadProjects();
+    }
+  }, REORDER_DEBOUNCE_MS);
+
+  const workItemsReorderWrite = useDebouncedWrite<{ projectId: string; orderedIds: string[] }>(
+    async ({ projectId, orderedIds }) => {
+      try {
+        await getRepos().projects.reorderWorkItems(projectId, orderedIds);
+      } catch (reorderError) {
+        setNotice({ text: `Reorder failed: ${messageOf(reorderError)}`, kind: "danger" });
+        void useProjectsStore.getState().refreshProjects();
+      }
+    },
+    REORDER_DEBOUNCE_MS,
+  );
+
   function reorder(delta: number): void {
     if (focusZone === "list") {
       if (selectedId === null) {
@@ -435,11 +461,12 @@ export function ProjectsScreen(): ReactNode {
       }
       const ids = projects.map((project) => project.id);
       [ids[index], ids[target]] = [ids[target], ids[index]];
-      void useProjectsStore.getState().reorderProjects(ids);
+      useProjectsStore.getState().applyProjectOrder(ids);
+      projectsReorderWrite.schedule(ids);
       return;
     }
     if (focusZone === "grid") {
-      if (selectedItemId === null) {
+      if (selectedItemId === null || selectedId === null) {
         return;
       }
       const index = workItems.findIndex((item) => item.id === selectedItemId);
@@ -449,7 +476,8 @@ export function ProjectsScreen(): ReactNode {
       }
       const ids = workItems.map((item) => item.id);
       [ids[index], ids[target]] = [ids[target], ids[index]];
-      void useProjectsStore.getState().reorderWorkItems(ids);
+      useProjectsStore.getState().applyWorkItemOrder(ids);
+      workItemsReorderWrite.schedule({ projectId: selectedId, orderedIds: ids });
     }
   }
 
@@ -563,6 +591,11 @@ export function ProjectsScreen(): ReactNode {
       const next = (index + delta + PROJECT_FIELDS.length) % PROJECT_FIELDS.length;
       return { ...current, field: PROJECT_FIELDS[next] };
     });
+  }
+
+  /** Mouse: focus the clicked project field. */
+  function focusProjectField(field: ProjectFormState["field"]): void {
+    setProjectForm((current) => (current.field === field ? current : { ...current, field }));
   }
 
   async function submitProjectForm(): Promise<void> {
@@ -695,6 +728,11 @@ export function ProjectsScreen(): ReactNode {
       const next = (index + delta + ITEM_FIELDS.length) % ITEM_FIELDS.length;
       return { ...current, field: ITEM_FIELDS[next] };
     });
+  }
+
+  /** Mouse: focus the clicked work-item field. */
+  function focusItemField(field: WorkItemFormState["field"]): void {
+    setItemForm((current) => (current.field === field ? current : { ...current, field }));
   }
 
   async function submitItemForm(): Promise<void> {
@@ -855,7 +893,21 @@ export function ProjectsScreen(): ReactNode {
   }
 
   function deletePhaseAtCursor(): void {
-    const phase = phases[phaseManager.cursor];
+    deletePhaseAtIndex(phaseManager.cursor);
+  }
+
+  /** Mouse: select a phase row. */
+  function selectPhaseIndex(index: number): void {
+    setPhaseManager((current) => ({
+      ...current,
+      cursor: Math.min(Math.max(0, phases.length - 1), Math.max(0, index)),
+    }));
+  }
+
+  /** Delete one phase by row index (keyboard `d` and the `x` affordance). A
+   * phase with items is refused with the same notice as the keyboard path. */
+  function deletePhaseAtIndex(index: number): void {
+    const phase = phases[index];
     if (phase === undefined) {
       return;
     }
@@ -865,17 +917,31 @@ export function ProjectsScreen(): ReactNode {
       return;
     }
     void useProjectsStore.getState().removePhase(phase.id);
-    setPhaseManager((current) => ({ ...current, cursor: Math.max(0, current.cursor - 1) }));
+    setPhaseManager((current) => ({ ...current, cursor: Math.max(0, index - 1) }));
   }
 
   function cyclePhaseColor(): void {
-    const phase = phases[phaseManager.cursor];
+    recolorPhaseAtIndex(phaseManager.cursor);
+  }
+
+  /** Mouse: cycle one phase swatch through the preset palette. */
+  function recolorPhaseAtIndex(index: number): void {
+    const phase = phases[index];
     if (phase === undefined) {
       return;
     }
-    const index = PHASE_COLORS.indexOf(phase.color);
-    const next = PHASE_COLORS[(index + 1) % PHASE_COLORS.length];
+    const colorIndex = PHASE_COLORS.indexOf(phase.color);
+    const next = PHASE_COLORS[(colorIndex + 1) % PHASE_COLORS.length];
     void savePhase(phase.id, { color: next });
+  }
+
+  /** Move one phase up or down (keyboard K/J and the `^`/`v` affordances). */
+  function movePhaseAtIndex(index: number, direction: "up" | "down"): void {
+    const phase = phases[index];
+    if (phase === undefined) {
+      return;
+    }
+    void useProjectsStore.getState().movePhase(phase.id, direction);
   }
 
   // -- Item actions ----------------------------------------------------------
@@ -1011,17 +1077,11 @@ export function ProjectsScreen(): ReactNode {
         return true;
       }
       if (upperChar("k")) {
-        const phase = phases[phaseManager.cursor];
-        if (phase !== undefined) {
-          void useProjectsStore.getState().movePhase(phase.id, "up");
-        }
+        movePhaseAtIndex(phaseManager.cursor, "up");
         return true;
       }
       if (upperChar("j")) {
-        const phase = phases[phaseManager.cursor];
-        if (phase !== undefined) {
-          void useProjectsStore.getState().movePhase(phase.id, "down");
-        }
+        movePhaseAtIndex(phaseManager.cursor, "down");
         return true;
       }
       if (plainChar("n")) {
@@ -1374,6 +1434,10 @@ export function ProjectsScreen(): ReactNode {
           error={projectForm.error}
           saving={projectForm.saving}
           onPatch={patchProjectForm}
+          onFocusField={focusProjectField}
+          onSubmit={() => {
+            void submitProjectForm();
+          }}
         />
       ) : null}
 
@@ -1393,6 +1457,10 @@ export function ProjectsScreen(): ReactNode {
               current.error === null ? current : { ...current, error: null },
             )
           }
+          onFocusField={focusItemField}
+          onSubmit={() => {
+            void submitItemForm();
+          }}
         />
       ) : null}
 
@@ -1412,6 +1480,10 @@ export function ProjectsScreen(): ReactNode {
           onRenameNameChange={(value) =>
             setPhaseManager((current) => ({ ...current, renameName: value }))
           }
+          onSelect={selectPhaseIndex}
+          onRecolor={recolorPhaseAtIndex}
+          onMove={movePhaseAtIndex}
+          onDelete={deletePhaseAtIndex}
         />
       ) : null}
 
@@ -1434,6 +1506,10 @@ export function ProjectsScreen(): ReactNode {
           }
           confirmLabel="Delete"
           destructive={true}
+          onConfirm={() => {
+            void runConfirm();
+          }}
+          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </box>

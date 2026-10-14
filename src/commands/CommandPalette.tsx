@@ -4,14 +4,16 @@ import { Modal } from "../components/ui/Modal";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
+import type { CommandPaletteProps } from "./CommandPalette.types";
 import { filterAvailableCommands, formatKey, PALETTE_PAGE_SIZE } from "./registry";
 
 // Command palette: fuzzy filter, Enter runs, Esc closes. Bound keys render from
 // the same registry that dispatches them, so a listing can never advertise a
 // binding the handler does not accept.
 // Selection movement lives in the single global key handler (App) so the
-// input keeps focus for typing while navigation keys stay predictable.
-export function CommandPalette(): ReactNode {
+// input keeps focus for typing while navigation keys stay predictable. A mouse
+// click on a row runs that command through the same callback.
+export function CommandPalette(props: CommandPaletteProps): ReactNode {
   const { theme, color } = useTheme();
   const tokens = theme.tokens;
   const query = useUi((state) => state.paletteQuery);
@@ -54,6 +56,12 @@ export function CommandPalette(): ReactNode {
               };
             })}
             selected={selected}
+            onActivate={(index) => {
+              const command = results[index];
+              if (command !== undefined) {
+                props.onRun?.(command);
+              }
+            }}
           />
         )}
       </box>

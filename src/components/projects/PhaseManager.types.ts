@@ -19,4 +19,11 @@ export interface PhaseManagerProps {
   colors: string[];
   onAddNameChange: (value: string) => void;
   onRenameNameChange: (value: string) => void;
+  /** Mouse: primary clicks on a row, its swatch, its move arrows, or its
+   * delete affordance. The keyboard paths stay authoritative; both call the
+   * same screen handlers. */
+  onSelect?: (index: number) => void;
+  onRecolor?: (index: number) => void;
+  onMove?: (index: number, direction: "up" | "down") => void;
+  onDelete?: (index: number) => void;
 }

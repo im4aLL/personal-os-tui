@@ -11,6 +11,7 @@ import { getRepos } from "../store/repos";
 import { useTodos } from "../store/todos";
 import { isValidISODate } from "../utils/date";
 import { messageOf } from "../utils/error";
+import { topPositionFor } from "../utils/todo-order";
 import type { TodoFormState, UseTodoFormOptions, UseTodoFormResult } from "./useTodoForm.types";
 
 const CREATE_FIELDS: TodoFormField[] = ["title", "description", "priority", "due"];
@@ -25,10 +26,11 @@ const EMPTY_FORM: TodoFormState = {
   saving: false,
 };
 
-/** Append position for a created todo: the count of active todos already in
- * `status`. Matches the screens' unfiltered per-status order. */
-function positionFor(status: TodoStatus): number {
-  return useTodos.getState().todos.filter((todo) => todo.status === status).length;
+/** Top position for a todo entering `status`: one below the smallest position
+ * already in that column, so position ordering puts it first. An empty column
+ * starts at 0. Reads the unfiltered store so a search filter cannot skew it. */
+function storeTopPositionFor(status: TodoStatus): number {
+  return topPositionFor(useTodos.getState().todos, status);
 }
 
 export function useTodoForm(options: UseTodoFormOptions = {}): UseTodoFormResult {
@@ -87,6 +89,11 @@ export function useTodoForm(options: UseTodoFormOptions = {}): UseTodoFormResult
     });
   }
 
+  /** Mouse: focus the clicked field, mirroring one `cycleField` step. */
+  function focusField(field: TodoFormField): void {
+    setForm((current) => (current.field === field ? current : { ...current, field }));
+  }
+
   async function submit(): Promise<void> {
     if (!form.open || form.saving) {
       return;
@@ -108,12 +115,14 @@ export function useTodoForm(options: UseTodoFormOptions = {}): UseTodoFormResult
     try {
       if (form.editing !== null) {
         const id = form.editing.id;
+        // An update lands at the top of its (possibly new) column.
         const patch = {
           title,
           description: description === "" ? null : description,
           priority,
           dueDate: due === "" ? null : due,
           status: values.status,
+          position: storeTopPositionFor(values.status),
         };
         await getRepos().todos.update(id, patch);
         useTodos.getState().patchTodo(id, patch);
@@ -124,7 +133,7 @@ export function useTodoForm(options: UseTodoFormOptions = {}): UseTodoFormResult
           priority,
           dueDate: due === "" ? null : due,
           status: values.status,
-          position: positionFor(values.status),
+          position: storeTopPositionFor(values.status),
         });
         useTodos.getState().addTodo(created);
         options.onCreated?.(created);
@@ -144,6 +153,7 @@ export function useTodoForm(options: UseTodoFormOptions = {}): UseTodoFormResult
     patch,
     clearError,
     cycleField,
+    focusField,
     submit,
   };
 }

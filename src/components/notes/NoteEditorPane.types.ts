@@ -36,4 +36,9 @@ export interface NoteEditorPaneProps {
   onRetry: () => void;
   /** Select the editor mode via the toolbar labels. */
   onSelectMode: (mode: NoteEditorMode) => void;
+  /** Mouse: focus the clicked editor field. */
+  onFocusField?: (field: NoteEditorField) => void;
+  /** Mouse: apply a tag suggestion or remove an applied tag. */
+  onAcceptSuggestion?: (tag: string) => void;
+  onRemoveTag?: (tag: string) => void;
 }

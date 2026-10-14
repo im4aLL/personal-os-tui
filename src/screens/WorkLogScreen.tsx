@@ -12,6 +12,7 @@ import { WorkLogForm } from "../components/work-log/WorkLogForm";
 import type { WorkLogFormField, WorkLogFormValues } from "../components/work-log/WorkLogForm.types";
 import { WorkLogRow } from "../components/work-log/WorkLogRow";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { claimFocusedField, useFocusedField } from "../hooks/useFocusedField";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import type { WorkLog, WorkLogFilter } from "../repos/types";
 import { getRepos } from "../store/repos";
@@ -27,7 +28,7 @@ import {
   todayISO,
 } from "../utils/date";
 import { messageOf, operationError, retryableError } from "../utils/error";
-import { isReadOnlyRow, wheelDelta } from "../utils/mouse";
+import { isPrimaryClick, isReadOnlyRow, wheelDelta } from "../utils/mouse";
 import { truncate } from "../utils/text";
 import type {
   Notice,
@@ -112,6 +113,15 @@ export function WorkLogScreen(): ReactNode {
 
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  // Mirrors `searchFocused` synchronously. The scope runs the handler captured
+  // on the last committed render, so a plain key that arrives in the same input
+  // chunk as the `/` that opened search must read this ref to defer instead of
+  // falling through to the browsing bindings. The effect below resyncs it for
+  // closes that do not go through a key handler; a key handler clears the ref
+  // itself and releases the claim, because an open and its close in one commit
+  // skip the effects, except a tab handoff that keeps the claim (it was never
+  // released, and the same id stays owned, so the effect does not re-run).
+  const searchFocusedRef = useRef(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [dateFocus, setDateFocus] = useState<WorkLogDateFocus>("none");
@@ -246,12 +256,11 @@ export function WorkLogScreen(): ReactNode {
   // characters reach it and ex mode cannot open over the dialog; this scope
   // still runs first for Tab/Esc/Enter.
   const fieldOwned = form.open || searchFocused || dateFocus !== "none" || confirm !== null;
+  useFocusedField(fieldOwned, "worklog-field");
+
   useEffect(() => {
-    useUi.getState().setFocusedField(fieldOwned ? "worklog-field" : null);
-    return () => {
-      useUi.getState().setFocusedField(null);
-    };
-  }, [fieldOwned]);
+    searchFocusedRef.current = searchFocused;
+  }, [searchFocused]);
 
   // -- Selection -------------------------------------------------------------
 
@@ -366,6 +375,11 @@ export function WorkLogScreen(): ReactNode {
     });
   }
 
+  /** Mouse: focus the clicked field. */
+  function focusFormField(field: WorkLogFormField): void {
+    setForm((current) => (current.field === field ? current : { ...current, field }));
+  }
+
   function addFormTag(raw: string): void {
     const name = raw.trim().toLowerCase().replace(/\s+/g, "-");
     setForm((current) => {
@@ -386,6 +400,14 @@ export function WorkLogScreen(): ReactNode {
     setForm((current) => ({
       ...current,
       values: { ...current.values, tags: current.values.tags.slice(0, -1) },
+    }));
+  }
+
+  /** Mouse: remove one applied tag by clicking its chip. */
+  function removeFormTag(tag: string): void {
+    setForm((current) => ({
+      ...current,
+      values: { ...current.values, tags: current.values.tags.filter((name) => name !== tag) },
     }));
   }
 
@@ -555,18 +577,29 @@ export function WorkLogScreen(): ReactNode {
       return !meta;
     }
 
-    if (searchFocused) {
+    // The search field owns typing once active. The ref, not just the committed
+    // flag, keeps a same-chunk key behind the `/` from falling through to the
+    // browsing bindings below.
+    if (searchFocusedRef.current) {
       if (name === "escape") {
+        searchFocusedRef.current = false;
+        claimFocusedField(null);
         searchRef.current = "";
         setSearch("");
         setSearchFocused(false);
         return true;
       }
       if (name === "return") {
+        searchFocusedRef.current = false;
+        claimFocusedField(null);
         setSearchFocused(false);
         return true;
       }
       if (name === "tab") {
+        // The date field takes over typing on the same screen field id; leave
+        // the claim in place (it was never released) and clear only the search
+        // flag.
+        searchFocusedRef.current = false;
         setSearchFocused(false);
         setDateFocus("from");
         return true;
@@ -637,6 +670,11 @@ export function WorkLogScreen(): ReactNode {
       return true;
     }
     if (name === "/") {
+      // Claim ownership synchronously: a key in the same input chunk as this
+      // one must not reach the global bindings before the focus effect commits,
+      // and this scope's search branch must already see the flag.
+      searchFocusedRef.current = true;
+      claimFocusedField("worklog-field");
       setDateFocus("none");
       setSearchFocused(true);
       return true;
@@ -717,6 +755,14 @@ export function WorkLogScreen(): ReactNode {
         paddingLeft={1}
         paddingRight={1}
         height={3}
+        onMouseDown={(event) => {
+          if (isPrimaryClick(event) && !searchFocused) {
+            searchFocusedRef.current = true;
+            claimFocusedField("worklog-field");
+            setDateFocus("none");
+            setSearchFocused(true);
+          }
+        }}
       >
         <input
           focused={searchFocused}
@@ -749,6 +795,14 @@ export function WorkLogScreen(): ReactNode {
         width={contentWidth}
         onFromChange={setFrom}
         onToChange={setTo}
+        onFromFocus={() => {
+          setSearchFocused(false);
+          setDateFocus("from");
+        }}
+        onToFocus={() => {
+          setSearchFocused(false);
+          setDateFocus("to");
+        }}
       />
 
       {/* The entries list shares one titled panel across loading, empty, and
@@ -845,6 +899,12 @@ export function WorkLogScreen(): ReactNode {
           onDescriptionChange={() => {
             setForm((current) => (current.error === null ? current : { ...current, error: null }));
           }}
+          onFocusField={focusFormField}
+          onSubmit={() => {
+            void submitForm();
+          }}
+          onAcceptSuggestion={addFormTag}
+          onRemoveTag={removeFormTag}
         />
       ) : null}
 
@@ -854,6 +914,10 @@ export function WorkLogScreen(): ReactNode {
           body={`Delete "${selected?.title ?? confirm.title}" permanently? This cannot be undone.`}
           confirmLabel="Delete"
           destructive={true}
+          onConfirm={() => {
+            void runDelete();
+          }}
+          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </box>

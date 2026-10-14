@@ -32,5 +32,7 @@ export interface UseTodoFormResult {
   patch: (patch: Partial<TodoFormValues>) => void;
   clearError: () => void;
   cycleField: (delta: 1 | -1) => void;
+  /** Mouse: focus a specific field by clicking it. */
+  focusField: (field: TodoFormField) => void;
   submit: () => Promise<void>;
 }

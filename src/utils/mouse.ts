@@ -95,3 +95,27 @@ export function rowClickHandler(
     }
   };
 }
+
+/** Standard handler for an action control (button, dialog action, clickable
+ * label). A primary press runs `onPress`; `preventDefault()` suppresses the
+ * default focus move so clicking an action never steals keyboard focus from the
+ * field the user is editing. Action labels should set `selectable={false}` so
+ * the press cannot start a text selection either. */
+export function pressHandler(onPress: () => void): (event: MouseEvent) => void {
+  return (event) => {
+    if (!isPrimaryClick(event)) {
+      return;
+    }
+    event.preventDefault();
+    onPress();
+  };
+}
+
+/** Row index under a mouse press on a fully-visible option list, from the
+ * global cell Y and the target renderable's top edge. Callers only use this for
+ * a control sized to its option count (no scrolling), where one row is one
+ * option. Returns -1 when the press lands above the first row. */
+export function optionRowFromPress(event: MouseEvent, linesPerItem = 1): number {
+  const top = event.currentTarget?.y ?? event.y;
+  return Math.floor((event.y - top) / Math.max(1, linesPerItem));
+}

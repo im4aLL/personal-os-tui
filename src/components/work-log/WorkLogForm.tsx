@@ -31,6 +31,7 @@ export function WorkLogForm(props: WorkLogFormProps): ReactNode {
       onChange={(value) => props.onPatch({ startDate: value })}
       focused={props.focusedField === "start"}
       width={dateWidth}
+      onFocusRequest={() => props.onFocusField?.("start")}
     />
   );
   const endDate = (
@@ -39,6 +40,7 @@ export function WorkLogForm(props: WorkLogFormProps): ReactNode {
       onChange={(value) => props.onPatch({ endDate: value })}
       focused={props.focusedField === "end"}
       width={dateWidth}
+      onFocusRequest={() => props.onFocusField?.("end")}
     />
   );
 
@@ -52,6 +54,7 @@ export function WorkLogForm(props: WorkLogFormProps): ReactNode {
             focused={props.focusedField === "title"}
             placeholder="What did you work on?"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("title")}
           />
         </Field>
 
@@ -63,6 +66,7 @@ export function WorkLogForm(props: WorkLogFormProps): ReactNode {
             height={3}
             textareaRef={props.descriptionRef}
             onChange={props.onDescriptionChange}
+            onFocusRequest={() => props.onFocusField?.("description")}
           />
         </Field>
 
@@ -87,12 +91,21 @@ export function WorkLogForm(props: WorkLogFormProps): ReactNode {
             suggestionIndex={props.suggestionIndex}
             width={fieldWidth}
             onInputChange={props.onTagInputChange}
+            onFocusRequest={() => props.onFocusField?.("tags")}
+            onAcceptSuggestion={props.onAcceptSuggestion}
+            onRemoveTag={props.onRemoveTag}
           />
         </Field>
 
         {props.error !== null ? <text fg={color(tokens.danger)}>{props.error}</text> : null}
 
-        <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
+        <Button
+          primary={true}
+          focused={false}
+          disabled={props.saving}
+          label={submitLabel}
+          onPress={props.onSubmit}
+        />
         <text fg={color(tokens.fgSubtle)}>
           {"tab next field  enter save  ctrl+enter from description  esc cancel"}
         </text>

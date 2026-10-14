@@ -16,6 +16,8 @@ export interface TextAreaProps {
   bordered?: boolean;
   /** Ref to the underlying renderable, for `plainText` on submit. */
   textareaRef?: Ref<TextareaRenderable>;
+  /** Mouse: a primary click asks the owning screen to focus this field. */
+  onFocusRequest?: () => void;
   /** Fires after any content change (typing, paste, delete). */
   onChange?: () => void;
   onKeyDown?: (key: KeyEvent) => void;

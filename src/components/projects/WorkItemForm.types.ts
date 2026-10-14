@@ -42,4 +42,8 @@ export interface WorkItemFormProps {
   commentRef: Ref<TextareaRenderable>;
   onPatch: (patch: Partial<WorkItemFormValues>) => void;
   onCommentChange?: () => void;
+  /** Mouse: focus the clicked field. */
+  onFocusField?: (field: WorkItemFormField) => void;
+  /** Mouse: click on the submit button (same path as Enter). */
+  onSubmit?: () => void;
 }

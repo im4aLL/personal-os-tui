@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useTheme } from "../../theme/ThemeProvider";
 import { todayISO } from "../../utils/date";
 import { rowMarker } from "../../utils/marker";
+import { rowClickHandler } from "../../utils/mouse";
 import { windowSlice } from "../../utils/window";
 import { Modal } from "../ui/Modal";
 import type { ArchivedTodosDialogProps } from "./ArchivedTodosDialog.types";
@@ -33,7 +34,15 @@ export function ArchivedTodosDialog(props: ArchivedTodosDialogProps): ReactNode 
             const index = todos.indexOf(todo);
             const selected = index === selectedIndex;
             return (
-              <text key={todo.id} wrapMode="none">
+              <text
+                key={todo.id}
+                wrapMode="none"
+                onMouseDown={rowClickHandler(
+                  todo.id,
+                  () => props.onSelect?.(index),
+                  () => props.onActivate?.(todo),
+                )}
+              >
                 <span fg={color(selected ? tokens.accent : tokens.fgSubtle)}>
                   {rowMarker(selected)}
                 </span>

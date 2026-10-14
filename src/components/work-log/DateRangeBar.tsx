@@ -12,6 +12,7 @@ function BoundedField(props: {
   focused: boolean;
   width: number;
   onChange: (value: string) => void;
+  onFocusRequest?: () => void;
 }): ReactNode {
   const { theme, color } = useTheme();
   return (
@@ -24,6 +25,7 @@ function BoundedField(props: {
         width={props.width}
         borderless={true}
         hideHint={true}
+        onFocusRequest={props.onFocusRequest}
       />
     </box>
   );
@@ -47,6 +49,7 @@ export function DateRangeBar(props: DateRangeBarProps): ReactNode {
       focused={props.fromFocused}
       width={fieldWidth}
       onChange={props.onFromChange}
+      onFocusRequest={props.onFromFocus}
     />
   );
   const to = (
@@ -56,6 +59,7 @@ export function DateRangeBar(props: DateRangeBarProps): ReactNode {
       focused={props.toFocused}
       width={fieldWidth}
       onChange={props.onToChange}
+      onFocusRequest={props.onToFocus}
     />
   );
 

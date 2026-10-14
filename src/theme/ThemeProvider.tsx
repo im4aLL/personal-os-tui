@@ -8,6 +8,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Modal } from "../components/ui/Modal";
 import { useSession } from "../store/session";
 import { useUi } from "../store/ui";
+import { pressHandler } from "../utils/mouse";
 import { resolveColor } from "./degrade";
 import type { ColorCaps } from "./degrade.types";
 import { getTheme, listThemes } from "./registry";
@@ -85,6 +86,11 @@ export function ThemePicker(): ReactNode {
             <text
               key={entry.id}
               fg={color(focused ? tokens.accent : active ? tokens.accentAlt : tokens.fg)}
+              selectable={false}
+              onMouseDown={pressHandler(() => {
+                useSession.getState().selectTheme(entry.id);
+                useUi.getState().closeModal();
+              })}
             >
               {`${marker}${entry.label}${suffix}`}
             </text>

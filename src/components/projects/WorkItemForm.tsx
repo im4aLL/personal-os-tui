@@ -48,6 +48,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
             focused={props.focusedField === "title"}
             placeholder="What needs to be done?"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("title")}
           />
         </Field>
 
@@ -58,6 +59,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
             focused={props.focusedField === "person"}
             placeholder="Who owns it?"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("person")}
           />
         </Field>
 
@@ -68,6 +70,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
             focused={props.focusedField === "jira"}
             placeholder="URL or ticket key"
             width={fieldWidth}
+            onFocusRequest={() => props.onFocusField?.("jira")}
           />
         </Field>
 
@@ -79,6 +82,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
               focused={props.focusedField === "start"}
               placeholder="1"
               width={halfWidth}
+              onFocusRequest={() => props.onFocusField?.("start")}
             />
           </Field>
           <Field label="End week">
@@ -88,6 +92,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
               focused={props.focusedField === "end"}
               placeholder="1"
               width={halfWidth}
+              onFocusRequest={() => props.onFocusField?.("end")}
             />
           </Field>
         </box>
@@ -97,6 +102,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
             options={STATUS_OPTIONS}
             selectedIndex={statusIndex}
             focused={props.focusedField === "status"}
+            onFocusRequest={() => props.onFocusField?.("status")}
             onChange={(_index, value) =>
               props.onPatch({ status: (value as WorkItemStatus) ?? "pending" })
             }
@@ -108,6 +114,7 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
             options={props.phaseOptions}
             selectedIndex={phaseIndex}
             focused={props.focusedField === "phase"}
+            onFocusRequest={() => props.onFocusField?.("phase")}
             onChange={(_index, value) => props.onPatch({ phaseId: value ?? "" })}
           />
         </Field>
@@ -120,12 +127,19 @@ export function WorkItemForm(props: WorkItemFormProps): ReactNode {
             height={2}
             textareaRef={props.commentRef}
             onChange={props.onCommentChange}
+            onFocusRequest={() => props.onFocusField?.("comment")}
           />
         </Field>
 
         {props.error !== null ? <text fg={color(tokens.danger)}>{props.error}</text> : null}
 
-        <Button primary={true} focused={false} disabled={props.saving} label={submitLabel} />
+        <Button
+          primary={true}
+          focused={false}
+          disabled={props.saving}
+          label={submitLabel}
+          onPress={props.onSubmit}
+        />
         <text fg={color(tokens.fgSubtle)}>
           {"tab next field  enter save  ctrl+enter from comment  esc cancel"}
         </text>

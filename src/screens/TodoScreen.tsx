@@ -1,7 +1,7 @@
 import { type KeyEvent, TextAttributes } from "@opentui/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { screenHint } from "../commands/registry";
 import { ArchivedTodosDialog } from "../components/todos/ArchivedTodosDialog";
 import { KanbanColumn } from "../components/todos/KanbanColumn";
@@ -9,9 +9,11 @@ import { TodoForm } from "../components/todos/TodoForm";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
+import { useDebouncedWrite } from "../hooks/useDebouncedWrite";
+import { claimFocusedField, useFocusedField } from "../hooks/useFocusedField";
 import { useKeyboardScope } from "../hooks/useKeyboardScope";
 import { useTodoForm } from "../hooks/useTodoForm";
-import type { Todo, TodoStatus } from "../repos/types";
+import type { PositionUpdate, Todo, TodoStatus } from "../repos/types";
 import { getRepos } from "../store/repos";
 import { useSession } from "../store/session";
 import { useTodos } from "../store/todos";
@@ -19,7 +21,7 @@ import { useUi } from "../store/ui";
 import { useTheme } from "../theme/ThemeProvider";
 import { todayISO } from "../utils/date";
 import { operationError, retryableError } from "../utils/error";
-import { isReadOnlyRow } from "../utils/mouse";
+import { isPrimaryClick, isReadOnlyRow } from "../utils/mouse";
 import { windowSlice } from "../utils/window";
 import type { TodoConfirmState } from "./TodoScreen.types";
 
@@ -38,6 +40,9 @@ const NEXT_STATUS: Record<TodoStatus, TodoStatus> = {
 };
 
 const HINT = screenHint("todo");
+
+// Quiet period before a settled reorder is written (see `reorderWrite`).
+const REORDER_DEBOUNCE_MS = 400;
 
 function truncate(text: string, room: number): string {
   if (text.length <= room) {
@@ -66,6 +71,14 @@ export function TodoScreen(): ReactNode {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [searchActive, setSearchActive] = useState(false);
+  // Mirrors `searchActive` synchronously. The scope runs the handler captured
+  // on the last committed render, so a plain key that arrives in the same input
+  // chunk as the `/` that opened search must read this ref to defer instead of
+  // falling through to the browsing bindings. The effect below resyncs it for
+  // closes that do not go through a key handler; a key handler that closes
+  // search clears the ref and releases the claim itself, because an open and its
+  // close in one commit skip the effects.
+  const searchActiveRef = useRef(false);
   const todoForm = useTodoForm({
     onCreated: (todo) => {
       setSelectedId(todo.id);
@@ -177,12 +190,11 @@ export function TodoScreen(): ReactNode {
   // characters reach the control and ex mode cannot open over a dialog; the
   // scope still runs first for Tab/Esc/Enter.
   const fieldOwned = todoForm.form.open || searchActive || confirm !== null || archivedOpen;
+  useFocusedField(fieldOwned, "todo-field");
+
   useEffect(() => {
-    useUi.getState().setFocusedField(fieldOwned ? "todo-field" : null);
-    return () => {
-      useUi.getState().setFocusedField(null);
-    };
-  }, [fieldOwned]);
+    searchActiveRef.current = searchActive;
+  }, [searchActive]);
 
   useEffect(() => {
     if (notice === null) {
@@ -267,20 +279,35 @@ export function TodoScreen(): ReactNode {
 
   // -- Write actions (optimistic, reload on failure) ------------------------
 
+  // Rapid K/J reorders update the board optimistically but only write the
+  // settled order once the keys go quiet, so a cloud (Turso) connection is not
+  // hit on every keypress.
+  const reorderWrite = useDebouncedWrite<PositionUpdate[]>(async (updates) => {
+    try {
+      await getRepos().todos.updatePositions(updates);
+    } catch (error) {
+      setActionError(retryableError("Could not reorder todos", error));
+      void loadTodos();
+    }
+  }, REORDER_DEBOUNCE_MS);
+
   function cycleStatus(todo: Todo): void {
     const status = NEXT_STATUS[todo.status];
-    // Unfiltered order so a search filter cannot leave hidden rows with
-    // duplicate positions.
-    const targetIds = fullByStatus[status]
-      .map((item) => item.id)
-      .filter((id) => id !== todo.id)
-      .concat(todo.id);
-    useTodos.getState().patchTodo(todo.id, { status, position: targetIds.length - 1 });
+    // A status change lands at the top of its new column. Unfiltered order so a
+    // search filter cannot leave hidden rows with duplicate positions.
+    const targetIds = [
+      todo.id,
+      ...fullByStatus[status].map((item) => item.id).filter((id) => id !== todo.id),
+    ];
+    useTodos.getState().patchTodo(todo.id, { status, position: 0 });
     useTodos.getState().reorderTodos(targetIds);
     setFocusedColumn(COLUMNS.indexOf(status));
     setSelectedId(todo.id);
     setActionError(null);
     void (async () => {
+      // Settle any pending reorder first so its positions cannot interleave
+      // with this status/position write.
+      await reorderWrite.flush();
       try {
         await getRepos().todos.updatePositions(
           targetIds.map((item, index) => ({
@@ -305,15 +332,15 @@ export function TodoScreen(): ReactNode {
       return;
     }
     const targetStatus = COLUMNS[targetColumn];
-    // Unfiltered order so a search filter cannot leave hidden rows with
-    // duplicate positions.
-    const targetIds = fullByStatus[targetStatus]
-      .map((todo) => todo.id)
-      .filter((id) => id !== selected.id)
-      .concat(selected.id);
+    // A cross-column move lands at the top of the target column. Unfiltered
+    // order so a search filter cannot leave hidden rows with duplicate positions.
+    const targetIds = [
+      selected.id,
+      ...fullByStatus[targetStatus].map((todo) => todo.id).filter((id) => id !== selected.id),
+    ];
     useTodos.getState().patchTodo(selected.id, {
       status: targetStatus,
-      position: targetIds.length - 1,
+      position: 0,
     });
     useTodos.getState().reorderTodos(targetIds);
     setFocusedColumn(targetColumn);
@@ -321,6 +348,9 @@ export function TodoScreen(): ReactNode {
     const id = selected.id;
     setActionError(null);
     void (async () => {
+      // Settle any pending reorder first so its positions cannot interleave
+      // with this status/position write.
+      await reorderWrite.flush();
       try {
         await getRepos().todos.updatePositions(
           targetIds.map((item, index) => ({
@@ -351,14 +381,9 @@ export function TodoScreen(): ReactNode {
     useTodos.getState().reorderTodos(ids);
     setSelectedId(moved);
     setActionError(null);
-    void (async () => {
-      try {
-        await getRepos().todos.updatePositions(ids.map((id, position) => ({ id, position })));
-      } catch (error) {
-        setActionError(retryableError("Could not reorder todos", error));
-        void loadTodos();
-      }
-    })();
+    // Optimistic locally, debounced remotely: rapid K/J presses coalesce into a
+    // single position write.
+    reorderWrite.schedule(ids.map((id, position) => ({ id, position })));
   }
 
   function requestDelete(): void {
@@ -607,9 +632,15 @@ export function TodoScreen(): ReactNode {
       return !meta;
     }
 
-    // The search field owns typing once active.
-    if (searchActive) {
+    // The search field owns typing once active. The ref, not just the committed
+    // flag, keeps a same-chunk key behind the `/` from falling through to the
+    // browsing bindings below.
+    if (searchActiveRef.current) {
       if (name === "escape") {
+        // Release synchronously: an open and close in one commit leave the net
+        // state unchanged, so the focus effect never runs to release the claim.
+        searchActiveRef.current = false;
+        claimFocusedField(null);
         setSearch("");
         setSearchActive(false);
         return true;
@@ -694,6 +725,11 @@ export function TodoScreen(): ReactNode {
       return true;
     }
     if (name === "/") {
+      // Claim ownership synchronously: a key in the same input chunk as this
+      // one must not reach the global bindings before the focus effect commits,
+      // and this scope's search branch must already see the flag.
+      searchActiveRef.current = true;
+      claimFocusedField("todo-field");
       setSearchActive(true);
       return true;
     }
@@ -777,6 +813,15 @@ export function TodoScreen(): ReactNode {
         paddingLeft={1}
         paddingRight={1}
         height={3}
+        onMouseDown={(event) => {
+          if (isPrimaryClick(event) && !searchActive) {
+            // Claim synchronously so a key in the same input chunk as the click
+            // is typed into the field rather than run as a browsing binding.
+            searchActiveRef.current = true;
+            claimFocusedField("todo-field");
+            setSearchActive(true);
+          }
+        }}
       >
         <input
           focused={searchActive}
@@ -895,6 +940,10 @@ export function TodoScreen(): ReactNode {
           descriptionRef={todoForm.descriptionRef}
           onPatch={todoForm.patch}
           onDescriptionChange={todoForm.clearError}
+          onFocusField={todoForm.focusField}
+          onSubmit={() => {
+            void todoForm.submit();
+          }}
         />
       ) : null}
 
@@ -904,6 +953,10 @@ export function TodoScreen(): ReactNode {
           selectedIndex={Math.min(archivedIndex, archivedMax)}
           loading={archivedLoading}
           maxRows={Math.max(3, Math.min(12, height - 10))}
+          onSelect={(index) => setArchivedIndex(index)}
+          onActivate={(todo) => {
+            void restoreArchived(todo);
+          }}
         />
       ) : null}
 
@@ -915,6 +968,10 @@ export function TodoScreen(): ReactNode {
           body={confirm.body}
           confirmLabel={confirm.confirmLabel}
           destructive={confirm.destructive}
+          onConfirm={() => {
+            void runConfirm();
+          }}
+          onCancel={() => setConfirm(null)}
         />
       ) : null}
     </box>

@@ -16,6 +16,9 @@ export interface NoteListPaneProps {
   /** Outer panel width in columns; rows use `width - 4` inside the frame. */
   width: number;
   onSearchChange: (value: string) => void;
+  /** Mouse: a primary click on the search field asks the screen to focus it
+   * (the keyboard `/` path). */
+  onFocusSearch?: () => void;
   /** Mouse: select/activate a note row without a keyboard. */
   onSelectNote?: (id: string) => void;
   onActivateNote?: (id: string) => void;

@@ -20,6 +20,7 @@ export function DateField(props: DateFieldProps): ReactNode {
       placeholder={props.placeholder ?? "YYYY-MM-DD"}
       width={props.width}
       borderless={props.borderless}
+      onFocusRequest={props.onFocusRequest}
     />
   );
 
